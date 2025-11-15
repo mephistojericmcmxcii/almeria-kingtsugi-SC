@@ -71,12 +71,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (maintenanceSetting?.enabled && user?.role !== 'admin') {
+        logout();
         toast({
             variant: "destructive",
             title: "Under Maintenance",
             description: "The portal is currently under maintenance. You have been logged out.",
         });
-        logout();
     }
   }, [maintenanceSetting, user]);
 
@@ -217,77 +217,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = async (email: string, password: string) => {
-    if (maintenanceSetting?.enabled && email !== 'admin@kintsugi.com') {
-        toast({
-            variant: "destructive",
-            title: "Under Maintenance",
-            description: "The portal is currently under maintenance. Please try again later.",
-        });
-        return;
-    }
     setIsLoading(true);
-
     try {
-        let userCredential;
-      
-        try {
-          userCredential = await signInWithEmailAndPassword(auth, email, password);
-        } catch (error: any) {
-          if (error.code === 'auth/user-not-found') {
-              if (email === "admin@kintsugi.com") {
-                  userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                  const fbUser = userCredential.user;
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const fbUser = userCredential.user;
 
-                  // Set custom claim first
-                  const functions = getFunctions();
-                  const setAdminRole = httpsCallable(functions, 'setAdminRole');
-                  await setAdminRole({ uid: fbUser.uid });
+        // Check for maintenance mode after successful login
+        if (maintenanceSetting?.enabled) {
+            const idTokenResult = await fbUser.getIdTokenResult(true); // Force refresh to get latest claims
+            const isAdmin = idTokenResult.claims.admin === true;
 
-                  const userRef = doc(firestore, "users", fbUser.uid);
-                  const adminData = {
-                      id: fbUser.uid,
-                      displayName: "Admin User",
-                      email: email,
-                      role: "admin",
-                      profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
-                      address: ""
-                  };
-                  await setDoc(userRef, adminData);
-                  
-                  // Force refresh of the token to get the custom claim
-                  await fbUser.getIdToken(true);
-              } else {
-                  toast({
-                      variant: "destructive",
-                      title: "User Not Found",
-                      description: "No account exists with this email address.",
-                  });
-                  setIsLoading(false);
-                  return;
-              }
-          } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-              toast({
-                variant: "destructive",
-                title: "Invalid Credentials",
-                description: "Please check your email and password and try again.",
-              });
-              setIsLoading(false);
-              return;
-          } else {
-              throw error;
-          }
+            if (!isAdmin) {
+                await signOut(auth); // Immediately sign out the non-admin user
+                toast({
+                    variant: "destructive",
+                    title: "Under Maintenance",
+                    description: "The portal is currently under maintenance. Please try again later.",
+                });
+                setIsLoading(false);
+                return; // Stop execution
+            }
         }
-
-      if (userCredential?.user) {
+        
+        // If we reach here, user is either an admin, or maintenance mode is off.
         router.push('/dashboard');
-      }
+
     } catch (error: any) {
-      console.error("Firebase login failed", error);
-       toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error.message || "Could not sign in.",
-      });
+        console.error("Firebase login failed", error);
+        
+        if (error.code === 'auth/user-not-found' && email === "admin@kintsugi.com") {
+             // This is a special case to auto-create the first admin user
+             try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const fbUser = userCredential.user;
+                const functions = getFunctions();
+                const setAdminRole = httpsCallable(functions, 'setAdminRole');
+                await setAdminRole({ uid: fbUser.uid });
+                await fbUser.getIdToken(true); // Force token refresh
+                
+                const userRef = doc(firestore, "users", fbUser.uid);
+                await setDoc(userRef, {
+                    id: fbUser.uid,
+                    displayName: "Admin User",
+                    email,
+                    role: "admin"
+                });
+
+                router.push('/dashboard');
+             } catch (creationError: any) {
+                 toast({ variant: "destructive", title: "Admin Creation Failed", description: creationError.message });
+             }
+        } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            toast({
+              variant: "destructive",
+              title: "Invalid Credentials",
+              description: "Please check your email and password and try again.",
+            });
+        } else {
+            toast({
+              variant: "destructive",
+              title: "Uh oh! Something went wrong.",
+              description: error.message || "Could not sign in.",
+            });
+        }
     } finally {
         setIsLoading(false);
     }
@@ -346,45 +338,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const loginWithGoogle = async () => {
-    if (maintenanceSetting?.enabled) {
-        toast({
-            variant: "destructive",
-            title: "Under Maintenance",
-            description: "The portal is currently under maintenance. Please try again later.",
-        });
-        return;
-    }
     setIsLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const additionalInfo = getAdditionalUserInfo(userCredential);
-      const fbUser = userCredential.user;
+        const provider = new GoogleAuthProvider();
+        const userCredential = await signInWithPopup(auth, provider);
+        const additionalInfo = getAdditionalUserInfo(userCredential);
+        const fbUser = userCredential.user;
 
-      if (additionalInfo?.isNewUser) {
-        const userRef = doc(firestore, 'users', fbUser.uid);
-        const newUser: User = {
-          id: fbUser.uid,
-          displayName: fbUser.displayName || 'New User',
-          email: fbUser.email!,
-          role: 'guest', 
-          profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
-          address: '',
-        };
-        await setDoc(userRef, newUser);
-      }
-      router.push('/dashboard');
+        if (maintenanceSetting?.enabled) {
+            const idTokenResult = await fbUser.getIdTokenResult(true);
+            const isAdmin = idTokenResult.claims.admin === true;
+
+            if (!isAdmin) {
+                await signOut(auth);
+                toast({
+                    variant: "destructive",
+                    title: "Under Maintenance",
+                    description: "The portal is currently under maintenance. Please try again later.",
+                });
+                setIsLoading(false);
+                return;
+            }
+        }
+        
+        if (additionalInfo?.isNewUser) {
+            const userRef = doc(firestore, 'users', fbUser.uid);
+            const newUser: User = {
+                id: fbUser.uid,
+                displayName: fbUser.displayName || 'New User',
+                email: fbUser.email!,
+                role: 'guest',
+                profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+                address: '',
+            };
+            await setDoc(userRef, newUser);
+        }
+        router.push('/dashboard');
+
     } catch (error: any) {
-      console.error("Google Sign-In failed", error);
-      toast({
-        variant: "destructive",
-        title: "Google Sign-In Failed",
-        description: error.message || "Could not sign in with Google.",
-      });
+        console.error("Google Sign-In failed", error);
+        toast({
+            variant: "destructive",
+            title: "Google Sign-In Failed",
+            description: error.message || "Could not sign in with Google.",
+        });
     } finally {
         setIsLoading(false);
     }
-  };
+};
 
 
   const createAdminUser = async (email: string, password: string, displayName: string): Promise<boolean> => {
@@ -732,3 +733,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
