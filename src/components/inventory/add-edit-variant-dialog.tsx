@@ -152,7 +152,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     try {
         if (imageFile) {
             const imageFileName = `${item.id}-${Date.now()}-${imageFile.name}`;
-            const imageStorageRef = storageRef(storage, `inventory-variant-images/${imageFileName}`);
+            const imageStorageRef = storageRef(storage, `inventory-item-variant-images/${imageFileName}`);
             
             const uploadResult = await uploadBytes(imageStorageRef, imageFile);
             finalImageUrl = await getDownloadURL(uploadResult.ref);
