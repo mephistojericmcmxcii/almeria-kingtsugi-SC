@@ -112,7 +112,7 @@ const MainSidebar = () => {
                         <SidebarMenuSub>
                             {servicesMenuItems.map(item => (
                                 <SidebarMenuItem key={item.href}>
-                                     <Link href={item.href} legacyBehavior passHref>
+                                     <Link href={item.href}>
                                         <SidebarMenuSubButton isActive={pathname === item.href}>
                                             <item.icon />
                                             <span>{item.label}</span>
