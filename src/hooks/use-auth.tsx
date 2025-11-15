@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             firebaseUser = userCredential.user;
          } catch (error: any) {
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+            if (error.code === 'auth/user-not-found') {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 firebaseUser = userCredential.user;
                 const userRef = doc(firestore, "users", firebaseUser.uid);
