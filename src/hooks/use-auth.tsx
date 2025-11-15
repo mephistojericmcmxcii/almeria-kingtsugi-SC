@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userData, isUserDocLoading] = useDocumentData(userDocRef);
 
   useEffect(() => {
-    setIsLoading(isAuthLoading || isUserDocLoading);
+    const totalLoading = isAuthLoading || (firebaseUser && isUserDocLoading);
+    setIsLoading(totalLoading);
 
     if (!isAuthLoading && !firebaseUser) {
       setUser(null);
@@ -53,7 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, router]);
 
   const login = async (role: 'admin' | 'guest', email?: string, password?: string) => {
-    setIsLoading(true);
     try {
       let firebaseUser: FirebaseUser | undefined;
 
@@ -99,8 +99,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Firebase login failed", error);
       // Re-throw the error to be caught by the calling component
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -112,7 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   };
   
-  const value = { user, login, logout, isLoading: isLoading };
+  const value = { user, login, logout, isLoading };
 
   return (
     <AuthContext.Provider value={value}>
