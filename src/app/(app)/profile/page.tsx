@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -215,7 +216,7 @@ function OrderHistory() {
 
 
 export default function ProfilePage() {
-  const { user, cart, updateUserProfile, isLoading: isAuthLoading, showCartBadge, dismissCartBadge } = useAuth();
+  const { user, cart, updateUserProfile, isLoading: isAuthLoading, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cartItemCount = cart?.length || 0;
@@ -240,6 +241,9 @@ export default function ProfilePage() {
   const handleTabChange = (value: string) => {
     if (value === 'cart') {
       dismissCartBadge();
+    }
+    if (value === 'orders') {
+        dismissOrderHistoryBadge();
     }
   };
 
@@ -282,9 +286,12 @@ export default function ProfilePage() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="orders">
+          <TabsTrigger value="orders" className="relative">
             <History className="mr-2" />
             Order History
+             {showOrderHistoryBadge && (
+                <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
+             )}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">

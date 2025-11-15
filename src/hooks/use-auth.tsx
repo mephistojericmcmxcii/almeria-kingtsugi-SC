@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -43,6 +44,8 @@ interface AuthContextType {
   updateOrderStatus: (order: Order, newStatus: OrderStatus) => Promise<boolean>;
   showCartBadge: boolean;
   dismissCartBadge: () => void;
+  showOrderHistoryBadge: boolean;
+  dismissOrderHistoryBadge: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCartBadge, setShowCartBadge] = useState(false);
+  const [showOrderHistoryBadge, setShowOrderHistoryBadge] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -60,6 +64,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return collection(firestore, 'users', user.id, 'cart');
   }, [firestore, user]);
   const { data: cart } = useCollection<CartItem>(cartCollectionRef);
+  
+  const ordersCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.id, 'orders');
+  }, [firestore, user]);
+  const { data: orders } = useCollection<Order>(ordersCollectionRef);
 
   useEffect(() => {
     const handleAuthChange = async (fbUser: FirebaseUser | null) => {
@@ -76,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userData.role,
               profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
               address: userData.address || '',
+              lastViewedOrdersAt: userData.lastViewedOrdersAt,
             };
             setUser(appUser);
           } else {
@@ -105,9 +116,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setShowCartBadge(true);
     }
   }, [cart]);
+  
+  useEffect(() => {
+    if (user && orders) {
+      const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+      const hasNewUpdates = orders.some(order => 
+        (order.updatedAt?.toMillis() || 0) > lastViewed
+      );
+      if (hasNewUpdates) {
+        setShowOrderHistoryBadge(true);
+      }
+    }
+  }, [user, orders]);
+
 
   const dismissCartBadge = () => {
     setShowCartBadge(false);
+  };
+  
+  const dismissOrderHistoryBadge = async () => {
+    if (!user) return;
+    setShowOrderHistoryBadge(false);
+    try {
+        const userRef = doc(firestore, "users", user.id);
+        const newTimestamp = serverTimestamp();
+        await updateDoc(userRef, { lastViewedOrdersAt: newTimestamp });
+        // Optimistically update local user state
+        setUser(prev => prev ? {...prev, lastViewedOrdersAt: Timestamp.now()} : null);
+    } catch (error) {
+        console.error("Error updating lastViewedOrdersAt:", error);
+    }
   };
 
 
@@ -278,7 +316,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
         const userRef = doc(firestore, "users", firebaseUser.uid);
-        const dataToUpdate: ProfileUpdateData = {
+        const dataToUpdate: ProfileUpdateData & { lastViewedOrdersAt?: any } = {
             displayName: data.displayName,
             address: data.address || "",
         };
@@ -434,7 +472,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     items: cartItems,
                     totalAmount,
                     shippingAddress,
-                    status: 'pending'
+                    status: 'pending',
+                    updatedAt: serverTimestamp(),
                 };
                 transaction.set(newOrderRef, newOrder);
 
@@ -475,9 +514,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const orderRef = order.ref || doc(firestore, 'users', order.userId, 'orders', order.id);
         
         try {
+            const dataToUpdate: { status: OrderStatus; updatedAt: any } = {
+                status: newStatus,
+                updatedAt: serverTimestamp(),
+            };
+
             if (newStatus === 'cancelled' && order.status !== 'cancelled') {
                 await runTransaction(firestore, async (transaction: Transaction) => {
-                    transaction.update(orderRef, { status: newStatus });
+                    transaction.update(orderRef, dataToUpdate);
 
                     for (const item of order.items) {
                         const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
@@ -487,7 +531,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     }
                 });
             } else {
-                await updateDoc(orderRef, { status: newStatus });
+                await updateDoc(orderRef, dataToUpdate);
             }
 
             toast({
@@ -521,7 +565,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge };
+  const value = { user, cart, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge };
 
   return (
     <AuthContext.Provider value={value}>

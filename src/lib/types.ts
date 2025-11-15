@@ -1,4 +1,5 @@
 
+
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type User = {
@@ -8,6 +9,7 @@ export type User = {
   role: 'admin' | 'guest';
   profileImageUrl: string;
   address?: string;
+  lastViewedOrdersAt?: Timestamp;
 };
 
 export type InventoryItem = {
@@ -61,6 +63,7 @@ export type Order = {
   shippingAddress: string;
   status: OrderStatus;
   ref?: DocumentReference; // Available on collection group queries
+  updatedAt?: Timestamp;
 };
 
     
