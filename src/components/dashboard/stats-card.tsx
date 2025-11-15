@@ -3,21 +3,24 @@ import type { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {
     title: string;
-    value: string;
+    value: string | number | React.ReactNode;
     description: string;
-    icon: LucideIcon;
+    icon: LucideIcon | React.ComponentType;
+    isLoading?: boolean;
 }
 
-export function StatsCard({ title, value, description, icon: Icon }: StatsCardProps) {
+export function StatsCard({ title, value, description, icon: Icon, isLoading }: StatsCardProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className="h-4 w-4 text-muted-foreground">
+                    <Icon />
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{value}</div>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                {!isLoading && <p className="text-xs text-muted-foreground">{description}</p>}
             </CardContent>
         </Card>
     );
