@@ -33,17 +33,16 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart, ShieldAlert } from 'lucide-react';
 
-export default function AdminOrdersPage() {
-  const { user, firestore, updateOrderStatus } = useAuth();
+function AdminOrdersContent() {
+  const { firestore, updateOrderStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
+  // This query is now safe because this component only renders for admins.
   const ordersCollectionGroup = useMemoFirebase(
-    () => (user?.role === 'admin' ? collectionGroup(firestore, 'orders') : null),
-    [firestore, user?.role]
+    () => collectionGroup(firestore, 'orders'),
+    [firestore]
   );
-  const { data: orders, isLoading } = useCollection<Order>(
-    ordersCollectionGroup
-  );
+  const { data: orders, isLoading } = useCollection<Order>(ordersCollectionGroup);
 
   const sortedOrders = useMemo(() => {
     if (!orders) return [];
@@ -51,18 +50,6 @@ export default function AdminOrdersPage() {
       (a, b) => b.orderDate.toMillis() - a.orderDate.toMillis()
     );
   }, [orders]);
-
-  if (user?.role !== 'admin') {
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-             <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-            <h1 className="text-3xl font-bold font-headline text-destructive">Access Denied</h1>
-            <p className="text-muted-foreground mt-2">
-                You do not have permission to view this page.
-            </p>
-        </div>
-    )
-  }
 
   const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {
     setIsUpdating(order.id);
@@ -95,106 +82,143 @@ export default function AdminOrdersPage() {
   };
 
   return (
+    <Card>
+      <CardHeader>
+        <CardTitle>All Orders</CardTitle>
+        <CardDescription>
+          View and manage all orders placed by customers.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-6 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-10 w-32" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : sortedOrders.length > 0 ? (
+              sortedOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-mono text-xs">
+                    {order.id}
+                  </TableCell>
+                  <TableCell>
+                      <div className="font-medium">{order.userDisplayName}</div>
+                      <div className="text-sm text-muted-foreground">{order.userEmail}</div>
+                  </TableCell>
+                  <TableCell>
+                    {format(order.orderDate.toDate(), 'MMM d, yyyy, h:mm a')}
+                  </TableCell>
+                  <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
+                  <TableCell>{getStatusBadge(order.status)}</TableCell>
+                  <TableCell>
+                      {order.status !== 'completed' && order.status !== 'cancelled' ? (
+                      <Select
+                          value={order.status}
+                          onValueChange={(value) => handleStatusChange(order, value as OrderStatus)}
+                          disabled={isUpdating === order.id}
+                      >
+                          <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Change status..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {order.status === 'pending' && <SelectItem value="confirmed">Confirm Order</SelectItem>}
+                              {order.status === 'confirmed' && <SelectItem value="delivering">Mark as Delivering</SelectItem>}
+                              {order.status === 'delivering' && <SelectItem value="completed">Mark as Completed</SelectItem>}
+                              <SelectItem value="cancelled">Cancel Order</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      ) : (
+                          <span className="text-sm text-muted-foreground">No actions</span>
+                      )}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No orders found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function AdminOrdersPage() {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+        <div className="space-y-8">
+            <div className="flex items-center gap-4">
+                <ShoppingCart className="w-8 h-8 text-primary" />
+                <h1 className="text-3xl font-bold tracking-tight font-headline">Customer Orders</h1>
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                    <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-64 w-full" />
+                </CardContent>
+            </Card>
+      </div>
+    );
+  }
+
+  if (user?.role !== 'admin') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+        <h1 className="text-3xl font-bold font-headline text-destructive">Access Denied</h1>
+        <p className="text-muted-foreground mt-2">
+          You do not have permission to view this page.
+        </p>
+      </div>
+    );
+  }
+
+  return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <ShoppingCart className="w-8 h-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight font-headline">
-          Customer Orders
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight font-headline">Customer Orders</h1>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Orders</CardTitle>
-          <CardDescription>
-            View and manage all orders placed by customers.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-5 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-28" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-20" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-10 w-32" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : sortedOrders.length > 0 ? (
-                sortedOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono text-xs">
-                      {order.id}
-                    </TableCell>
-                    <TableCell>
-                        <div className="font-medium">{order.userDisplayName}</div>
-                        <div className="text-sm text-muted-foreground">{order.userEmail}</div>
-                    </TableCell>
-                    <TableCell>
-                      {format(order.orderDate.toDate(), 'MMM d, yyyy, h:mm a')}
-                    </TableCell>
-                    <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>
-                        {order.status !== 'completed' && order.status !== 'cancelled' ? (
-                        <Select
-                            value={order.status}
-                            onValueChange={(value) => handleStatusChange(order, value as OrderStatus)}
-                            disabled={isUpdating === order.id}
-                        >
-                            <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Change status..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {order.status === 'pending' && <SelectItem value="confirmed">Confirm Order</SelectItem>}
-                                {order.status === 'confirmed' && <SelectItem value="delivering">Mark as Delivering</SelectItem>}
-                                {order.status === 'delivering' && <SelectItem value="completed">Mark as Completed</SelectItem>}
-                                <SelectItem value="cancelled">Cancel Order</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        ) : (
-                            <span className="text-sm text-muted-foreground">No actions</span>
-                        )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    No orders found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <AdminOrdersContent />
     </div>
   );
 }
