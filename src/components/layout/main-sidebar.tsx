@@ -70,6 +70,7 @@ const MainSidebar = () => {
 
   const servicesMenuItems = [
     { href: '/services/inventory', label: 'Inventory', icon: Boxes },
+    { href: '/services/orders', label: 'Orders', icon: ShoppingCart },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard },
     { href: '/services/po', label: 'PO', icon: FileText },
   ];
