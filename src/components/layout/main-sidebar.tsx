@@ -52,26 +52,26 @@ const MainSidebar = () => {
       href: "/dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      roles: ['admin', 'guest'],
+      adminOnly: false,
     },
     {
       href: "/admin",
       label: "Admin",
       icon: Settings,
-      roles: ['admin'],
+      adminOnly: true,
     },
      {
       href: "/about",
       label: "About Us",
       icon: Info,
-      roles: ['admin', 'guest'],
+      adminOnly: false,
     },
   ];
 
   const servicesMenuItems = [
-    { href: '/services/inventory', label: 'Inventory', icon: Boxes, roles: ['admin', 'guest'] },
-    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
-    { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
+    { href: '/services/inventory', label: 'Inventory', icon: Boxes },
+    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard },
+    { href: '/services/po', label: 'PO', icon: FileText },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
@@ -89,8 +89,10 @@ const MainSidebar = () => {
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         {menuItems.map((item) => {
-          const showItem = item.roles && item.roles.includes(user?.role || '');
-          return showItem ? (
+          if (item.adminOnly && user?.role !== 'admin') {
+            return null;
+          }
+          return (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
@@ -102,7 +104,7 @@ const MainSidebar = () => {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-          ) : null;
+          );
         })}
         
         {user?.role === 'admin' && (
@@ -118,7 +120,6 @@ const MainSidebar = () => {
                     <CollapsibleContent asChild>
                         <SidebarMenuSub>
                             {servicesMenuItems.map(item => (
-                                (item.roles.includes(user?.role || '') && !(item as any).hidden) ? (
                                 <SidebarMenuItem key={item.href}>
                                     <Link href={item.href}>
                                         <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
@@ -127,7 +128,6 @@ const MainSidebar = () => {
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuItem>
-                                ) : null
                             ))}
                         </SidebarMenuSub>
                     </CollapsibleContent>
