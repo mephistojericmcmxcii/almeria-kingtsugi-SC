@@ -54,7 +54,7 @@ interface AddEditItemDialogProps {
   itemToEdit?: InventoryItem | null;
 }
 
-const PREDEFINED_CATEGORIES = ["Pottery", "Textiles", "Woodcraft", "Jewelry", "Other"];
+const PREDEFINED_CATEGORIES = ["Office Supplies", "Laboratory Supplies", "ICT Supplies", "Furniture's & Fixture", "Electronics", "Other"];
 
 export function AddEditItemDialog({ isOpen, onOpenChange, itemToEdit }: AddEditItemDialogProps) {
   const { firestore } = useFirebase();
