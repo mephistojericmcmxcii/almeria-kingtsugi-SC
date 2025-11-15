@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useFirebase } from '@/firebase';
+import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -95,20 +95,20 @@ export function AddEditItemDialog({ isOpen, onOpenChange, itemToEdit }: AddEditI
 
   const onSubmit = async (values: AddEditItemFormValues) => {
     setIsSubmitting(true);
-    try {
-      const docId = itemToEdit ? itemToEdit.id : values.name.toLowerCase().replace(/\s+/g, '-');
-      const itemRef = doc(firestore, 'inventory', docId);
+    const docId = itemToEdit ? itemToEdit.id : values.name.toLowerCase().replace(/\s+/g, '-');
+    const itemRef = doc(firestore, 'inventory', docId);
 
-      const finalCategory = values.category === 'Other' ? values.otherCategory : values.category;
+    const finalCategory = values.category === 'Other' ? values.otherCategory! : values.category;
 
-      const dataToSave = {
+    const dataToSave = {
         name: values.name,
         category: finalCategory,
         description: values.description || '',
         updatedAt: serverTimestamp(),
         ...( !itemToEdit && { createdAt: serverTimestamp() })
-      };
+    };
 
+    try {
       await setDoc(itemRef, dataToSave, { merge: true });
 
       toast({
@@ -117,13 +117,21 @@ export function AddEditItemDialog({ isOpen, onOpenChange, itemToEdit }: AddEditI
       });
       
       onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving item:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not save the item. Please try again.",
-      });
+    } catch (error: any) {
+        if (error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                path: itemRef.path,
+                operation: itemToEdit ? 'update' : 'create',
+                requestResourceData: dataToSave,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not save the item. Please try again.",
+            });
+        }
     } finally {
       setIsSubmitting(false);
     }
