@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -17,15 +17,23 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ChevronLeft, CreditCard, Home, ShoppingCart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
 };
 
 export default function CheckoutPage() {
-    const { firestore, user } = useFirebase();
+    const { firestore } = useFirebase();
+    const { user } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
+
+    const [shippingOption, setShippingOption] = useState<'profile' | 'custom'>('profile');
+    const [customAddress, setCustomAddress] = useState('');
 
     const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'cart') : null, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
@@ -35,9 +43,17 @@ export default function CheckoutPage() {
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }, [cartItems]);
     
-    // Placeholder values
     const shippingFee = subtotal > 0 ? 50 : 0;
     const total = subtotal + shippingFee;
+
+    const finalShippingAddress = useMemo(() => {
+        if (shippingOption === 'profile') {
+            return user?.address;
+        }
+        return customAddress;
+    }, [shippingOption, user?.address, customAddress]);
+
+    const isPlaceOrderDisabled = !finalShippingAddress || finalShippingAddress.trim() === '';
 
     const handlePlaceOrder = () => {
         // In a real app, this would trigger payment processing and order creation.
@@ -105,17 +121,39 @@ export default function CheckoutPage() {
                             <Home className="w-6 h-6 text-primary" />
                             <CardTitle className="font-headline text-2xl">Shipping Information</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            {user?.address ? (
-                                <>
-                                    <p className="font-semibold">{user.displayName}</p>
-                                    <p className="text-muted-foreground">{user.address}</p>
-                                </>
-                            ) : (
-                                <p className="text-muted-foreground">
-                                    No address found. Please <Link href="/profile" className="underline text-primary">add one to your profile</Link>.
-                                </p>
-                            )}
+                        <CardContent className="space-y-4">
+                           <RadioGroup value={shippingOption} onValueChange={(value) => setShippingOption(value as 'profile' | 'custom')}>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="profile" id="profile" disabled={!user?.address} />
+                                    <Label htmlFor="profile" className={!user?.address ? 'text-muted-foreground' : ''}>
+                                        Use Profile Address
+                                    </Label>
+                                </div>
+                                {user?.address ? (
+                                    <div className="pl-6 text-sm text-muted-foreground border-l ml-2 py-2">
+                                        <p className='font-semibold text-foreground'>{user.displayName}</p>
+                                        <p>{user.address}</p>
+                                    </div>
+                                ) : (
+                                     <p className="pl-6 text-sm text-muted-foreground">
+                                        No address found. Please <Link href="/profile" className="underline text-primary">add one to your profile</Link>.
+                                    </p>
+                                )}
+
+                                <div className="flex items-center space-x-2 pt-2">
+                                    <RadioGroupItem value="custom" id="custom" />
+                                    <Label htmlFor="custom">Use a Different Address</Label>
+                                </div>
+                                {shippingOption === 'custom' && (
+                                     <div className="pl-6 border-l ml-2 py-2 space-y-2">
+                                        <Textarea 
+                                            placeholder="Enter your full shipping address..."
+                                            value={customAddress}
+                                            onChange={(e) => setCustomAddress(e.target.value)}
+                                        />
+                                    </div>
+                                )}
+                           </RadioGroup>
                         </CardContent>
                     </Card>
 
@@ -183,8 +221,8 @@ export default function CheckoutPage() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={!user?.address}>
-                            {user?.address ? 'Place Order' : 'Add Address to Continue'}
+                        <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isPlaceOrderDisabled}>
+                            {isPlaceOrderDisabled ? 'Enter a Shipping Address' : 'Place Order'}
                         </Button>
                     </CardFooter>
                 </Card>
@@ -192,4 +230,3 @@ export default function CheckoutPage() {
         </div>
     );
 }
-
