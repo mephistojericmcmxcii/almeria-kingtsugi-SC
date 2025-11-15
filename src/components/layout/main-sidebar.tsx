@@ -54,17 +54,17 @@ const MainSidebar = () => {
       icon: LayoutDashboard,
       adminOnly: false,
     },
-    {
-      href: "/admin",
-      label: "Admin",
-      icon: Settings,
-      adminOnly: true,
-    },
      {
       href: "/about",
       label: "About Us",
       icon: Info,
       adminOnly: false,
+    },
+    {
+      href: "/admin",
+      label: "Admin",
+      icon: Settings,
+      adminOnly: true,
     },
   ];
 
