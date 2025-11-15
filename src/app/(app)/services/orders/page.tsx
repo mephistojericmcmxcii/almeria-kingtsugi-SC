@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -29,7 +30,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { UserNav } from "../auth/user-nav";
+import { UserNav } from "@/components/auth/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
