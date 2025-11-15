@@ -127,6 +127,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Uh oh! Something went wrong.",
         description: error.message || "Could not sign in.",
       });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -157,6 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Google Sign-In Failed",
         description: error.message || "Could not sign in with Google.",
       });
+    } finally {
+        setIsLoading(false);
     }
   };
 

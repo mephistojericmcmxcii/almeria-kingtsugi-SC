@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Kintsugi Portal',
+  title: 'KINTSUGI variery shop',
   description: 'Business management for the KINTSUGI variety shop',
 };
 
