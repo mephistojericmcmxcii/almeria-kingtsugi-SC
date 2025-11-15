@@ -25,6 +25,7 @@ import {
   CreditCard,
   FileText,
   ChevronDown,
+  ShoppingCart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
@@ -66,6 +67,7 @@ const MainSidebar = () => {
 
   const servicesMenuItems = [
     { href: '/services/inventory', label: 'Inventory', icon: Boxes, roles: ['admin', 'guest'] },
+    { href: '/services/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
     { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
   ];
@@ -145,3 +147,5 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
+
+    

@@ -415,6 +415,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const newOrderRef = doc(collection(firestore, 'users', user.id, 'orders'));
                 const newOrder: Omit<Order, 'id'> = {
                     orderDate: serverTimestamp(),
+                    userId: user.id,
+                    userDisplayName: user.displayName,
+                    userEmail: user.email,
                     items: cartItems,
                     totalAmount,
                     shippingAddress,

@@ -235,6 +235,18 @@
           "format": "date-time",
           "description": "Timestamp when the order was placed."
         },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who placed the order."
+        },
+        "userDisplayName": {
+          "type": "string",
+          "description": "The display name of the user who placed the order."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The email of the user who placed the order."
+        },
         "items": {
           "type": "array",
           "items": {
@@ -253,6 +265,8 @@
           "type": "string",
           "enum": [
             "pending",
+            "confirmed",
+            "delivering",
             "completed",
             "cancelled"
           ]
@@ -260,6 +274,9 @@
       },
       "required": [
         "orderDate",
+        "userId",
+        "userDisplayName",
+        "userEmail",
         "items",
         "totalAmount",
         "shippingAddress",
@@ -318,7 +335,7 @@
           "schema": {
             "$ref": "#/backend/entities/Order"
           },
-          "description": "Stores a user's order history. Owned by the user.",
+          "description": "Stores a user's order history. Owned by the user. Admins can also read and update status.",
           "params": [
             {
               "name": "userId",
@@ -419,3 +436,5 @@
     "reasoning": "The Firestore structure is designed to support a business management portal with user authentication (Guest/Admin roles), a dashboard for metrics, and an admin panel for user and settings management. The structure emphasizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs.\\n\\n**Authorization Independence:**  Authorization data is denormalized to avoid `get()` calls in security rules.  For example, admin privileges are determined by the existence of a document in `/roles_admin/{userId}`, avoiding the need to read user profile data during authorization.\\n\\n**Structural Segregation:** Data with different access requirements is stored in separate collections (e.g., public vs. private data).  System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data. Inventory data is in its own collection with specific admin/guest rules, and variants are in a subcollection with admin-only access.\\n\\n**Access Modeling:** User-owned data will be stored in `/users/{userId}/...`. Global roles are managed via existence checks in dedicated role collections (`/roles_admin/{userId}`).\\n\\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations. The segregation of data based on access levels (e.g., system settings in a separate collection) ensures that listing operations can be secured without filtering based on document content.\\n\\n**Denormalization Strategy:**  The role is denormalized to avoid reads in security rules. The dashboard metrics do not have user based authorization requirements so it will be under a main collection. The system settings require admin only access, which is achieved via role verification."
   }
 }
+
+    

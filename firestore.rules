@@ -6,7 +6,7 @@
  * Data Structure:
  * - /users/{userId}: Stores user profiles. Accessible only to the user themselves.
  * - /users/{userId}/cart/{cartItemId}: Stores items in a user's shopping cart. Accessible only to the owner.
- * - /users/{userId}/orders/{orderId}: Stores a user's order history. Accessible only to the owner.
+ * - /users/{userId}/orders/{orderId}: Stores a user's order history. Accessible only to the owner. Admins can also manage all orders.
  * - /roles_admin/{userId}: Indicates admin status. The existence of a document grants admin privileges.
  * - /dashboard_metrics/{metricId}: Stores dashboard metrics. Accessible only to admins.
  * - /system_settings/{settingId}: Stores system settings. Accessible only to admins.
@@ -28,6 +28,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if the authenticated user is an admin.
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
     /**
      * @description Controls access to user profile data and subcollections like the cart.
      * @path /users/{userId}
@@ -44,7 +49,7 @@ service cloud.firestore {
       }
 
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if false; // Disallow listing of users for security reasons.
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
@@ -60,37 +65,29 @@ service cloud.firestore {
       }
 
        /**
-       * @description Controls access to the user's order history.
+       * @description Controls access to the user's order history. Admins can also manage all orders.
        * @path /users/{userId}/orders/{orderId}
        */
        match /orders/{orderId} {
          // Allow user to create and read their own orders.
          allow create, read: if isOwner(userId);
+         
          // Allow user to update their own order, but only to change the status to 'completed' or 'cancelled'.
          allow update: if isOwner(userId)
                       && request.resource.data.status != resource.data.status
                       && (request.resource.data.status == 'completed' || request.resource.data.status == 'cancelled');
+
+         // Allow admins to read and update any order's status.
+         allow get, list, update: if isAdmin();
        }
     }
 
     /**
      * @description Manages admin role assignments. The existence of a document grants admin privileges.
      * @path /roles_admin/{userId}
-     * @allow (create) An admin role can be created for a user.
-     * @deny (create) A non-admin cannot create an admin role.
-     * @allow (get) Admins can read the documents in /roles_admin
-     * @deny (get) Non-admins cannot read the documents in /roles_admin.
-     * @allow (update) An admin role can be updated for a user.
-     * @deny (update) A non-admin cannot update an admin role.
-     * @allow (delete) An admin role can be deleted for a user.
-     * @deny (delete) A non-admin cannot delete an admin role.
      * @principle Authorization Independence: Admin privileges are determined by the existence of a document in /roles_admin/{userId}.
      */
     match /roles_admin/{userId} {
-        function isAdmin() {
-            return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-        }
-
         allow get: if isAdmin();
         allow list: if false;
         allow create: if isAdmin();
@@ -101,65 +98,29 @@ service cloud.firestore {
     /**
      * @description Controls access to dashboard metrics. Only admins can read and write these metrics.
      * @path /dashboard_metrics/{metricId}
-     * @allow (create) Admins can create new dashboard metrics.
-     * @deny (create) Non-admins cannot create dashboard metrics.
-     * @allow (get) Admins can retrieve dashboard metrics.
-     * @deny (get) Non-admins cannot retrieve dashboard metrics.
-     * @allow (update) Admins can update dashboard metrics.
-     * @deny (update) Non-admins cannot update dashboard metrics.
-     * @allow (delete) Admins can delete dashboard metrics.
-     * @deny (delete) Non-admins cannot delete dashboard metrics.
      * @principle Role-based access control: Only users with the 'Admin' role can access dashboard metrics.
      */
     match /dashboard_metrics/{metricId} {
-      function isAdmin() {
-            return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-        }
-
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+      allow get, list, create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
     }
 
     /**
      * @description Controls access to system settings. Only admins can read and write these settings.
      * @path /system_settings/{settingId}
-     * @allow (create) Admins can create new system settings.
-     * @deny (create) Non-admins cannot create system settings.
-     * @allow (get) Admins can retrieve system settings.
-     * @deny (get) Non-admins cannot retrieve system settings.
-     * @allow (update) Admins can update system settings.
-     * @deny (update) Non-admins cannot update system settings.
-     * @allow (delete) Admins can delete system settings.
-     * @deny (delete) Non-admins cannot delete system settings.
      * @principle Role-based access control: Only users with the 'Admin' role can access system settings.
      */
     match /system_settings/{settingId} {
-      function isAdmin() {
-            return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-        }
-
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+      allow get, list, create: if isAdmin();
+      allow update, delete: if isAdmin() && resource != null;
     }
 
     /**
      * @description Controls access to parent inventory items. Admins have full access, guests can read.
      * @path /inventory/{itemId}
-     * @allow (get, list) All authenticated users (admins and guests) can read inventory.
-     * @allow (create, update, delete) Only admins can create, update, or delete inventory items.
      * @principle Role-based access control for inventory management.
      */
     match /inventory/{itemId} {
-      function isAdmin() {
-        return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-      }
-      
       // Anyone authenticated can read the inventory
       allow get, list: if request.auth != null;
 
@@ -169,7 +130,6 @@ service cloud.firestore {
        /**
        * @description Controls access to inventory item variants. Admins have full access.
        * @path /inventory/{itemId}/variants/{variantId}
-       * @allow (read, write) Only admins can manage item variants.
        */
       match /variants/{variantId} {
          allow read, write: if isAdmin();
@@ -177,3 +137,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

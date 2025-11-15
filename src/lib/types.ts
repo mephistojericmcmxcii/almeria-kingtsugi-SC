@@ -48,13 +48,19 @@ export type CartItem = {
   stock?: number;
 };
 
-export type OrderStatus = 'pending' | 'completed' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'delivering' | 'completed' | 'cancelled';
 
 export type Order = {
   id: string;
+  userId: string;
+  userDisplayName: string;
+  userEmail: string;
   orderDate: Timestamp;
   items: CartItem[];
   totalAmount: number;
   shippingAddress: string;
   status: OrderStatus;
+  ref?: DocumentReference; // Available on collection group queries
 };
+
+    
