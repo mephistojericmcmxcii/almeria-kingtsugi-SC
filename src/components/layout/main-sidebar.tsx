@@ -47,7 +47,7 @@ const MainSidebar = () => {
       href: "/dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      roles: ['admin'],
+      roles: ['admin', 'guest'],
     },
     {
       href: "/admin",
@@ -59,7 +59,7 @@ const MainSidebar = () => {
       href: "/about",
       label: "About Us",
       icon: Info,
-      roles: ['admin'],
+      roles: ['admin', 'guest'],
     },
   ];
 
@@ -85,7 +85,7 @@ const MainSidebar = () => {
         {menuItems.map((item) =>
           item.roles.includes(user?.role || '') ? (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
                   tooltip={item.label}
@@ -111,7 +111,7 @@ const MainSidebar = () => {
                         <SidebarMenuSub>
                             {servicesMenuItems.map(item => (
                                 <SidebarMenuItem key={item.href}>
-                                     <Link href={item.href} legacyBehavior passHref>
+                                     <Link href={item.href}>
                                         <SidebarMenuSubButton isActive={pathname === item.href}>
                                             <item.icon />
                                             <span>{item.label}</span>
