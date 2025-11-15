@@ -3,8 +3,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ShieldCheck, User } from "lucide-react";
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -12,37 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 export function LoginForm() {
   const { login, isLoading } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-  const { toast } = useToast();
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-
 
   const handleLogin = async (role: 'admin' | 'guest') => {
     setIsLoggingIn(true);
-    try {
-      if (role === 'admin') {
-        if (!email || !password) {
-            toast({
-                variant: "destructive",
-                title: "Login Error",
-                description: "Email and password are required for admin login.",
-            });
-            setIsLoggingIn(false);
-            return;
-        }
-        await login(role, email, password);
-      } else if (role === 'guest') {
-        await login(role);
-      }
-    } catch (error: any) {
-       toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error.message || "Could not sign in.",
-      });
-    } finally {
-        setIsLoggingIn(false);
-    }
+    await login(role);
+    setIsLoggingIn(false);
   };
 
   const disabled = isLoading || isLoggingIn;
@@ -53,15 +25,10 @@ export function LoginForm() {
         <CardTitle className="font-headline text-2xl">Welcome</CardTitle>
         <CardDescription>Sign in to access the portal.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="admin@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
+      <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Sign in as an administrator to manage the portal or as a guest for read-only access.
+          </p>
       </CardContent>
       <CardFooter className="flex flex-col gap-3">
         <Button className="w-full" onClick={() => handleLogin('admin')} disabled={disabled}>

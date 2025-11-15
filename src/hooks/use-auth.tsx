@@ -8,13 +8,12 @@ import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
-import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 
 interface AuthContextType {
   user: User | null;
-  login: (role: 'admin' | 'guest', email?: string, password?: string) => Promise<void>;
+  login: (role: 'admin' | 'guest') => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -28,85 +27,93 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
-  const userDocRef = useMemo(() => {
-    if (!firebaseUser || !firestore) return undefined;
-    return doc(firestore, 'users', firebaseUser.uid);
-  }, [firebaseUser, firestore]);
-
-  const [userData, isUserDocLoading, userDocError] = useDocumentData(userDocRef);
-
   useEffect(() => {
-    const totalLoading = isAuthLoading || (!!firebaseUser && isUserDocLoading);
-    setIsLoading(totalLoading);
+    const handleAuthChange = async (fbUser: FirebaseUser | null) => {
+      if (fbUser) {
+        // If there's a firebase user, fetch their firestore document
+        const userDocRef = doc(firestore, 'users', fbUser.uid);
+        try {
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            const appUser: User = {
+              id: fbUser.uid,
+              displayName: userData.displayName,
+              email: userData.email,
+              role: userData.role,
+              profileImageUrl: userData.profileImageUrl || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+            };
+            setUser(appUser);
+          } else {
+             // This case can happen if the user record was deleted from firestore
+             // but they are still authenticated.
+             setUser(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user document:", error);
+          setUser(null);
+        }
+      } else {
+        // No firebase user, so no app user.
+        setUser(null);
+      }
+       // Mark loading as false once we have processed the auth state.
+      setIsLoading(false);
+    };
 
-    if (!isAuthLoading && !firebaseUser) {
-      setUser(null);
-      return;
+    // We only set isLoading to true once, on initial load.
+    // isAuthLoading from useFirebase handles the initial auth check.
+    if (!isAuthLoading) {
+      handleAuthChange(firebaseUser);
     }
 
-    if (firebaseUser && userData) {
-       const appUser: User = {
-         id: firebaseUser.uid,
-         displayName: userData.displayName,
-         email: userData.email,
-         role: userData.role,
-         profileImageUrl: userData.profileImageUrl || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`,
-       };
-       setUser(appUser);
-    }
-    
-    if (userDocError) {
-      console.error("Error fetching user document:", userDocError);
-      setUser(null);
-    }
+  }, [firebaseUser, isAuthLoading, firestore, router]);
 
-  }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, userDocError, router]);
 
-  const login = async (role: 'admin' | 'guest', email?: string, password?: string) => {
-    let userCredential;
+  const login = async (role: 'admin' | 'guest') => {
+    setIsLoading(true);
+    const adminEmail = "admin@kintsugi.com";
+    const adminPassword = "kasinokeso";
+
     try {
+      let userCredential;
       if (role === 'guest') {
         userCredential = await signInAnonymously(auth);
-        const firebaseUser = userCredential.user;
-        const userRef = doc(firestore, "users", firebaseUser.uid);
-        const guestData = {
-            id: firebaseUser.uid,
+        const fbUser = userCredential.user;
+        setUser({
+            id: fbUser.uid,
             displayName: "Guest User",
-            email: `guest_${firebaseUser.uid}@example.com`,
+            email: `guest_${fbUser.uid}@example.com`,
             role: "guest",
-            profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
-        };
-        setDoc(userRef, guestData).catch(error => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: userRef.path,
-            operation: 'create',
-            requestResourceData: guestData,
-          }))
+            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
         });
-      } else if (role === 'admin' && email && password) {
+      } else if (role === 'admin') {
          try {
-            userCredential = await signInWithEmailAndPassword(auth, email, password);
+            userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
          } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
-                userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const firebaseUser = userCredential.user;
-                const userRef = doc(firestore, "users", firebaseUser.uid);
+                userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+                const fbUser = userCredential.user;
+                const userRef = doc(firestore, "users", fbUser.uid);
                 const adminData = {
-                    id: firebaseUser.uid,
+                    id: fbUser.uid,
                     displayName: "Admin User",
-                    email: email,
+                    email: adminEmail,
                     role: "admin",
-                    profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
+                    profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
                 };
+                // We must await the creation of user docs before proceeding
                 await setDoc(userRef, adminData);
-                const adminRoleRef = doc(firestore, "roles_admin", firebaseUser.uid);
+                const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
                 await setDoc(adminRoleRef, { role: "admin" });
+
             } else if (error.code === 'auth/invalid-credential') {
                 toast({
                   variant: "destructive",
                   title: "Invalid Credentials",
                   description: "Please check your email and password and try again.",
                 });
+                setIsLoading(false);
                 return;
             } else {
                 throw error;
@@ -124,6 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Uh oh! Something went wrong.",
         description: error.message || "Could not sign in.",
       });
+      setIsLoading(false);
     }
   };
 
