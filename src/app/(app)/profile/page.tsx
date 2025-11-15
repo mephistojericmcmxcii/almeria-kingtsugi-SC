@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { CartItem } from '@/lib/types';
 import Image from 'next/image';
@@ -45,12 +45,11 @@ const formatCurrency = (amount: number) => {
 
 
 function CartList() {
-    const { firestore, user } = useFirebase();
+    const { user, firestore, updateCartItemQuantity, removeCartItem } = useAuth();
     const router = useRouter();
-    const { updateCartItemQuantity, removeCartItem } = useAuth();
-    const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'cart') : null, [firestore, user]);
+    const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.id, 'cart') : null, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
-
+    
     const totalCartPrice = useMemo(() => {
         if (!cartItems) return 0;
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
@@ -261,3 +260,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { CartItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
@@ -28,8 +27,7 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function CheckoutPage() {
-    const { firestore } = useFirebase();
-    const { user } = useAuth();
+    const { user, firestore } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -234,3 +232,5 @@ export default function CheckoutPage() {
         </div>
     );
 }
+
+    
