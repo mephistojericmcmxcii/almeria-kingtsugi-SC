@@ -65,6 +65,8 @@ export default function InventoryPage() {
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
     try {
+      // Note: In a real app, you'd also want to delete all variants in the subcollection.
+      // This typically requires a Cloud Function for atomicity and efficiency.
       await deleteDoc(doc(firestore, 'inventory', itemToDelete.id));
       toast({
         title: "Item Deleted",
@@ -97,10 +99,10 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Parent Items</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Unique Items</CardTitle>
             <PackageSearch className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -116,6 +118,16 @@ export default function InventoryPage() {
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{categories.length}</div>}
              <p className="text-xs text-muted-foreground">Total unique categories</p>
+          </CardContent>
+        </Card>
+         <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Inventory Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">₱---</div>}
+             <p className="text-xs text-muted-foreground">Calculation requires setup*</p>
           </CardContent>
         </Card>
       </div>
@@ -167,7 +179,7 @@ export default function InventoryPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-sm">{item.description || 'N/A'}</TableCell>
                     <TableCell className="text-right">
-                       {user?.role === 'admin' && (
+                       {user?.role === 'admin' ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -192,6 +204,11 @@ export default function InventoryPage() {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                       ) : (
+                         <Button variant="outline" size="sm" onClick={() => router.push(`/services/inventory/${item.id}`)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                         </Button>
                        )}
                     </TableCell>
                   </TableRow>
@@ -238,3 +255,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+
