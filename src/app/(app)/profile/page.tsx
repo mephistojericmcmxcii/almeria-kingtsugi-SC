@@ -49,21 +49,15 @@ const formatCurrency = (amount: number) => {
 
 
 function CartList() {
-    const { user, firestore, updateCartItemQuantity, removeCartItem } = useAuth();
+    const { user, cart: cartItems, isLoading: isAuthLoading, updateCartItemQuantity, removeCartItem } = useAuth();
     const router = useRouter();
-    
-    const cartCollectionRef = useMemoFirebase(() => {
-        if (!firestore || !user) return null;
-        return collection(firestore, 'users', user.id, 'cart');
-    }, [firestore, user]);
-    const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
     
     const totalCartPrice = useMemo(() => {
         if (!cartItems) return 0;
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }, [cartItems]);
 
-    if (isLoading) {
+    if (isAuthLoading) {
         return <div className="text-center py-12 text-muted-foreground">Loading your cart...</div>;
     }
 

@@ -4,7 +4,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, errorEmitter } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction } from 'firebase/firestore';
@@ -26,6 +26,7 @@ type CombinedVariant = InventoryVariant & {
 
 interface AuthContextType {
   user: User | null;
+  cart: CartItem[] | null;
   firestore: Firestore;
   toast: ({...props}: any) => void;
   login: (email: string, password: string) => Promise<void>;
@@ -50,6 +51,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+
+  // Fetch cart items in real-time
+  const cartCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.id, 'cart');
+  }, [firestore, user]);
+  const { data: cart } = useCollection<CartItem>(cartCollectionRef);
 
   useEffect(() => {
     const handleAuthChange = async (fbUser: FirebaseUser | null) => {
@@ -518,7 +526,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus };
+  const value = { user, cart, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus };
 
   return (
     <AuthContext.Provider value={value}>
@@ -534,4 +542,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
