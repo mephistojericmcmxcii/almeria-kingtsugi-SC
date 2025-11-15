@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -99,6 +98,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             });
         }
     } else {
+        // Reset image states when dialog closes
         setImagePreview(null);
         setImageFile(null);
         if (fileInputRef.current) {
@@ -122,15 +122,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         return;
     }
 
-    if (file.size > 2 * 1024 * 1024) { // 2MB
-        toast({
-            variant: "destructive",
-            title: "Image Too Large",
-            description: "Please select an image smaller than 2MB.",
-        });
-        return;
-    }
-
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -150,6 +141,10 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           toast({ variant: "destructive", title: "Error", description: "Parent item not found." });
           return;
       }
+      if (!storage) {
+          toast({ variant: "destructive", title: "Error", description: "Storage service is not available." });
+          return;
+      }
 
     setIsSubmitting(true);
     let finalImageUrl = variantToEdit?.imageUrl || '';
@@ -162,6 +157,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             const uploadResult = await uploadBytes(imageStorageRef, imageFile);
             finalImageUrl = await getDownloadURL(uploadResult.ref);
         } else if (!imagePreview && variantToEdit?.imageUrl) {
+            // This case handles removing an existing image
             finalImageUrl = '';
         }
 
