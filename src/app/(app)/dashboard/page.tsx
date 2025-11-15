@@ -5,8 +5,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, getDoc, doc } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { ViewProductModal } from '@/components/dashboard/view-product-modal';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,12 +26,13 @@ type CombinedVariant = InventoryVariant & {
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const router = useRouter();
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [combinedVariants, setCombinedVariants] = useState<CombinedVariant[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [selectedVariant, setSelectedVariant] = useState<CombinedVariant | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const variantsCollectionGroup = useMemoFirebase(() => collectionGroup(firestore, 'variants'), [firestore]);
   const { data: variants, isLoading: areVariantsLoading } = useCollection<InventoryVariant>(variantsCollectionGroup);
@@ -89,6 +90,11 @@ export default function DashboardPage() {
     })
   }
 
+  const handleViewDetails = (variant: CombinedVariant) => {
+    setSelectedVariant(variant);
+    setIsModalOpen(true);
+  }
+
   const getPlaceholderImage = (itemId: string) => {
       const itemImage = PlaceHolderImages.find(p => p.id === itemId);
       const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
@@ -111,6 +117,7 @@ export default function DashboardPage() {
 
 
   return (
+    <>
     <div className="space-y-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
@@ -188,7 +195,7 @@ export default function DashboardPage() {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex-col sm:flex-row gap-2 pt-4">
-                                <Button variant="outline" className="w-full" onClick={() => router.push(`/services/inventory/${item.parentItemId}`)}>
+                                <Button variant="outline" className="w-full" onClick={() => handleViewDetails(item)}>
                                     <Eye className="mr-2" /> View Details
                                 </Button>
                                 <Button className="w-full" onClick={() => handleOrderClick(item.parentName, item.brand)} disabled={item.quantity <= 0}>
@@ -205,5 +212,13 @@ export default function DashboardPage() {
             </div>
         )}
     </div>
+    {selectedVariant && (
+        <ViewProductModal 
+            isOpen={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            variant={selectedVariant}
+        />
+    )}
+    </>
   );
 }
