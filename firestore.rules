@@ -10,9 +10,11 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Users can read/write their own data.
-      // Admins can read/write any user's data.
-      allow read, write: if request.auth.uid == userId || isAdmin();
+      // User can read and write their own data.
+      allow read, write: if request.auth.uid == userId;
+      // Admins can get, create, update, or delete a specific user's document,
+      // but they cannot list the entire collection.
+      allow get, create, update, delete: if isAdmin();
 
       match /cart/{cartItemId} {
         allow read, write: if request.auth.uid == userId;
