@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -98,7 +99,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             });
         }
     } else {
-        // Reset image state when dialog closes
         setImagePreview(null);
         setImageFile(null);
         if (fileInputRef.current) {
@@ -108,7 +108,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   }, [variantToEdit, form, isOpen]);
 
 
-  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -162,7 +162,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             const uploadResult = await uploadBytes(imageStorageRef, imageFile);
             finalImageUrl = await getDownloadURL(uploadResult.ref);
         } else if (!imagePreview && variantToEdit?.imageUrl) {
-            // Image was removed, so clear the URL
             finalImageUrl = '';
         }
 
