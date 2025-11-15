@@ -29,7 +29,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useRef } from 'react';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
-import imageCompression from 'browser-image-compression';
 import { Upload, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -133,24 +132,8 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         return;
     }
 
-    const options = {
-      maxSizeMB: 0.5, // Compress to ~500KB
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    };
-
-    try {
-      const compressedFile = await imageCompression(file, options);
-      setImageFile(compressedFile);
-      setImagePreview(URL.createObjectURL(compressedFile));
-    } catch (error) {
-      console.error('Error compressing image:', error);
-      toast({
-        variant: "destructive",
-        title: "Image Compression Failed",
-        description: "Could not process the image. Please try another file.",
-      });
-    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const removeImage = () => {
@@ -253,7 +236,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   <div className="relative h-24 w-24 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
                     {imagePreview ? (
                       <>
-                        <Image src={imagePreview} alt="Variant preview" fill objectFit="cover" />
+                        <Image src={imagePreview} alt="Variant preview" fill style={{objectFit: "cover"}} />
                         <Button
                           type="button"
                           variant="destructive"
