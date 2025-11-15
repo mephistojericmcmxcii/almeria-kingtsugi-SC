@@ -160,7 +160,9 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         const imageStoragePath = `inventory-item-variant-images/${imageFileName}`;
         const imageStorageRef = storageRef(storage, imageStoragePath);
         
+        // Await the upload
         const uploadResult = await uploadBytes(imageStorageRef, imageFile);
+        // Await the URL
         finalImageUrl = await getDownloadURL(uploadResult.ref);
       } else if (!imagePreview && variantToEdit?.imageUrl) {
         // If image was removed, delete old one from storage
