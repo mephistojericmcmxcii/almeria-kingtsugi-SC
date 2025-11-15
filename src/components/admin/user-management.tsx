@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react"
-import { MoreHorizontal, UserPlus } from "lucide-react"
+import { MoreHorizontal } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,6 @@ import { useFirebase, useCollection, useMemoFirebase } from "@/firebase"
 import type { User } from "@/lib/types"
 import { collection } from "firebase/firestore"
 import { Skeleton } from "../ui/skeleton"
-import { AddAdminDialog } from "./add-admin-modal"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +38,6 @@ const getInitials = (name?: string) => {
 export function UserManagement() {
   const { user: currentUser, firestore } = useAuth();
   const { updateUserRole } = useAuth();
-  const [isAddAdminDialogOpen, setIsAddAdminDialogOpen] = useState(false);
   const [userToUpdate, setUserToUpdate] = useState<{user: User, newRole: 'admin' | 'guest'} | null>(null);
 
   const usersCollectionRef = useMemoFirebase(() => {
@@ -64,9 +62,6 @@ export function UserManagement() {
               <CardTitle className="font-headline">Users</CardTitle>
               <CardDescription>Manage your portal users and their roles.</CardDescription>
             </div>
-            <Button onClick={() => setIsAddAdminDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" /> Add User
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -152,7 +147,6 @@ export function UserManagement() {
           </Table>
         </CardContent>
       </Card>
-      <AddAdminDialog isOpen={isAddAdminDialogOpen} onOpenChange={setIsAddAdminDialogOpen} />
 
       <AlertDialog open={!!userToUpdate} onOpenChange={(open) => !open && setUserToUpdate(null)}>
         <AlertDialogContent>

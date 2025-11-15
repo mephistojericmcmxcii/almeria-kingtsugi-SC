@@ -72,7 +72,6 @@ const MainSidebar = () => {
     { href: '/services/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
     { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
-    { href: '/services/create-admin', label: 'Create Admin', icon: UserPlus, roles: ['admin'] },
     { href: '/services/make-admin', label: 'Make Admin', icon: UserCog, roles: ['admin'] },
   ];
 
