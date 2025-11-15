@@ -176,7 +176,7 @@ function OrderHistory() {
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
                             <div className="flex flex-col text-left">
-                                <span className="font-semibold text-base">Order #{order.id.slice(0, 7)}...</span>
+                                <span className="font-semibold text-base font-mono">Order #{order.id}</span>
                                 <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
                             </div>
                             <div className="flex items-center gap-4">

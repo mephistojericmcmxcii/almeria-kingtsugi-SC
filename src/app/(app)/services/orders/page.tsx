@@ -68,7 +68,7 @@ export default function AdminOrdersPage() {
       await updateDoc(order.ref, { status: newStatus });
       toast({
         title: 'Order Status Updated',
-        description: `Order #${order.id.slice(0,7)} is now ${newStatus}.`,
+        description: `Order #${order.id} is now ${newStatus}.`,
       });
     } catch (error) {
       console.error('Failed to update order status:', error);
@@ -162,7 +162,7 @@ export default function AdminOrdersPage() {
                 sortedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-mono text-xs">
-                      #{order.id.slice(0, 7)}...
+                      {order.id}
                     </TableCell>
                     <TableCell>
                         <div className="font-medium">{order.userDisplayName}</div>
@@ -210,5 +210,3 @@ export default function AdminOrdersPage() {
     </div>
   );
 }
-
-    
