@@ -36,14 +36,17 @@ const getInitials = (name?: string) => {
 };
 
 export function UserManagement() {
-  const { user: currentUser, firestore } = useAuth();
-  const { updateUserRole } = useAuth();
+  const { user: currentUser, firestore, updateUserRole } = useAuth();
   const [userToUpdate, setUserToUpdate] = useState<{user: User, newRole: 'admin' | 'guest'} | null>(null);
 
   const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
+    // Only fetch users if the user is an admin and firestore is available
+    if (firestore && currentUser?.role === 'admin') {
+      return collection(firestore, 'users');
+    }
+    return null;
+  }, [firestore, currentUser?.role]);
+
   const { data: users, isLoading } = useCollection<User>(usersCollectionRef);
 
   const handleRoleChangeConfirm = async () => {
