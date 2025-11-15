@@ -17,7 +17,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { CartItem, Order, OrderStatus } from '@/lib/types';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -130,27 +130,15 @@ function CartList() {
 }
 
 function OrderHistory() {
-    const { user, firestore, toast } = useAuth();
+    const { user, firestore, updateOrderStatus } = useAuth();
     const ordersCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.id, 'orders') : null, [firestore, user]);
     const { data: orders, isLoading } = useCollection<Order>(ordersCollectionRef);
+    const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-    const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
-        if (!user) return;
-        const orderRef = doc(firestore, 'users', user.id, 'orders', orderId);
-        try {
-            await updateDoc(orderRef, { status });
-            toast({
-                title: "Order Updated",
-                description: `Your order has been marked as ${status}.`
-            });
-        } catch (error) {
-            console.error("Error updating order status:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Update Failed',
-                description: 'Could not update the order status.'
-            });
-        }
+    const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
+        setIsUpdating(order.id);
+        await updateOrderStatus(order, status);
+        setIsUpdating(null);
     };
 
     const getStatusBadge = (status: OrderStatus) => {
@@ -211,15 +199,15 @@ function OrderHistory() {
                             </div>
                             <div className="flex gap-2 justify-end pt-4">
                                 {(order.status === 'pending' || order.status === 'confirmed') && (
-                                     <Button variant="outline" size="sm" onClick={() => updateOrderStatus(order.id, 'cancelled')}>
+                                     <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
                                         <XCircle className="mr-2 h-4 w-4"/>
-                                        Cancel Order
+                                        {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
                                     </Button>
                                 )}
                                 {order.status === 'delivering' && (
-                                    <Button size="sm" onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                    <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
                                         <CheckCircle className="mr-2 h-4 w-4"/>
-                                        Mark as Received
+                                         {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
                                     </Button>
                                 )}
                             </div>

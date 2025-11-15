@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -6,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order } from '@/lib/types';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction } from 'firebase/firestore';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -38,6 +39,7 @@ interface AuthContextType {
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string) => Promise<boolean>;
+  updateOrderStatus: (order: Order, newStatus: OrderStatus) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -462,6 +464,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const updateOrderStatus = async (order: Order, newStatus: OrderStatus): Promise<boolean> => {
+        const orderRef = order.ref || doc(firestore, 'users', order.userId, 'orders', order.id);
+        
+        try {
+            if (newStatus === 'cancelled' && order.status !== 'cancelled') {
+                // Transaction to restock inventory and update order status
+                await runTransaction(firestore, async (transaction: Transaction) => {
+                    // Update order status
+                    transaction.update(orderRef, { status: newStatus });
+
+                    // Restock each item in the inventory
+                    for (const item of order.items) {
+                        const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                        transaction.update(variantRef, {
+                            quantity: increment(item.quantity)
+                        });
+                    }
+                });
+            } else {
+                // For other status changes, just update the document
+                await updateDoc(orderRef, { status: newStatus });
+            }
+
+            toast({
+                title: "Order Updated",
+                description: `Order #${order.id} has been marked as ${newStatus}.`,
+            });
+            return true;
+        } catch (error: any) {
+            console.error("Error updating order status:", error);
+            toast({
+                variant: "destructive",
+                title: "Update Failed",
+                description: "Could not update the order status. Please try again.",
+            });
+             if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: orderRef.path,
+                    operation: 'update',
+                    requestResourceData: { status: newStatus },
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            }
+            return false;
+        }
+    };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -469,7 +518,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder };
+  const value = { user, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus };
 
   return (
     <AuthContext.Provider value={value}>
@@ -486,4 +535,3 @@ export const useAuth = () => {
   return context;
 };
 
-    

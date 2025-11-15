@@ -3,10 +3,9 @@
 
 import { useState, useMemo } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, doc, updateDoc } from 'firebase/firestore';
+import { collectionGroup } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import {
   Card,
@@ -35,8 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart } from 'lucide-react';
 
 export default function AdminOrdersPage() {
-  const { firestore } = useFirebase();
-  const { toast } = useToast();
+  const { firestore, updateOrderStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
   const ordersCollectionGroup = useMemoFirebase(
@@ -55,31 +53,9 @@ export default function AdminOrdersPage() {
   }, [orders]);
 
   const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {
-    if (!order.ref) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Order reference is missing.',
-        });
-        return;
-    }
     setIsUpdating(order.id);
-    try {
-      await updateDoc(order.ref, { status: newStatus });
-      toast({
-        title: 'Order Status Updated',
-        description: `Order #${order.id} is now ${newStatus}.`,
-      });
-    } catch (error) {
-      console.error('Failed to update order status:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: 'Could not update the order status.',
-      });
-    } finally {
-      setIsUpdating(null);
-    }
+    await updateOrderStatus(order, newStatus);
+    setIsUpdating(null);
   };
 
   const getStatusBadge = (status: OrderStatus) => {
