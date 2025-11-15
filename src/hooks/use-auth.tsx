@@ -234,14 +234,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const fbUser = userCredential.user;
 
       const userRef = doc(firestore, 'users', fbUser.uid);
-      const newUser: Omit<User, 'id'> = {
+      const newUser: User = {
+        id: fbUser.uid,
         displayName: displayName,
         email: fbUser.email!,
         role: 'guest',
         profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
         address: '',
       };
-      await setDoc(userRef, {id: fbUser.uid, ...newUser});
+      await setDoc(userRef, newUser);
       
       toast({
         title: "Account Created!",
@@ -280,14 +281,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (additionalInfo?.isNewUser) {
         const userRef = doc(firestore, 'users', fbUser.uid);
-        const newUser: Omit<User, 'id'> = {
+        const newUser: User = {
+          id: fbUser.uid,
           displayName: fbUser.displayName || 'New User',
           email: fbUser.email!,
           role: 'guest', 
           profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
           address: '',
         };
-        await setDoc(userRef, {id: fbUser.uid, ...newUser});
+        await setDoc(userRef, newUser);
       }
       router.push('/dashboard');
     } catch (error: any) {
@@ -647,6 +649,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
-    
