@@ -5,6 +5,7 @@
  *
  * Data Structure:
  * - /users/{userId}: Stores user profiles. Accessible only to the user themselves.
+ * - /users/{userId}/cart/{cartItemId}: Stores items in a user's shopping cart. Accessible only to the owner.
  * - /roles_admin/{userId}: Indicates admin status. The existence of a document grants admin privileges.
  * - /dashboard_metrics/{metricId}: Stores dashboard metrics. Accessible only to admins.
  * - /system_settings/{settingId}: Stores system settings. Accessible only to admins.
@@ -27,17 +28,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile data.
+     * @description Controls access to user profile data and subcollections like the cart.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user123' can create their profile.
-     * @deny (create) User with ID 'user456' cannot create a profile for 'user123'.
-     * @allow (get) User with ID 'user123' can retrieve their profile.
-     * @deny (get) User with ID 'user456' cannot retrieve the profile of 'user123'.
-     * @allow (update) User with ID 'user123' can update their profile.
-     * @deny (update) User with ID 'user456' cannot update the profile of 'user123'.
-     * @allow (delete) User with ID 'user123' can delete their profile.
-     * @deny (delete) User with ID 'user456' cannot delete the profile of 'user123'.
-     * @principle Enforces document ownership for writes.  Users can only read and write their own profile data.
      */
     match /users/{userId} {
       // Helper function to check if the authenticated user is the owner of the document.
@@ -55,6 +47,16 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Controls access to the user's shopping cart.
+       * @path /users/{userId}/cart/{cartItemId}
+       * @allow (read, write) The user can fully manage their own cart.
+       * @deny (read, write) Users cannot access other users' carts.
+       */
+      match /cart/{cartItemId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     /**

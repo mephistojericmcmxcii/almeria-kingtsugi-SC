@@ -192,6 +192,37 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "CartItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CartItem",
+      "type": "object",
+      "description": "Represents an item in a user's shopping cart.",
+      "properties": {
+        "variantId": {
+          "type": "string",
+          "description": "ID of the inventory variant."
+        },
+        "parentItemId": {
+          "type": "string",
+          "description": "ID of the parent inventory item."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Number of units of the variant in the cart."
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the item was added to the cart."
+        }
+      },
+      "required": [
+        "variantId",
+        "parentItemId",
+        "quantity",
+        "addedAt"
+      ]
     }
   },
   "auth": {
@@ -214,6 +245,26 @@
             {
               "name": "userId",
               "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/cart/{cartItemId}",
+        "definition": {
+          "entityName": "CartItem",
+          "schema": {
+            "$ref": "#/backend/entities/CartItem"
+          },
+          "description": "Stores items in a user's shopping cart. Owned by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the cart."
+            },
+            {
+              "name": "cartItemId",
+              "description": "The unique ID for the cart item."
             }
           ]
         }

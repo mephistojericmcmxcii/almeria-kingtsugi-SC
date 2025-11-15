@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -7,13 +8,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User } from 'lucide-react';
+import { ShoppingCart, History, User, Package } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState } from 'react';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { CartItem } from '@/lib/types';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -31,6 +37,61 @@ const getInitials = (name?: string) => {
   }
   return name.substring(0, 2);
 };
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+};
+
+
+function CartList() {
+    const { firestore, user } = useFirebase();
+    const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'cart') : null, [firestore, user]);
+    const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
+
+    if (isLoading) {
+        return <div className="text-center py-12 text-muted-foreground">Loading your cart...</div>;
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+        return <div className="text-center py-12 text-muted-foreground"><p>Your cart is empty.</p></div>;
+    }
+    
+    const getPlaceholderImage = (itemId: string | undefined) => {
+      const itemImage = PlaceHolderImages.find(p => p.id === itemId);
+      const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
+      return itemImage || fallbackImage!;
+    }
+
+    return (
+        <div className="space-y-4">
+            {cartItems.map(item => {
+                const placeholder = getPlaceholderImage(item.parentItemId);
+                return (
+                <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                     <Image 
+                        src={placeholder.imageUrl} 
+                        alt={item.parentName || 'product'} 
+                        width={64} 
+                        height={64} 
+                        className="rounded-md object-cover"
+                        data-ai-hint={placeholder.imageHint}
+                        />
+                    <div className="flex-grow">
+                        <p className="font-semibold">{item.parentName}</p>
+                        <p className="text-sm text-muted-foreground">{item.brand}</p>
+                        <p className="text-sm">Quantity: {item.quantity}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="font-semibold">{formatCurrency((item.price || 0) * item.quantity)}</p>
+                        <p className="text-sm text-muted-foreground">({formatCurrency(item.price || 0)} each)</p>
+                    </div>
+                </div>
+                )
+            })}
+        </div>
+    );
+}
+
 
 export default function ProfilePage() {
   const { user, updateUserProfile, isLoading: isAuthLoading } = useAuth();
@@ -83,13 +144,13 @@ export default function ProfilePage() {
             <User className="mr-2" />
             Profile
           </TabsTrigger>
+           <TabsTrigger value="cart">
+            <ShoppingCart className="mr-2" />
+            My Cart
+          </TabsTrigger>
           <TabsTrigger value="orders">
             <History className="mr-2" />
             Order History
-          </TabsTrigger>
-          <TabsTrigger value="cart">
-            <ShoppingCart className="mr-2" />
-            My Cart
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
@@ -161,10 +222,11 @@ export default function ProfilePage() {
               <CardDescription>Items you have added to your cart.</CardDescription>
             </CardHeader>
             <CardContent>
-               <div className="text-center py-12 text-muted-foreground">
-                <p>Your cart is empty.</p>
-              </div>
+               <CartList />
             </CardContent>
+             <CardFooter className="flex justify-end">
+                <Button>Proceed to Checkout</Button>
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>

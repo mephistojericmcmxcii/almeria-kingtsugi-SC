@@ -33,4 +33,17 @@ export type InventoryVariant = {
   ref?: DocumentReference; 
 };
 
+export type CartItem = {
+  id: string;
+  variantId: string;
+  parentItemId: string;
+  quantity: number;
+  addedAt: any;
+  // Denormalized data for easy display in the cart
+  parentName?: string;
+  brand?: string;
+  price?: number;
+  imageUrl?: string;
+  imageHint?: string;
+};
     

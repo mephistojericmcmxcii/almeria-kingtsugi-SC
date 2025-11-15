@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/hooks/use-auth';
 import { collection, collectionGroup, getDoc, doc } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,7 @@ type CombinedVariant = InventoryVariant & {
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
+  const { addToCart } = useAuth();
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,12 +85,9 @@ export default function DashboardPage() {
     );
   }, [combinedVariants, searchTerm]);
   
-  const handleOrderClick = (itemName: string, brand: string) => {
-    toast({
-        title: "Coming Soon!",
-        description: `Ordering for ${itemName} - ${brand} is not yet available.`
-    })
-  }
+  const handleAddToCart = (variant: CombinedVariant) => {
+    addToCart(variant);
+  };
 
   const handleViewDetails = (variant: CombinedVariant) => {
     setSelectedVariant(variant);
@@ -198,8 +197,8 @@ export default function DashboardPage() {
                                 <Button variant="outline" className="w-full" onClick={() => handleViewDetails(item)}>
                                     <Eye className="mr-2" /> View Details
                                 </Button>
-                                <Button className="w-full" onClick={() => handleOrderClick(item.parentName, item.brand)} disabled={item.quantity <= 0}>
-                                    <ShoppingCart className="mr-2" /> Add to Order
+                                <Button className="w-full" onClick={() => handleAddToCart(item)} disabled={item.quantity <= 0}>
+                                    <ShoppingCart className="mr-2" /> Add to Cart
                                 </Button>
                             </CardFooter>
                         </Card>

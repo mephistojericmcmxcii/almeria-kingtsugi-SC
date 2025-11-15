@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import type { InventoryVariant } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/hooks/use-auth';
 
 import {
   Dialog,
@@ -13,8 +14,10 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tag, Package, Boxes, FileText, ShoppingCart } from 'lucide-react';
+import { Tag, Package } from 'lucide-react';
 import { Button } from '../ui/button';
+import { ShoppingCart } from 'lucide-react';
+
 
 type CombinedVariant = InventoryVariant & {
     parentName: string;
@@ -29,7 +32,14 @@ interface ViewProductModalProps {
 }
 
 export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductModalProps) {
+  const { addToCart } = useAuth();
+  
   if (!variant) return null;
+
+  const handleAddToCart = () => {
+    addToCart(variant);
+    onOpenChange(false);
+  }
 
   const getPlaceholderImage = (itemId: string) => {
     const itemImage = PlaceHolderImages.find(p => p.id === itemId);
@@ -91,8 +101,8 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
                 </div>
 
                 <div className="pt-4 flex flex-col gap-2">
-                    <Button size="lg" disabled={variant.quantity <= 0}>
-                        <ShoppingCart className="mr-2" /> Add to Order
+                    <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCart}>
+                        <ShoppingCart className="mr-2" /> Add to Cart
                     </Button>
                     <Button size="lg" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                 </div>
