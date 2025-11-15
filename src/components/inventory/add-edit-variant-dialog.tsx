@@ -137,54 +137,72 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
 
   const onSubmit = async (values: AddEditVariantFormValues) => {
-      if (!item) {
-          toast({ variant: "destructive", title: "Error", description: "Parent item not found." });
-          return;
-      }
-      if (!storage) {
-          toast({ variant: "destructive", title: "Error", description: "Storage service is not available." });
-          return;
-      }
+    if (!item) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Parent item not found.' });
+      return;
+    }
+    // Added firestore validation
+    if (!storage || !firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firebase services are not available.' });
+      return;
+    }
 
     setIsSubmitting(true);
     let finalImageUrl = variantToEdit?.imageUrl || '';
 
+    // Explicit variant ID generation
+    const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+    const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
+    const variantId = variantRef.id;
+
+    // Better error handling for image upload
+    if (imageFile) {
+      try {
+        console.log(`Uploading image for variant ${variantId}...`);
+        const imageFileName = `${variantId}-${imageFile.name}`;
+        const imageStorageRef = storageRef(storage, `inventory-item-variant-images/${imageFileName}`);
+        
+        const uploadResult = await uploadBytes(imageStorageRef, imageFile);
+        finalImageUrl = await getDownloadURL(uploadResult.ref);
+        console.log('Image uploaded successfully. URL:', finalImageUrl);
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        toast({
+          variant: 'destructive',
+          title: 'Image Upload Failed',
+          description: 'Could not upload the image. Please try again.',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    } else if (!imagePreview && variantToEdit?.imageUrl) {
+      // This case handles removing an existing image
+      finalImageUrl = '';
+    }
+
     try {
-        if (imageFile) {
-            const imageFileName = `${item.id}-${Date.now()}-${imageFile.name}`;
-            const imageStorageRef = storageRef(storage, `inventory-item-variant-images/${imageFileName}`);
-            
-            const uploadResult = await uploadBytes(imageStorageRef, imageFile);
-            finalImageUrl = await getDownloadURL(uploadResult.ref);
-        } else if (!imagePreview && variantToEdit?.imageUrl) {
-            // This case handles removing an existing image
-            finalImageUrl = '';
-        }
-
-      const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-      const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
-
+      console.log('Saving variant data to Firestore...');
       const dataToSave = {
         ...values,
         imageUrl: finalImageUrl,
         updatedAt: serverTimestamp(),
-        ...(!variantToEdit && { createdAt: serverTimestamp() })
+        ...(!variantToEdit && { createdAt: serverTimestamp() }),
       };
 
       await setDoc(variantRef, dataToSave, { merge: true });
 
       toast({
-        title: variantToEdit ? "Variant Updated" : "Variant Added",
+        title: variantToEdit ? 'Variant Updated' : 'Variant Added',
         description: `The variant has been saved to ${item.name}.`,
       });
       
       onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving variant:", error);
+    } catch (firestoreError) {
+      console.error('Firestore save failed:', firestoreError);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not save the variant. Please try again.",
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'Could not save the variant data. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
