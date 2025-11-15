@@ -113,6 +113,16 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    const acceptedTypes = ['image/jpeg', 'image/png'];
+    if (!acceptedTypes.includes(file.type)) {
+        toast({
+            variant: "destructive",
+            title: "Invalid File Type",
+            description: "Please select a PNG or JPEG image.",
+        });
+        return;
+    }
 
     if (file.size > 2 * 1024 * 1024) { // 2MB
         toast({
@@ -168,8 +178,8 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             const imageFileName = `${item.id}-${Date.now()}-${imageFile.name}`;
             const imageStorageRef = storageRef(storage, `inventory-variant-images/${imageFileName}`);
             
-            await uploadBytes(imageStorageRef, imageFile);
-            finalImageUrl = await getDownloadURL(imageStorageRef);
+            const uploadResult = await uploadBytes(imageStorageRef, imageFile);
+            finalImageUrl = await getDownloadURL(uploadResult.ref);
         } else if (imagePreview === null && variantToEdit?.imageUrl) {
             // Image was removed, so clear the URL
             finalImageUrl = '';
@@ -178,12 +188,12 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
       const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
 
-      const dataToSave = {
+      const dataToSave: Omit<InventoryVariant, 'id'> = {
         ...values,
         imageUrl: finalImageUrl,
         description: values.description || '',
         updatedAt: serverTimestamp(),
-        ...( !variantToEdit && { createdAt: serverTimestamp() })
+        createdAt: variantToEdit?.createdAt || serverTimestamp()
       };
 
       await setDoc(variantRef, dataToSave, { merge: true });
@@ -230,13 +240,14 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   <div className="relative h-24 w-24 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
                     {imagePreview ? (
                       <>
-                        <Image src={imagePreview} alt="Variant preview" layout="fill" objectFit="cover" />
+                        <Image src={imagePreview} alt="Variant preview" fill objectFit="cover" />
                         <Button
                           type="button"
                           variant="destructive"
                           size="icon"
                           className="absolute top-0 right-0 h-6 w-6 z-10"
                           onClick={removeImage}
+                          disabled={isSubmitting}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -247,7 +258,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   </div>
                   <Input 
                     type="file" 
-                    accept="image/*" 
+                    accept="image/png, image/jpeg" 
                     onChange={handleImageChange}
                     className="hidden"
                     ref={fileInputRef}
