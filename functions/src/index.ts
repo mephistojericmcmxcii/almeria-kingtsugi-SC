@@ -33,7 +33,7 @@ export const setAdminRole = onCall(async (request) => {
     }
   }
 
-  await admin.auth().setCustomUserClaims(uid, {role: "admin"});
+  await admin.auth().setCustomUserClaims(uid, {admin: true});
 
   await db.collection("users").doc(uid).set(
     {role: "admin"},

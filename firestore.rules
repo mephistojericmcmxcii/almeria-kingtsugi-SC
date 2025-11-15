@@ -4,9 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Helper function: check admin ---
-    // Checks for the `role` custom claim set by the `setAdminRole` Cloud Function.
     function isAdmin() {
-      return request.auth.token.role == 'admin';
+      return request.auth.token.admin == true;
     }
 
     // --- Users collection ---
@@ -64,5 +63,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
