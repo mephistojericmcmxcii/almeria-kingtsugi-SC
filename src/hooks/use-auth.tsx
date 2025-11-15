@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem } from '@/lib/types';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment } from 'firebase/firestore';
+import type { User, InventoryVariant, CartItem, Order } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -26,6 +26,7 @@ type CombinedVariant = InventoryVariant & {
 interface AuthContextType {
   user: User | null;
   firestore: Firestore;
+  toast: ({...props}: any) => void;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
@@ -36,6 +37,7 @@ interface AuthContextType {
   addToCart: (variant: CombinedVariant) => Promise<void>;
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
+  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,23 +52,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handleAuthChange = async (fbUser: FirebaseUser | null) => {
       if (fbUser) {
-        const userDocRef = doc(firestore, 'users', fbUser.uid);
+        const userDocRef = doc(firestore, 'users', fbUser.id);
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             const appUser: User = {
-              id: fbUser.uid,
+              id: fbUser.id,
               displayName: userData.displayName,
               email: userData.email,
               role: userData.role,
-              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.id}/40/40`,
               address: userData.address || '',
             };
             setUser(appUser);
           } else {
              // This can happen if a user is created in Auth but their Firestore doc fails to be created
-             console.warn("User document not found for authenticated user:", fbUser.uid);
+             console.warn("User document not found for authenticated user:", fbUser.id);
              setUser(null);
           }
         } catch (error) {
@@ -102,17 +104,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               if (email === "admin@kintsugi.com") {
                   userCredential = await createUserWithEmailAndPassword(auth, email, password);
                   const fbUser = userCredential.user;
-                  const userRef = doc(firestore, "users", fbUser.uid);
+                  const userRef = doc(firestore, "users", fbUser.id);
                   const adminData = {
-                      id: fbUser.uid,
+                      id: fbUser.id,
                       displayName: "Admin User",
                       email: email,
                       role: "admin",
-                      profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+                      profileImageUrl: `https://picsum.photos/seed/${fbUser.id}/40/40`,
                       address: ""
                   };
                   await setDoc(userRef, adminData);
-                  const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
+                  const adminRoleRef = doc(firestore, "roles_admin", fbUser.id);
                   await setDoc(adminRoleRef, { role: "admin" });
               } else {
                   toast({
@@ -161,12 +163,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // If it's a new user, create their document in Firestore
       if (additionalInfo?.isNewUser) {
-        const userRef = doc(firestore, 'users', fbUser.uid);
+        const userRef = doc(firestore, 'users', fbUser.id);
         const newUser: Omit<User, 'id'> = {
           displayName: fbUser.displayName || 'New User',
           email: fbUser.email!,
           role: 'guest', // Default role for new Google sign-ups
-          profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+          profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.id}/40/40`,
           address: '',
         };
         await setDoc(userRef, newUser);
@@ -191,19 +193,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const fbUser = userCredential.user;
 
         // Create user profile in 'users' collection
-        const userRef = doc(firestore, "users", fbUser.uid);
+        const userRef = doc(firestore, "users", fbUser.id);
         const adminData = {
-            id: fbUser.uid,
+            id: fbUser.id,
             displayName: displayName,
             email: email,
             role: "admin",
-            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+            profileImageUrl: `https://picsum.photos/seed/${fbUser.id}/40/40`,
             address: "",
         };
         await setDoc(userRef, adminData);
 
         // Add user to 'roles_admin' collection to grant admin privileges
-        const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
+        const adminRoleRef = doc(firestore, "roles_admin", fbUser.id);
         await setDoc(adminRoleRef, { role: "admin" });
         
         toast({
@@ -258,7 +260,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-        const userRef = doc(firestore, "users", firebaseUser.uid);
+        const userRef = doc(firestore, "users", firebaseUser.id);
         const dataToUpdate: ProfileUpdateData = {
             displayName: data.displayName,
             address: data.address || "",
@@ -400,6 +402,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string): Promise<boolean> => {
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to place an order.' });
+            return false;
+        }
+
+        try {
+            await runTransaction(firestore, async (transaction) => {
+                // 1. Create a new order document
+                const newOrderRef = doc(collection(firestore, 'users', user.id, 'orders'));
+                const newOrder: Omit<Order, 'id'> = {
+                    orderDate: serverTimestamp(),
+                    items: cartItems,
+                    totalAmount,
+                    shippingAddress,
+                    status: 'pending'
+                };
+                transaction.set(newOrderRef, newOrder);
+
+                // 2. Update inventory for each item in the cart
+                for (const item of cartItems) {
+                    const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                    // Use increment to atomically decrease the quantity
+                    transaction.update(variantRef, {
+                        quantity: increment(-item.quantity)
+                    });
+                }
+
+                // 3. Clear the user's cart
+                for (const item of cartItems) {
+                    const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
+                    transaction.delete(cartItemRef);
+                }
+            });
+            
+            return true;
+        } catch (error: any) {
+            console.error("Order placement failed:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Order Failed',
+                description: error.message || "There was a problem placing your order. Please try again."
+            });
+            // Emit a generic write error if it's a permission issue.
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: `users/${user.id}`,
+                    operation: 'write',
+                    requestResourceData: { note: "Order placement transaction" }
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            }
+            return false;
+        }
+    };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -407,7 +465,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, firestore, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem };
+  const value = { user, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder };
 
   return (
     <AuthContext.Provider value={value}>
@@ -423,5 +481,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

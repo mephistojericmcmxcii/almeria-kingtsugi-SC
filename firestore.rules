@@ -6,6 +6,7 @@
  * Data Structure:
  * - /users/{userId}: Stores user profiles. Accessible only to the user themselves.
  * - /users/{userId}/cart/{cartItemId}: Stores items in a user's shopping cart. Accessible only to the owner.
+ * - /users/{userId}/orders/{orderId}: Stores a user's order history. Accessible only to the owner.
  * - /roles_admin/{userId}: Indicates admin status. The existence of a document grants admin privileges.
  * - /dashboard_metrics/{metricId}: Stores dashboard metrics. Accessible only to admins.
  * - /system_settings/{settingId}: Stores system settings. Accessible only to admins.
@@ -57,6 +58,19 @@ service cloud.firestore {
       match /cart/{cartItemId} {
         allow read, write: if isOwner(userId);
       }
+
+       /**
+       * @description Controls access to the user's order history.
+       * @path /users/{userId}/orders/{orderId}
+       */
+       match /orders/{orderId} {
+         // Allow user to create and read their own orders.
+         allow create, read: if isOwner(userId);
+         // Allow user to update their own order, but only to change the status to 'completed' or 'cancelled'.
+         allow update: if isOwner(userId)
+                      && request.resource.data.status != resource.data.status
+                      && (request.resource.data.status == 'completed' || request.resource.data.status == 'cancelled');
+       }
     }
 
     /**

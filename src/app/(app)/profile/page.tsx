@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,11 +16,14 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { CartItem } from '@/lib/types';
+import { collection, doc, updateDoc } from 'firebase/firestore';
+import type { CartItem, Order, OrderStatus } from '@/lib/types';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -115,9 +118,107 @@ function CartList() {
                 <span className="ml-4">{formatCurrency(totalCartPrice)}</span>
             </div>
              <CardFooter className="flex justify-end p-0 pt-6">
-                <Button onClick={() => router.push('/checkout')} disabled={cartItems.length === 0}>Proceed to Checkout</Button>
+                <Button onClick={() => router.push('/checkout')} disabled={!cartItems || cartItems.length === 0}>Proceed to Checkout</Button>
             </CardFooter>
         </div>
+    );
+}
+
+function OrderHistory() {
+    const { user, firestore, toast } = useAuth();
+    const ordersCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.id, 'orders') : null, [firestore, user]);
+    const { data: orders, isLoading } = useCollection<Order>(ordersCollectionRef);
+
+    const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+        if (!user) return;
+        const orderRef = doc(firestore, 'users', user.id, 'orders', orderId);
+        try {
+            await updateDoc(orderRef, { status });
+            toast({
+                title: "Order Updated",
+                description: `Your order has been marked as ${status}.`
+            });
+        } catch (error) {
+            console.error("Error updating order status:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: 'Could not update the order status.'
+            });
+        }
+    };
+
+    const getStatusBadge = (status: OrderStatus) => {
+        switch (status) {
+            case 'pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
+            case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
+            case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
+        }
+    };
+
+    if (isLoading) {
+        return <div className="text-center py-12 text-muted-foreground">Loading order history...</div>;
+    }
+
+    if (!orders || orders.length === 0) {
+        return (
+            <div className="text-center py-12 text-muted-foreground">
+                <History className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4">You have no past orders.</p>
+            </div>
+        );
+    }
+
+    return (
+        <Accordion type="single" collapsible className="w-full space-y-4">
+            {orders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis()).map(order => (
+                <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
+                    <AccordionTrigger>
+                        <div className="flex justify-between w-full items-center">
+                            <div className="flex flex-col text-left">
+                                <span className="font-semibold text-base">Order #{order.id.slice(0, 7)}...</span>
+                                <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                               <span className="font-semibold text-lg">{formatCurrency(order.totalAmount)}</span>
+                               {getStatusBadge(order.status)}
+                            </div>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="font-semibold mb-2">Items</h4>
+                                <div className="space-y-2">
+                                {order.items.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center text-sm">
+                                        <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
+                                        <span>{formatCurrency((item.price || 0) * item.quantity)}</span>
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                            <div className="pt-2 border-t">
+                                <h4 className="font-semibold mb-1">Shipping Address</h4>
+                                <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                            </div>
+                            {order.status === 'pending' && (
+                                <div className="flex gap-2 justify-end pt-4">
+                                    <Button variant="outline" size="sm" onClick={() => updateOrderStatus(order.id, 'cancelled')}>
+                                        <XCircle className="mr-2 h-4 w-4"/>
+                                        Cancel Order
+                                    </Button>
+                                    <Button size="sm" onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                        <CheckCircle className="mr-2 h-4 w-4"/>
+                                        Mark as Delivered
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+        </Accordion>
     );
 }
 
@@ -238,10 +339,7 @@ export default function ProfilePage() {
               <CardDescription>A record of your past purchases.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                 <History className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4">You have no past orders.</p>
-              </div>
+              <OrderHistory />
             </CardContent>
           </Card>
         </TabsContent>
@@ -260,5 +358,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

@@ -1,5 +1,5 @@
 
-import type { DocumentReference } from 'firebase/firestore';
+import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type User = {
   id: string;
@@ -47,4 +47,14 @@ export type CartItem = {
   imageHint?: string;
   stock?: number;
 };
-    
+
+export type OrderStatus = 'pending' | 'completed' | 'cancelled';
+
+export type Order = {
+  id: string;
+  orderDate: Timestamp;
+  items: CartItem[];
+  totalAmount: number;
+  shippingAddress: string;
+  status: OrderStatus;
+};

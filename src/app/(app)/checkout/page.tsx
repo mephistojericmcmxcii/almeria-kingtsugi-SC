@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -20,7 +19,6 @@ import { ChevronLeft, CreditCard, Home, ShoppingCart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 const formatCurrency = (amount: number) => {
@@ -28,12 +26,13 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function CheckoutPage() {
-    const { user, firestore } = useAuth();
+    const { user, firestore, placeOrder } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
     const [shippingOption, setShippingOption] = useState<'profile' | 'custom'>('profile');
     const [customAddress, setCustomAddress] = useState('');
+    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
     const cartCollectionRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -46,7 +45,7 @@ export default function CheckoutPage() {
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }, [cartItems]);
     
-    const shippingFee = subtotal > 0 ? 10 : 0;
+    const shippingFee = 10;
     const total = subtotal + shippingFee;
 
     const finalShippingAddress = useMemo(() => {
@@ -56,17 +55,23 @@ export default function CheckoutPage() {
         return customAddress;
     }, [shippingOption, user?.address, customAddress]);
 
-    const isPlaceOrderDisabled = !finalShippingAddress || finalShippingAddress.trim() === '';
+    const isPlaceOrderDisabled = !finalShippingAddress || finalShippingAddress.trim() === '' || !cartItems || cartItems.length === 0 || isPlacingOrder;
 
-    const handlePlaceOrder = () => {
-        // In a real app, this would trigger payment processing and order creation.
-        // For now, we'll just show a success message and redirect.
-        toast({
-            title: "Order Placed!",
-            description: "Thank you for your purchase. Your order is being processed.",
-        });
-        // Here you would typically clear the cart after a successful order.
-        router.push('/dashboard');
+    const handlePlaceOrder = async () => {
+        if (!finalShippingAddress || !cartItems) return;
+        setIsPlacingOrder(true);
+
+        const success = await placeOrder(cartItems, total, finalShippingAddress);
+
+        if (success) {
+            toast({
+                title: "Order Placed!",
+                description: "Thank you for your purchase. Your order is being processed.",
+            });
+            router.push('/profile');
+        }
+        // If it fails, the placeOrder function will have already shown an error toast.
+        setIsPlacingOrder(false);
     }
 
     if (isLoading) {
@@ -167,33 +172,33 @@ export default function CheckoutPage() {
                             <CardTitle className="font-headline text-2xl">Payment Method</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <RadioGroup defaultValue="cod" disabled>
+                            <RadioGroup defaultValue="cod">
                                 <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
                                     <div className="flex items-center space-x-3">
-                                        <RadioGroupItem value="gcash" id="gcash" />
+                                        <RadioGroupItem value="gcash" id="gcash" disabled />
                                         <Label htmlFor="gcash">GCash</Label>
                                     </div>
                                     <span className="text-xs font-semibold text-muted-foreground">SOON</span>
                                 </div>
                                  <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
                                     <div className="flex items-center space-x-3">
-                                        <RadioGroupItem value="instapay" id="instapay" />
+                                        <RadioGroupItem value="instapay" id="instapay" disabled />
                                         <Label htmlFor="instapay">Instapay</Label>
                                     </div>
                                     <span className="text-xs font-semibold text-muted-foreground">SOON</span>
                                 </div>
-                                 <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
+                                 <div className="flex items-center justify-between rounded-lg border p-4">
                                     <div className="flex items-center space-x-3">
                                         <RadioGroupItem value="cod" id="cod" />
                                         <Label htmlFor="cod">Cash on Delivery</Label>
                                     </div>
-                                     <span className="text-xs font-semibold text-primary">SELECTED</span>
+                                     <span className="text-xs font-semibold text-primary">AVAILABLE</span>
                                 </div>
                             </RadioGroup>
                             <Alert>
                                 <AlertTitle className="font-semibold">Cash on Delivery Only</AlertTitle>
                                 <AlertDescription>
-                                    GCash and Instapay payment options will be available in the future. For now, all orders are processed as Cash on Delivery.
+                                    Digital payment options will be available in the future. For now, all orders are processed as Cash on Delivery.
                                 </AlertDescription>
                             </Alert>
                         </CardContent>
@@ -248,7 +253,7 @@ export default function CheckoutPage() {
                     </CardContent>
                     <CardFooter>
                         <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isPlaceOrderDisabled}>
-                            {isPlaceOrderDisabled ? 'Enter a Shipping Address' : 'Place Order'}
+                            {isPlacingOrder ? 'Placing Order...' : (isPlaceOrderDisabled ? 'Enter a Shipping Address' : 'Place Order')}
                         </Button>
                     </CardFooter>
                 </Card>
@@ -256,5 +261,3 @@ export default function CheckoutPage() {
         </div>
     );
 }
-
-    

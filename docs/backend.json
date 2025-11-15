@@ -223,6 +223,48 @@
         "quantity",
         "addedAt"
       ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a customer's order.",
+      "properties": {
+        "orderDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the order was placed."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/CartItem"
+          }
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total cost of the order."
+        },
+        "shippingAddress": {
+          "type": "string",
+          "description": "The address where the order will be shipped."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "completed",
+            "cancelled"
+          ]
+        }
+      },
+      "required": [
+        "orderDate",
+        "items",
+        "totalAmount",
+        "shippingAddress",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -265,6 +307,26 @@
             {
               "name": "cartItemId",
               "description": "The unique ID for the cart item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores a user's order history. Owned by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the order."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique ID for the order."
             }
           ]
         }
