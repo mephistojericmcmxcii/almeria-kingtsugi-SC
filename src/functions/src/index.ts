@@ -81,3 +81,4 @@ export const revokeAdminRole = onCall(async (request) => {
 
   return { message: "Admin role has been revoked. The user must log out and log back in." };
 });
+
