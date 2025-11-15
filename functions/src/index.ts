@@ -18,18 +18,7 @@ export const setAdminRole = onCall(async (request) => {
       throw new Error("Only admins can assign roles.");
     }
   } else {
-    // If unauthenticated, check if any admin users already exist.
-    // This allows for the creation of the *first* admin user.
-    try {
-      const {users} = await admin.auth().listUsers(1, "admin");
-      if (users.length > 0) {
-        throw new Error("Only admins can assign roles. At least one admin already exists.");
-      }
-    } catch (e) {
-        // If listUsers fails for other reasons, it might be a setup issue.
-        // We will proceed but log the error. This is a failsafe.
-        console.error("Could not list users, proceeding with caution:", e);
-    }
+    throw new Error("Authentication required.");
   }
 
   await admin.auth().setCustomUserClaims(uid, {role: "admin"});

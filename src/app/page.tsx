@@ -1,95 +1,48 @@
 
 "use client";
 
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UserCog, Gem } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { LoginForm } from "@/components/auth/login-form";
+import { Gem } from "lucide-react";
 
-export default function MakeAdminPage() {
-  const { toast } = useToast();
-  const [uid, setUid] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function LoginPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
 
-  async function makeAdmin() {
-    if (!uid) {
-      toast({
-        variant: "destructive",
-        title: "UID Required",
-        description: "Please enter a user ID.",
-      });
-      return;
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push("/dashboard");
     }
-    setIsSubmitting(true);
-    const functions = getFunctions();
-    const setAdminRole = httpsCallable(functions, "setAdminRole");
+  }, [user, isLoading, router]);
 
-    try {
-      const result = await setAdminRole({ uid });
-      console.log(result.data);
-      toast({
-        title: "Success!",
-        description: `User ${uid} has been granted admin privileges. They must log out and log back in for the change to take effect.`,
-      });
-      setUid("");
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description:
-          err.message || "An unknown error occurred while setting the admin role.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Prevent flash of login page if user is already authenticated and just refreshing
+  if (isLoading || (!isLoading && user)) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="p-8 space-y-4 flex flex-col items-center">
+            <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-muted-foreground">Restoring your session...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
-         <div className="flex flex-col justify-center items-center mb-8 text-center">
+        <div className="flex flex-col justify-center items-center mb-8 text-center">
           <Gem className="h-10 w-10 mb-4 text-primary" />
           <h1 className="text-4xl font-bold font-headline">Kintsugi Portal</h1>
-           <p className="text-muted-foreground mt-2">
-            Admin Creation Tool
+          <p className="text-muted-foreground mt-2">
+            Business Management Suite
           </p>
         </div>
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><UserCog /> Grant Admin Privileges</CardTitle>
-                <CardDescription>
-                Enter a user's UID to grant them admin privileges. The user must sign out and sign back in for the new role to take effect.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-2">
-                    <Label htmlFor="uid">User ID (UID)</Label>
-                    <Input
-                    id="uid"
-                    value={uid}
-                    onChange={(e) => setUid(e.target.value)}
-                    placeholder="Enter the user's Firebase UID"
-                    />
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button onClick={makeAdmin} disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? "Processing..." : "Set as Admin"}
-                </Button>
-            </CardFooter>
-        </Card>
+        <LoginForm />
       </div>
     </main>
   );
