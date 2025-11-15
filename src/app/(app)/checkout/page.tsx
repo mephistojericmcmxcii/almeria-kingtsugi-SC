@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -45,7 +46,7 @@ export default function CheckoutPage() {
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }, [cartItems]);
     
-    const shippingFee = subtotal > 0 ? 50 : 0;
+    const shippingFee = subtotal > 0 ? 10 : 0;
     const total = subtotal + shippingFee;
 
     const finalShippingAddress = useMemo(() => {
@@ -165,11 +166,34 @@ export default function CheckoutPage() {
                              <CreditCard className="w-6 h-6 text-primary" />
                             <CardTitle className="font-headline text-2xl">Payment Method</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
+                            <RadioGroup defaultValue="cod" disabled>
+                                <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
+                                    <div className="flex items-center space-x-3">
+                                        <RadioGroupItem value="gcash" id="gcash" />
+                                        <Label htmlFor="gcash">GCash</Label>
+                                    </div>
+                                    <span className="text-xs font-semibold text-muted-foreground">SOON</span>
+                                </div>
+                                 <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
+                                    <div className="flex items-center space-x-3">
+                                        <RadioGroupItem value="instapay" id="instapay" />
+                                        <Label htmlFor="instapay">Instapay</Label>
+                                    </div>
+                                    <span className="text-xs font-semibold text-muted-foreground">SOON</span>
+                                </div>
+                                 <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
+                                    <div className="flex items-center space-x-3">
+                                        <RadioGroupItem value="cod" id="cod" />
+                                        <Label htmlFor="cod">Cash on Delivery</Label>
+                                    </div>
+                                     <span className="text-xs font-semibold text-primary">SELECTED</span>
+                                </div>
+                            </RadioGroup>
                             <Alert>
-                                <AlertTitle className="font-semibold">Coming Soon!</AlertTitle>
+                                <AlertTitle className="font-semibold">Cash on Delivery Only</AlertTitle>
                                 <AlertDescription>
-                                    GCash and Instapay payment options will be available in the future. For now, all orders are processed upon placement.
+                                    GCash and Instapay payment options will be available in the future. For now, all orders are processed as Cash on Delivery.
                                 </AlertDescription>
                             </Alert>
                         </CardContent>
@@ -232,3 +256,5 @@ export default function CheckoutPage() {
         </div>
     );
 }
+
+    
