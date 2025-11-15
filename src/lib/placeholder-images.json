@@ -5,6 +5,24 @@
       "description": "Aesthetic interior of the Kintsugi variety shop.",
       "imageUrl": "https://images.unsplash.com/photo-1641816482139-c04a5fe29b90?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzaG9wJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzYzMDg2Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "shop interior"
+    },
+    {
+      "id": "product-fallback",
+      "description": "A generic placeholder for a product.",
+      "imageUrl": "https://images.unsplash.com/photo-1615397349754-cfa2066a298e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwcm9kdWN0fGVufDB8fHx8MTc2MzEwMzQ5NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "product"
+    },
+    {
+      "id": "ceramic-bowl",
+      "description": "A beautifully handcrafted ceramic bowl.",
+      "imageUrl": "https://images.unsplash.com/photo-1635166197966-73207e005887?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjZXJhbWljJTIwYm93bHxlbnwwfHx8fDE3NjMxNDEwMzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ceramic bowl"
+    },
+    {
+      "id": "ballpen",
+      "description": "A high-quality ballpen for everyday use.",
+      "imageUrl": "https://images.unsplash.com/photo-1587135991058-8816b028691f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGVufGVufDB8fHx8MTc2MzEwMzE1MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pen"
     }
   ]
 }

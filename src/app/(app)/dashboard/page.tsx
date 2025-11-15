@@ -1,165 +1,134 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import type { InventoryItem, InventoryVariant } from '@/lib/types';
+import { collection } from 'firebase/firestore';
+import type { InventoryItem } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
-import { StatsCard } from "@/components/dashboard/stats-card";
-import { Boxes, PackageSearch, PackageX, Tag } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-};
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Eye, ShoppingCart, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const [totalValue, setTotalValue] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0);
-  const [isValueLoading, setIsValueLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const [searchTerm, setSearchTerm] = useState('');
 
   const inventoryCollectionRef = useMemoFirebase(() => collection(firestore, 'inventory'), [firestore]);
-  const { data: inventoryItems, isLoading: areItemsLoading } = useCollection<InventoryItem>(inventoryCollectionRef);
+  const { data: inventoryItems, isLoading } = useCollection<InventoryItem>(inventoryCollectionRef);
 
-  const recentItemsQuery = useMemoFirebase(() => {
-    if (!inventoryCollectionRef) return null;
-    return query(inventoryCollectionRef, orderBy('updatedAt', 'desc'), limit(5));
-  }, [inventoryCollectionRef]);
+  const filteredItems = useMemo(() => {
+    if (!inventoryItems) return [];
+    return inventoryItems.filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [inventoryItems, searchTerm]);
+  
+  const handleOrderClick = (itemName: string) => {
+    toast({
+        title: "Coming Soon!",
+        description: `Ordering functionality for ${itemName} is not yet available.`
+    })
+  }
 
-  const { data: recentItems, isLoading: areRecentItemsLoading } = useCollection<InventoryItem>(recentItemsQuery);
-
-  useEffect(() => {
-    if (!inventoryItems) {
-      setIsValueLoading(false);
-      return;
-    }
-
-    const fetchVariantData = async () => {
-        setIsValueLoading(true);
-        let accumulatedValue = 0;
-        let lowStockItems = 0;
-        
-        try {
-            for (const item of inventoryItems) {
-                const variantsCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-                const variantsSnapshot = await getDocs(variantsCollectionRef);
-                variantsSnapshot.forEach(variantDoc => {
-                    const variant = variantDoc.data() as InventoryVariant;
-                    accumulatedValue += (variant.quantity || 0) * (variant.price || 0);
-                    if (variant.quantity > 0 && variant.quantity <= variant.warningLimit) {
-                        lowStockItems++;
-                    }
-                });
-            }
-            setTotalValue(accumulatedValue);
-            setLowStockCount(lowStockItems);
-        } catch (error) {
-            console.error("Error calculating inventory stats:", error);
-            setTotalValue(0);
-            setLowStockCount(0);
-        } finally {
-            setIsValueLoading(false);
-        }
-    };
-
-    fetchVariantData();
-
-  }, [inventoryItems, firestore]);
-
-  const totalItems = inventoryItems?.length || 0;
-  const categoriesCount = inventoryItems ? [...new Set(inventoryItems.map(item => item.category))].length : 0;
-  const isLoading = areItemsLoading || isValueLoading;
+  // A simple function to get a placeholder image based on the item ID
+  const getPlaceholderImage = (itemId: string) => {
+      const itemImage = PlaceHolderImages.find(p => p.id === itemId);
+      const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
+      return itemImage || fallbackImage!;
+  }
 
   return (
     <div className="space-y-8">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Dashboard</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatsCard
-                title="Total Inventory Value"
-                value={isLoading ? <Skeleton className="h-8 w-3/4" /> : formatCurrency(totalValue)}
-                description="Estimated value of all current stock"
-                icon={() => <span className='font-bold'>₱</span>}
-                isLoading={isLoading}
-            />
-            <StatsCard
-                title="Total Unique Items"
-                value={isLoading ? <Skeleton className="h-8 w-1/4" /> : totalItems}
-                description="Number of parent product lines"
-                icon={PackageSearch}
-                isLoading={isLoading}
-            />
-            <StatsCard
-                title="Item Categories"
-                value={isLoading ? <Skeleton className="h-8 w-1/4" /> : categoriesCount}
-                description="Total number of unique categories"
-                icon={Boxes}
-                 isLoading={isLoading}
-            />
-            <StatsCard
-                title="Low Stock Items"
-                value={isLoading ? <Skeleton className="h-8 w-1/4" /> : lowStockCount}
-                description="Variants needing restock"
-                icon={PackageX}
-                isLoading={isLoading}
-            />
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight font-headline">Product Catalog</h1>
+                <p className="text-muted-foreground">Browse our collection of unique, handcrafted items.</p>
+            </div>
+            <div className="relative w-full md:w-1/3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input 
+                    placeholder="Search by name or category..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10"
+                />
+            </div>
         </div>
-        <div className="grid gap-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Recently Updated Items</CardTitle>
-                    <CardDescription>
-                        The last 5 parent items that were created or updated.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Item Name</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Last Updated</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {areRecentItemsLoading ? (
-                                Array.from({ length: 3 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                                    <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                                </TableRow>
-                                ))
-                            ) : recentItems?.length ? (
-                                recentItems.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell><Badge variant="secondary">{item.category}</Badge></TableCell>
-                                    <TableCell className="text-muted-foreground truncate max-w-sm">{item.description || 'N/A'}</TableCell>
-                                    <TableCell className="text-right text-muted-foreground">
-                                        {item.updatedAt ? format(item.updatedAt.toDate(), 'PPp') : 'N/A'}
-                                    </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                    No inventory items found.
-                                </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+
+        {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <Card key={i} className="overflow-hidden">
+                        <Skeleton className="h-48 w-full" />
+                        <CardHeader>
+                            <Skeleton className="h-6 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-10 w-full" />
+                        </CardContent>
+                        <CardFooter className="gap-2">
+                             <Skeleton className="h-10 w-full" />
+                             <Skeleton className="h-10 w-full" />
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        ) : filteredItems.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {filteredItems.map((item) => {
+                    const placeholder = getPlaceholderImage(item.id);
+                    return (
+                        <Card key={item.id} className="flex flex-col overflow-hidden">
+                            <div className="aspect-video relative">
+                                <Image
+                                    src={placeholder.imageUrl}
+                                    alt={placeholder.description}
+                                    fill
+                                    className="object-cover"
+                                    data-ai-hint={placeholder.imageHint}
+                                />
+                            </div>
+                            <CardHeader>
+                                <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
+                                <CardDescription>
+                                    <Badge variant="secondary">{item.category}</Badge>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                    {item.description || 'A unique item from our collection.'}
+                                </p>
+                            </CardContent>
+                            <CardFooter className="flex-col sm:flex-row gap-2 pt-4">
+                                <Button variant="outline" className="w-full" onClick={() => router.push(`/services/inventory/${item.id}`)}>
+                                    <Eye className="mr-2" /> View Details
+                                </Button>
+                                <Button className="w-full" onClick={() => handleOrderClick(item.name)}>
+                                    <ShoppingCart className="mr-2" /> Add to Order
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    );
+                })}
+            </div>
+        ) : (
+            <div className="text-center py-24">
+                <p className="text-muted-foreground">No products found matching your search.</p>
+            </div>
+        )}
     </div>
   );
 }
