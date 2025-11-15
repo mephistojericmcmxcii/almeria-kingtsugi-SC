@@ -2,27 +2,43 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { InventoryItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
-import { Boxes, PackageSearch, PackagePlus, DollarSign } from "lucide-react";
+import { Boxes, PackageSearch, PackagePlus, DollarSign, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AddEditItemDialog } from '@/components/inventory/add-edit-item-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function InventoryPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
 
   const inventoryCollectionRef = useMemoFirebase(() => collection(firestore, 'inventory'), [firestore]);
   const { data: inventoryItems, isLoading } = useCollection<InventoryItem>(inventoryCollectionRef);
@@ -36,19 +52,41 @@ export default function InventoryPage() {
   }, [inventoryItems, searchTerm]);
 
   const totalItems = useMemo(() => inventoryItems?.length || 0, [inventoryItems]);
-  const totalValue = useMemo(() => {
-      if (!inventoryItems) return 0;
-      return inventoryItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  }, [inventoryItems]);
   const categories = useMemo(() => {
     if (!inventoryItems) return [];
     return [...new Set(inventoryItems.map(item => item.category))];
   }, [inventoryItems]);
 
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+  const handleEdit = (item: InventoryItem) => {
+    setItemToEdit(item);
+    setIsAddDialogOpen(true);
   };
+  
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    try {
+      await deleteDoc(doc(firestore, 'inventory', itemToDelete.id));
+      toast({
+        title: "Item Deleted",
+        description: `${itemToDelete.name} has been removed from the inventory.`,
+      });
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not delete the item. Please try again.",
+      });
+      setItemToDelete(null);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setIsAddDialogOpen(false);
+    setItemToEdit(null);
+  };
+
 
   return (
     <div className="space-y-8">
@@ -59,26 +97,15 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Overview Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Parent Items</CardTitle>
             <PackageSearch className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{totalItems}</div>}
-            <p className="text-xs text-muted-foreground">Total unique items in inventory</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Inventory Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>}
-            <p className="text-xs text-muted-foreground">Sum of price multiplied by quantity</p>
+            <p className="text-xs text-muted-foreground">Total unique parent items in inventory</p>
           </CardContent>
         </Card>
         <Card>
@@ -93,7 +120,6 @@ export default function InventoryPage() {
         </Card>
       </div>
 
-      {/* Table Section */}
       <Card>
         <CardHeader>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -106,8 +132,8 @@ export default function InventoryPage() {
                     />
                 </div>
                  {user?.role === 'admin' && (
-                    <Button onClick={() => setIsDialogOpen(true)}>
-                        <PackagePlus className="mr-2 h-4 w-4" /> Add Item
+                    <Button onClick={() => setIsAddDialogOpen(true)}>
+                        <PackagePlus className="mr-2 h-4 w-4" /> Add Parent Item
                     </Button>
                  )}
             </div>
@@ -118,11 +144,8 @@ export default function InventoryPage() {
               <TableRow>
                 <TableHead>Item Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -131,8 +154,7 @@ export default function InventoryPage() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -143,8 +165,7 @@ export default function InventoryPage() {
                     <TableCell>
                       <Badge variant="secondary">{item.category}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                    <TableCell className="text-muted-foreground truncate max-w-sm">{item.description || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                        {user?.role === 'admin' && (
                         <DropdownMenu>
@@ -156,8 +177,19 @@ export default function InventoryPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Delete</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => router.push(`/services/inventory/${item.id}`)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Variants
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleEdit(item)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => setItemToDelete(item)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                        )}
@@ -167,7 +199,7 @@ export default function InventoryPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
-                    No inventory items found.
+                    No parent items found.
                   </TableCell>
                 </TableRow>
               )}
@@ -178,12 +210,31 @@ export default function InventoryPage() {
       
       {user?.role === 'admin' && (
         <AddEditItemDialog
-            isOpen={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
+            isOpen={isAddDialogOpen}
+            onOpenChange={handleDialogClose}
+            itemToEdit={itemToEdit}
         />
       )}
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the item
+                    <span className="font-bold"> {itemToDelete?.name} </span>
+                    and all of its variants.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     </div>
   );
 }
-
-    

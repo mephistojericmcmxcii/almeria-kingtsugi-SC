@@ -25,25 +25,38 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import type { InventoryItem } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Item name must be at least 2 characters.' }),
   category: z.string().min(2, { message: 'Category is required.' }),
-  quantity: z.coerce.number().int().min(0, { message: 'Quantity must be a positive number.' }),
-  price: z.coerce.number().min(0, { message: 'Price must be a positive number.' }),
+  otherCategory: z.string().optional(),
   description: z.string().optional(),
+}).refine(data => {
+    if (data.category === 'Other' && (!data.otherCategory || data.otherCategory.length < 2)) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Please specify the other category (min. 2 characters).',
+    path: ['otherCategory'],
 });
+
 
 type AddEditItemFormValues = z.infer<typeof formSchema>;
 
 interface AddEditItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  itemToEdit?: InventoryItem | null;
 }
 
-export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogProps) {
+const PREDEFINED_CATEGORIES = ["Pottery", "Textiles", "Woodcraft", "Jewelry", "Other"];
+
+export function AddEditItemDialog({ isOpen, onOpenChange, itemToEdit }: AddEditItemDialogProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,40 +66,63 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
     defaultValues: {
       name: '',
       category: '',
-      quantity: 0,
-      price: 0,
+      otherCategory: '',
       description: '',
     },
   });
 
+  const categoryValue = form.watch('category');
+  
+  useEffect(() => {
+    if (itemToEdit) {
+      const isPredefined = PREDEFINED_CATEGORIES.includes(itemToEdit.category);
+      form.reset({
+        name: itemToEdit.name,
+        category: isPredefined ? itemToEdit.category : 'Other',
+        otherCategory: isPredefined ? '' : itemToEdit.category,
+        description: itemToEdit.description || '',
+      });
+    } else {
+      form.reset({
+        name: '',
+        category: '',
+        otherCategory: '',
+        description: '',
+      });
+    }
+  }, [itemToEdit, form, isOpen]);
+
+
   const onSubmit = async (values: AddEditItemFormValues) => {
     setIsSubmitting(true);
     try {
-      const docId = values.name.toLowerCase().replace(/\s+/g, '-');
+      const docId = itemToEdit ? itemToEdit.id : values.name.toLowerCase().replace(/\s+/g, '-');
       const itemRef = doc(firestore, 'inventory', docId);
 
-      await setDoc(itemRef, {
+      const finalCategory = values.category === 'Other' ? values.otherCategory : values.category;
+
+      const dataToSave = {
         name: values.name,
-        category: values.category,
-        quantity: values.quantity,
-        price: values.price,
+        category: finalCategory,
         description: values.description || '',
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+        ...( !itemToEdit && { createdAt: serverTimestamp() })
+      };
+
+      await setDoc(itemRef, dataToSave, { merge: true });
 
       toast({
-        title: "Item Added",
-        description: `${values.name} has been added to the inventory.`,
+        title: itemToEdit ? "Item Updated" : "Item Added",
+        description: `${values.name} has been ${itemToEdit ? 'updated' : 'added'}.`,
       });
-      form.reset();
+      
       onOpenChange(false);
     } catch (error) {
-      console.error("Error adding item:", error);
+      console.error("Error saving item:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not add the item. Please try again.",
+        description: "Could not save the item. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -95,18 +131,18 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
   
   const handleDialogClose = (open: boolean) => {
     if (isSubmitting) return;
-    form.reset();
     onOpenChange(open);
   }
+
+  const title = itemToEdit ? "Edit Parent Item" : "Add New Parent Item";
+  const description = itemToEdit ? "Update the details for this parent item." : "Fill in the details below to add a new parent item to your inventory.";
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Inventory Item</DialogTitle>
-          <DialogDescription>
-            Fill in the details below to add a new item to your inventory. The item name will be used as its unique ID.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -117,7 +153,7 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
                 <FormItem>
                   <FormLabel>Item Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Ceramic Bowl" {...field} />
+                    <Input placeholder="e.g., Ceramic Bowl" {...field} disabled={!!itemToEdit} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -129,41 +165,39 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Pottery" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {PREDEFINED_CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat === 'Other' ? 'Other...' : cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
+
+            {categoryValue === 'Other' && (
+               <FormField
                 control={form.control}
-                name="quantity"
+                name="otherCategory"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantity</FormLabel>
+                    <FormLabel>Custom Category</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input placeholder="e.g., Kintsugi Art" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price (₱)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            )}
+           
             <FormField
               control={form.control}
               name="description"
@@ -171,7 +205,7 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
                 <FormItem>
                   <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Describe the item..." {...field} />
+                    <Textarea placeholder="Describe the parent item..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -180,7 +214,7 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
              <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Item"}
+                {isSubmitting ? "Saving..." : (itemToEdit ? "Save Changes" : "Add Item")}
               </Button>
             </DialogFooter>
           </form>
@@ -189,4 +223,3 @@ export function AddEditItemDialog({ isOpen, onOpenChange }: AddEditItemDialogPro
     </Dialog>
   );
 }
-    

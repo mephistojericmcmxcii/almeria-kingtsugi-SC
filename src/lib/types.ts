@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   displayName: string;
@@ -10,11 +11,18 @@ export type InventoryItem = {
     id: string;
     name: string;
     category: string;
-    quantity: number;
-    price: number;
     description?: string;
     createdAt: any; 
     updatedAt: any;
 };
 
-    
+export type InventoryVariant = {
+  id: string;
+  brand: string;
+  source: string;
+  quantity: number;
+  price: number;
+  description?: string;
+  createdAt: any;
+  updatedAt: any;
+};

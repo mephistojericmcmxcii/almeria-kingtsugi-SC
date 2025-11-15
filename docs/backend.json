@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -105,7 +106,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "InventoryItem",
       "type": "object",
-      "description": "Represents an item in the inventory.",
+      "description": "Represents a parent inventory item category.",
       "properties": {
         "name": {
           "type": "string",
@@ -115,32 +116,68 @@
           "type": "string",
           "description": "Category of the item (e.g., 'Office Supplies', 'Electronics')."
         },
-        "quantity": {
-          "type": "number",
-          "description": "The number of units available."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price per unit."
-        },
         "description": {
           "type": "string",
           "description": "An optional description of the item."
         },
         "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the item was created."
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the item was created."
         },
         "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the item was last updated."
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the item was last updated."
         }
       },
       "required": [
         "name",
         "category",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InventoryVariant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InventoryVariant",
+      "type": "object",
+      "description": "Represents a specific variant of a parent inventory item.",
+      "properties": {
+        "brand": {
+          "type": "string",
+          "description": "Brand of the item variant."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the item was sourced from."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The number of units available for this variant."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price per unit for this variant."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description of the variant."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the variant was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the variant was last updated."
+        }
+      },
+      "required": [
+        "brand",
+        "source",
         "quantity",
         "price",
         "createdAt",
@@ -163,7 +200,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles.  Uses path-based ownership for private user data.",
+          "description": "Stores user profiles. Uses path-based ownership for private user data.",
           "params": [
             {
               "name": "userId",
@@ -179,7 +216,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection to store admin roles. The existence of a document with the user's UID implies admin access.  Authorization independence is achieved because rules only check for document existence.",
+          "description": "Collection to store admin roles. The existence of a document with the user's UID implies admin access. Authorization independence is achieved because rules only check for document existence.",
           "params": [
             {
               "name": "userId",
@@ -195,7 +232,7 @@
           "schema": {
             "$ref": "#/backend/entities/DashboardMetrics"
           },
-          "description": "Stores dashboard metrics.  Accessible to admins.",
+          "description": "Stores dashboard metrics. Accessible to admins.",
           "params": [
             {
               "name": "metricId",
@@ -220,14 +257,14 @@
           ]
         }
       },
-       {
+      {
         "path": "/inventory/{itemId}",
         "definition": {
           "entityName": "InventoryItem",
           "schema": {
             "$ref": "#/backend/entities/InventoryItem"
           },
-          "description": "Stores individual inventory items. Accessible to guests for reading, and admins for all operations.",
+          "description": "Stores parent inventory items. Accessible to guests for reading, and admins for all operations.",
           "params": [
             {
               "name": "itemId",
@@ -235,9 +272,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/inventory/{itemId}/variants/{variantId}",
+        "definition": {
+          "entityName": "InventoryVariant",
+          "schema": {
+            "$ref": "#/backend/entities/InventoryVariant"
+          },
+          "description": "Stores specific variants of a parent inventory item. Accessible to admins only.",
+          "params": [
+            {
+              "name": "itemId",
+              "description": "The ID of the parent inventory item."
+            },
+            {
+              "name": "variantId",
+              "description": "The unique identifier for the item variant."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a business management portal with user authentication (Guest/Admin roles), a dashboard for metrics, and an admin panel for user and settings management. The structure emphasizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs.\n\n**Authorization Independence:**  Authorization data is denormalized to avoid `get()` calls in security rules.  For example, admin privileges are determined by the existence of a document in `/roles_admin/{userId}`, avoiding the need to read user profile data during authorization.\n\n**Structural Segregation:** Data with different access requirements is stored in separate collections (e.g., public vs. private data).  System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data. Inventory data is in its own collection with specific admin/guest rules.\n\n**Access Modeling:** User-owned data will be stored in `/users/{userId}/...`. Global roles are managed via existence checks in dedicated role collections (`/roles_admin/{userId}`).\n\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations. The segregation of data based on access levels (e.g., system settings in a separate collection) ensures that listing operations can be secured without filtering based on document content.\n\n**Denormalization Strategy:**  The role is denormalized to avoid reads in security rules. The dashboard metrics do not have user based authorization requirements so it will be under a main collection. The system settings require admin only access, which is achieved via role verification."
+    "reasoning": "The Firestore structure is designed to support a business management portal with user authentication (Guest/Admin roles), a dashboard for metrics, and an admin panel for user and settings management. The structure emphasizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs.\n\n**Authorization Independence:**  Authorization data is denormalized to avoid `get()` calls in security rules.  For example, admin privileges are determined by the existence of a document in `/roles_admin/{userId}`, avoiding the need to read user profile data during authorization.\n\n**Structural Segregation:** Data with different access requirements is stored in separate collections (e.g., public vs. private data).  System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data. Inventory data is in its own collection with specific admin/guest rules, and variants are in a subcollection with admin-only access.\n\n**Access Modeling:** User-owned data will be stored in `/users/{userId}/...`. Global roles are managed via existence checks in dedicated role collections (`/roles_admin/{userId}`).\n\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations. The segregation of data based on access levels (e.g., system settings in a separate collection) ensures that listing operations can be secured without filtering based on document content.\n\n**Denormalization Strategy:**  The role is denormalized to avoid reads in security rules. The dashboard metrics do not have user based authorization requirements so it will be under a main collection. The system settings require admin only access, which is achieved via role verification."
   }
 }
-    

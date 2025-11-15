@@ -1,3 +1,4 @@
+
 /**
  * @file Firestore Security Rules
  * @description This ruleset enforces a role-based access control model with ownership for user data.
@@ -7,7 +8,8 @@
  * - /roles_admin/{userId}: Indicates admin status. The existence of a document grants admin privileges.
  * - /dashboard_metrics/{metricId}: Stores dashboard metrics. Accessible only to admins.
  * - /system_settings/{settingId}: Stores system settings. Accessible only to admins.
- * - /inventory/{itemId}: Stores inventory items. Admins have full access, guests have read-only access.
+ * - /inventory/{itemId}: Stores parent inventory items. Admins have full access, guests have read-only access.
+ * - /inventory/{itemId}/variants/{variantId}: Stores item variants. Admins have full access.
  *
  * Key Security Decisions:
  * - User profiles are private and only accessible to the owning user.
@@ -131,7 +133,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to inventory items. Admins have full access, guests can read.
+     * @description Controls access to parent inventory items. Admins have full access, guests can read.
      * @path /inventory/{itemId}
      * @allow (get, list) All authenticated users (admins and guests) can read inventory.
      * @allow (create, update, delete) Only admins can create, update, or delete inventory items.
@@ -147,7 +149,15 @@ service cloud.firestore {
 
       // Only admins can create, update, or delete
       allow write: if isAdmin();
+
+       /**
+       * @description Controls access to inventory item variants. Admins have full access.
+       * @path /inventory/{itemId}/variants/{variantId}
+       * @allow (read, write) Only admins can manage item variants.
+       */
+      match /variants/{variantId} {
+         allow read, write: if isAdmin();
+      }
     }
   }
 }
-    
