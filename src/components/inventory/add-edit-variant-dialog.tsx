@@ -34,6 +34,7 @@ const formSchema = z.object({
   source: z.string().min(2, { message: 'Source is required.' }),
   quantity: z.coerce.number().int().min(0, { message: 'Quantity must be a positive number.' }),
   price: z.coerce.number().min(0, { message: 'Price must be a positive number.' }),
+  warningLimit: z.coerce.number().int().min(0, { message: 'Warning limit must be a positive number.' }),
   description: z.string().optional(),
 });
 
@@ -58,6 +59,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       source: '',
       quantity: 0,
       price: 0,
+      warningLimit: 10,
       description: '',
     },
   });
@@ -69,6 +71,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         source: variantToEdit.source,
         quantity: variantToEdit.quantity,
         price: variantToEdit.price,
+        warningLimit: variantToEdit.warningLimit,
         description: variantToEdit.description || '',
       });
     } else {
@@ -77,6 +80,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         source: '',
         quantity: 0,
         price: 0,
+        warningLimit: 10,
         description: '',
       });
     }
@@ -192,6 +196,19 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 )}
               />
             </div>
+             <FormField
+              control={form.control}
+              name="warningLimit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Warning Limit</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="description"
@@ -217,3 +234,5 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
+
+    

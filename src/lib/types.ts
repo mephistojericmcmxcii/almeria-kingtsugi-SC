@@ -22,7 +22,10 @@ export type InventoryVariant = {
   source: string;
   quantity: number;
   price: number;
+  warningLimit: number;
   description?: string;
   createdAt: any;
   updatedAt: any;
 };
+
+    

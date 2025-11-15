@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +90,16 @@ export default function ItemVariantsPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
   };
+
+  const getStatusBadge = (variant: InventoryVariant) => {
+    if (variant.quantity <= 0) {
+      return <Badge variant="destructive">Out of Stock</Badge>;
+    }
+    if (variant.quantity <= variant.warningLimit) {
+      return <Badge variant="secondary" className="bg-yellow-400 text-yellow-900">Low</Badge>;
+    }
+    return <Badge className="bg-green-500 hover:bg-green-600">Good</Badge>;
+  }
   
   const isLoading = isItemLoading || areVariantsLoading;
 
@@ -168,6 +179,7 @@ export default function ItemVariantsPage() {
                 <TableHead>Source</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead className="text-right">Total Value</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -181,6 +193,7 @@ export default function ItemVariantsPage() {
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -193,6 +206,7 @@ export default function ItemVariantsPage() {
                     <TableCell>{variant.source}</TableCell>
                     <TableCell className="text-muted-foreground">{variant.description || 'N/A'}</TableCell>
                     <TableCell className="text-right">{variant.quantity}</TableCell>
+                    <TableCell>{getStatusBadge(variant)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(variant.price)}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(variant.price * variant.quantity)}</TableCell>
                     <TableCell className="text-right">
@@ -223,7 +237,7 @@ export default function ItemVariantsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     No variants found for this item.
                   </TableCell>
                 </TableRow>
@@ -264,3 +278,5 @@ export default function ItemVariantsPage() {
     </div>
   );
 }
+
+    
