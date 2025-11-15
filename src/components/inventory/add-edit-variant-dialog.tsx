@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirebase } from '@/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { setDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -98,7 +98,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             });
         }
     } else {
-        // Reset image states when dialog closes
         setImagePreview(null);
         setImageFile(null);
         if (fileInputRef.current) {
@@ -141,7 +140,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       toast({ variant: 'destructive', title: 'Error', description: 'Parent item not found.' });
       return;
     }
-    // Added firestore validation
     if (!storage || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Firebase services are not available.' });
       return;
@@ -150,38 +148,34 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     setIsSubmitting(true);
     let finalImageUrl = variantToEdit?.imageUrl || '';
 
-    // Explicit variant ID generation
-    const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-    const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
-    const variantId = variantRef.id;
-
-    // Better error handling for image upload
-    if (imageFile) {
-      try {
-        console.log(`Uploading image for variant ${variantId}...`);
-        const imageFileName = `${variantId}-${imageFile.name}`;
-        const imageStorageRef = storageRef(storage, `inventory-item-variant-images/${imageFileName}`);
-        
-        const uploadResult = await uploadBytes(imageStorageRef, imageFile);
-        finalImageUrl = await getDownloadURL(uploadResult.ref);
-        console.log('Image uploaded successfully. URL:', finalImageUrl);
-      } catch (uploadError) {
-        console.error('Image upload failed:', uploadError);
-        toast({
-          variant: 'destructive',
-          title: 'Image Upload Failed',
-          description: 'Could not upload the image. Please try again.',
-        });
-        setIsSubmitting(false);
-        return;
-      }
-    } else if (!imagePreview && variantToEdit?.imageUrl) {
-      // This case handles removing an existing image
-      finalImageUrl = '';
-    }
-
     try {
-      console.log('Saving variant data to Firestore...');
+      if (imageFile) {
+        const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+        const tempDocRef = doc(variantCollectionRef); // Create a ref to get an ID
+        const variantId = variantToEdit ? variantToEdit.id : tempDocRef.id;
+
+        const timestamp = Date.now();
+        const imageFileName = `${variantId}-${timestamp}-${imageFile.name}`;
+        const imageStoragePath = `inventory-item-variant-images/${imageFileName}`;
+        const imageStorageRef = storageRef(storage, imageStoragePath);
+        
+        const uploadResult = await uploadBytes(imageStorageRef, imageFile, { contentType: imageFile.type });
+        finalImageUrl = await getDownloadURL(uploadResult.ref);
+
+      } else if (!imagePreview && variantToEdit?.imageUrl) {
+          try {
+            const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
+            await deleteObject(oldImageRef);
+            finalImageUrl = '';
+          } catch (deleteError) {
+             console.warn('[v0] Could not delete old image:', deleteError);
+             finalImageUrl = '';
+          }
+      }
+
+      const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+      const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
+
       const dataToSave = {
         ...values,
         imageUrl: finalImageUrl,
@@ -197,12 +191,12 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       });
       
       onOpenChange(false);
-    } catch (firestoreError) {
-      console.error('Firestore save failed:', firestoreError);
+    } catch (error) {
+      console.error('Failed to save variant:', error);
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'Could not save the variant data. Please try again.',
+        description: error instanceof Error ? error.message : 'Could not save the variant data. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -242,7 +236,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   <div className="relative h-24 w-24 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
                     {imagePreview ? (
                       <>
-                        <Image src={imagePreview} alt="Variant preview" fill style={{objectFit: "cover"}} />
+                        <Image src={imagePreview || "/placeholder.svg"} alt="Variant preview" fill style={{objectFit: "cover"}} />
                         <Button
                           type="button"
                           variant="destructive"
@@ -264,6 +258,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                     onChange={handleImageChange}
                     className="hidden"
                     ref={fileInputRef}
+                    disabled={isSubmitting}
                   />
                   <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
                     {imagePreview ? 'Change Image' : 'Upload Image'}
@@ -280,7 +275,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 <FormItem>
                   <FormLabel>Brand</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Pilot" {...field} />
+                    <Input placeholder="e.g., Pilot" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -293,7 +288,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 <FormItem>
                   <FormLabel>Source</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., National Bookstore" {...field} />
+                    <Input placeholder="e.g., National Bookstore" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -307,7 +302,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -320,7 +315,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   <FormItem>
                     <FormLabel>Price (₱)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input type="number" step="0.01" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -334,7 +329,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 <FormItem>
                   <FormLabel>Warning Limit</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Input type="number" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -347,7 +342,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 <FormItem>
                   <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g., G2, 0.5mm, Black Ink" {...field} />
+                    <Textarea placeholder="e.g., G2, 0.5mm, Black Ink" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
