@@ -1,141 +1,62 @@
 
-/**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model with ownership for user data.
- *
- * Data Structure:
- * - /users/{userId}: Stores user profiles. Accessible only to the user themselves.
- * - /users/{userId}/cart/{cartItemId}: Stores items in a user's shopping cart. Accessible only to the owner.
- * - /users/{userId}/orders/{orderId}: Stores a user's order history. Accessible only to the owner. Admins can also manage all orders.
- * - /roles_admin/{userId}: Indicates admin status. The existence of a document grants admin privileges.
- * - /dashboard_metrics/{metricId}: Stores dashboard metrics. Accessible only to admins.
- * - /system_settings/{settingId}: Stores system settings. Accessible only to admins.
- * - /inventory/{itemId}: Stores parent inventory items. Admins have full access, guests have read-only access.
- * - /inventory/{itemId}/variants/{variantId}: Stores item variants. Admins have full access.
- *
- * Key Security Decisions:
- * - User profiles are private and only accessible to the owning user.
- * - Admin privileges are determined by the presence of a document in the /roles_admin collection.
- * - Listing of users or admin roles is disallowed.
- *
- * Denormalization for Authorization:
- * - Admin status is determined by the existence of a document in `/roles_admin/{userId}`. This avoids the need to read user profile data during authorization.
- *
- * Structural Segregation:
- * - System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the authenticated user is an admin.
     function isAdmin() {
+      // Check for admin role by looking for a document in the roles_admin collection.
+      // This is more secure and reliable for rules than custom claims.
       return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    /**
-     * @description Controls access to user profile data and subcollections like the cart.
-     * @path /users/{userId}
-     */
     match /users/{userId} {
-      // Helper function to check if the authenticated user is the owner of the document.
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
+      // Users can read/write their own data.
+      // Admins can read/write any user's data.
+      allow read, write: if request.auth.uid == userId || isAdmin();
 
-      // Helper function to check if the authenticated user is the owner of the existing document.
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // Disallow listing of users for security reasons.
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Controls access to the user's shopping cart.
-       * @path /users/{userId}/cart/{cartItemId}
-       * @allow (read, write) The user can fully manage their own cart.
-       * @deny (read, write) Users cannot access other users' carts.
-       */
       match /cart/{cartItemId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if request.auth.uid == userId;
       }
 
-       /**
-       * @description Controls access to the user's order history. Admins can also manage all orders.
-       * @path /users/{userId}/orders/{orderId}
-       */
-       match /orders/{orderId} {
-         // Allow user to create and read their own orders.
-         allow create, read: if isOwner(userId);
-         
-         // Allow user to update their own order, but only to change the status to 'completed' or 'cancelled'.
-         allow update: if isOwner(userId)
+      match /orders/{orderId} {
+         allow read, create: if request.auth.uid == userId;
+         // Allow user to update their own order only to cancel or complete.
+         allow update: if request.auth.uid == userId
                       && request.resource.data.status != resource.data.status
                       && (request.resource.data.status == 'completed' || request.resource.data.status == 'cancelled');
-
-         // Allow admins to read and update any order's status.
+         // Admins can manage all orders.
          allow get, list, update: if isAdmin();
-       }
-    }
-
-    /**
-     * @description Manages admin role assignments. The existence of a document grants admin privileges.
-     * @path /roles_admin/{userId}
-     * @principle Authorization Independence: Admin privileges are determined by the existence of a document in /roles_admin/{userId}.
-     */
-    match /roles_admin/{userId} {
-        allow get: if isAdmin();
-        allow list: if false;
-        allow create: if isAdmin();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
-    }
-
-    /**
-     * @description Controls access to dashboard metrics. Only admins can read and write these metrics.
-     * @path /dashboard_metrics/{metricId}
-     * @principle Role-based access control: Only users with the 'Admin' role can access dashboard metrics.
-     */
-    match /dashboard_metrics/{metricId} {
-      allow get, list, create: if isAdmin();
-      allow update, delete: if isAdmin() && resource != null;
-    }
-
-    /**
-     * @description Controls access to system settings. Only admins can read and write these settings.
-     * @path /system_settings/{settingId}
-     * @principle Role-based access control: Only users with the 'Admin' role can access system settings.
-     */
-    match /system_settings/{settingId} {
-      allow get, list, create: if isAdmin();
-      allow update, delete: if isAdmin() && resource != null;
-    }
-
-    /**
-     * @description Controls access to parent inventory items. Admins have full access, guests can read.
-     * @path /inventory/{itemId}
-     * @principle Role-based access control for inventory management.
-     */
-    match /inventory/{itemId} {
-      // Anyone authenticated can read the inventory
-      allow get, list: if request.auth != null;
-
-      // Only admins can create, update, or delete
-      allow write: if isAdmin();
-
-       /**
-       * @description Controls access to inventory item variants. Admins have full access.
-       * @path /inventory/{itemId}/variants/{variantId}
-       */
-      match /variants/{variantId} {
-         allow read, write: if isAdmin();
       }
+    }
+    
+    // Admins have full access to manage roles.
+    match /roles_admin/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /dashboard_metrics/{metricId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /system_settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /inventory/{itemId} {
+      // Any authenticated user can read inventory.
+      allow get, list: if request.auth != null;
+      // Only admins can write to inventory.
+      allow write: if isAdmin();
+      
+      match /variants/{variantId} {
+        // Only admins can manage variants.
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Admins can query the 'orders' collection group for notifications.
+    match /{path=**}/orders/{orderId} {
+      allow list: if isAdmin();
     }
   }
 }
-
-    
