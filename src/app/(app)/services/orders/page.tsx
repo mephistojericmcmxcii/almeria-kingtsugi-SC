@@ -31,15 +31,15 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, ShieldAlert } from 'lucide-react';
 
 export default function AdminOrdersPage() {
-  const { firestore, updateOrderStatus } = useAuth();
+  const { user, firestore, updateOrderStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
   const ordersCollectionGroup = useMemoFirebase(
-    () => collectionGroup(firestore, 'orders'),
-    [firestore]
+    () => (user?.role === 'admin' ? collectionGroup(firestore, 'orders') : null),
+    [firestore, user?.role]
   );
   const { data: orders, isLoading } = useCollection<Order>(
     ordersCollectionGroup
@@ -51,6 +51,18 @@ export default function AdminOrdersPage() {
       (a, b) => b.orderDate.toMillis() - a.orderDate.toMillis()
     );
   }, [orders]);
+
+  if (user?.role !== 'admin') {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+             <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+            <h1 className="text-3xl font-bold font-headline text-destructive">Access Denied</h1>
+            <p className="text-muted-foreground mt-2">
+                You do not have permission to view this page.
+            </p>
+        </div>
+    )
+  }
 
   const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {
     setIsUpdating(order.id);
