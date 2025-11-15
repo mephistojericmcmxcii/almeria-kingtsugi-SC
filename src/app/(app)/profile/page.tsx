@@ -1,7 +1,4 @@
 
-
-
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -18,8 +15,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
-import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useMemoFirebase, useFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import type { CartItem, Order, OrderStatus } from '@/lib/types';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -126,8 +123,16 @@ function CartList() {
 }
 
 function OrderHistory() {
-    const { user, orders, isLoading, updateOrderStatus } = useAuth();
+    const { user, updateOrderStatus } = useAuth();
+    const { firestore } = useFirebase();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
+
+    const userOrdersQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.id) return null;
+        return collection(firestore, 'users', user.id, 'orders');
+    }, [firestore, user]);
+
+    const { data: orders, isLoading } = useCollection<Order>(userOrdersQuery);
 
     const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
         setIsUpdating(order.id);
@@ -158,21 +163,19 @@ function OrderHistory() {
         );
     }
     
-    // Admins see all orders, users see only their own. The query in useAuth handles this.
-    const userOrders = (user?.role === 'admin' ? orders : orders.filter(o => o.userId === user?.id))
-        .sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+    const sortedOrders = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
 
 
     return (
         <Accordion type="single" collapsible className="w-full space-y-4">
-            {userOrders.map(order => (
+            {sortedOrders.map(order => (
                 <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
                             <div className="flex flex-col text-left">
                                 <span className="font-semibold text-base font-mono">{order.id}</span>
                                 <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
-                                {user?.role === 'admin' && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
+                                {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                             </div>
                             <div className="flex items-center gap-4">
                                <span className="font-semibold text-lg">{formatCurrency(order.totalAmount)}</span>
@@ -395,6 +398,8 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
 
     
 
