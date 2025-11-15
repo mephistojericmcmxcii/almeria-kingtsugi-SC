@@ -1,223 +1,149 @@
+"use client";
 
-'use client';
-
-import { useState, useMemo } from 'react';
-import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { Order, OrderStatus } from '@/lib/types';
-import { useAuth } from '@/hooks/use-auth';
-import { format } from 'date-fns';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+  Sidebar,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+} from "@/components/ui/sidebar";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingCart, ShieldAlert } from 'lucide-react';
+  LayoutDashboard,
+  Info,
+  Gem,
+  Settings,
+  LogOut,
+  Briefcase,
+  Boxes,
+  CreditCard,
+  FileText,
+  ChevronDown,
+  ShoppingCart,
+  UserCog,
+  UserPlus,
+} from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { UserNav } from "../auth/user-nav";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
-function AdminOrdersContent() {
-  const { firestore, updateOrderStatus, user } = useAuth();
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-  const placedOrdersCollectionRef = useMemoFirebase(
-    () => (user?.role === 'admin' ? collection(firestore, 'placed-orders') : null),
-    [firestore, user?.role]
-  );
-  const { data: orders, isLoading } = useCollection<Order>(placedOrdersCollectionRef);
+const MainSidebar = () => {
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const [servicesOpen, setServicesOpen] = React.useState(false);
 
-  const sortedOrders = useMemo(() => {
-    if (!orders) return [];
-    return [...orders].sort(
-      (a, b) => b.orderDate.toMillis() - a.orderDate.toMillis()
-    );
-  }, [orders]);
-
-  const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {
-    setIsUpdating(order.id);
-    await updateOrderStatus(order, newStatus);
-    setIsUpdating(null);
-  };
-
-  const getStatusBadge = (status: OrderStatus) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
-      case 'confirmed':
-        return <Badge className="bg-blue-500 text-blue-50">Confirmed</Badge>;
-      case 'delivering':
-        return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
-      case 'completed':
-        return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+  React.useEffect(() => {
+    if (pathname.startsWith('/services')) {
+      setServicesOpen(true);
     }
-  };
+  }, [pathname]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-    }).format(amount);
-  };
+  const menuItems = [
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      roles: ['admin', 'guest'],
+    },
+    {
+      href: "/admin",
+      label: "Admin",
+      icon: Settings,
+      roles: ['admin'],
+    },
+     {
+      href: "/about",
+      label: "About Us",
+      icon: Info,
+      roles: ['admin', 'guest'],
+    },
+  ];
+
+  const servicesMenuItems = [
+    { href: '/services/inventory', label: 'Inventory', icon: Boxes, roles: ['admin', 'guest'] },
+    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
+    { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
+  ];
+
+  const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
+
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>All Orders</CardTitle>
-        <CardDescription>
-          View and manage all orders placed by customers.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-5 w-24" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-28" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-6 w-24" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-10 w-32" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : sortedOrders.length > 0 ? (
-              sortedOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs">
-                    {order.id}
-                  </TableCell>
-                  <TableCell>
-                      <div className="font-medium">{order.userDisplayName}</div>
-                      <div className="text-sm text-muted-foreground">{order.userEmail}</div>
-                  </TableCell>
-                  <TableCell>
-                    {format(order.orderDate.toDate(), 'MMM d, yyyy, h:mm a')}
-                  </TableCell>
-                  <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell>
-                      {order.status !== 'completed' && order.status !== 'cancelled' ? (
-                      <Select
-                          value={order.status}
-                          onValueChange={(value) => handleStatusChange(order, value as OrderStatus)}
-                          disabled={isUpdating === order.id}
-                      >
-                          <SelectTrigger className="w-[140px]">
-                              <SelectValue placeholder="Change status..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {order.status === 'pending' && <SelectItem value="confirmed">Confirm Order</SelectItem>}
-                              {order.status === 'confirmed' && <SelectItem value="delivering">Mark as Delivering</SelectItem>}
-                              {order.status === 'delivering' && <SelectItem value="completed">Mark as Completed</SelectItem>}
-                              <SelectItem value="cancelled">Cancel Order</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      ) : (
-                          <span className="text-sm text-muted-foreground">No actions</span>
-                      )}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  No orders found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-export default function AdminOrdersPage() {
-  const { user, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return (
-        <div className="space-y-8">
-            <div className="flex items-center gap-4">
-                <ShoppingCart className="w-8 h-8 text-primary" />
-                <h1 className="text-3xl font-bold tracking-tight font-headline">Customer Orders</h1>
+    <Sidebar>
+      <SidebarHeader>
+        <div className="flex items-center gap-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <Gem className="h-6 w-6 text-primary" />
             </div>
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-6 w-40" />
-                    <Skeleton className="h-4 w-64" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-64 w-full" />
-                </CardContent>
-            </Card>
-      </div>
-    );
-  }
-
-  if (user?.role !== 'admin') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-        <h1 className="text-3xl font-bold font-headline text-destructive">Access Denied</h1>
-        <p className="text-muted-foreground mt-2">
-          You do not have permission to view this page.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <ShoppingCart className="w-8 h-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Customer Orders</h1>
-      </div>
-      <AdminOrdersContent />
-    </div>
+            <span className="font-headline text-lg font-semibold">Kintsugi</span>
+        </div>
+      </SidebarHeader>
+      <SidebarMenu className="flex-1">
+        {menuItems.map((item) =>
+          item.roles.includes(user?.role || '') ? (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href}>
+                <SidebarMenuButton
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ) : null
+        )}
+        
+        {user?.role === 'admin' && (
+            <Collapsible open={servicesOpen} onOpenChange={setServicesOpen} asChild>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Services" isActive={isServicesActive}>
+                            <Briefcase />
+                            <span>Services</span>
+                            <ChevronDown className={cn("ml-auto transition-transform", servicesOpen && "rotate-180")} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent asChild>
+                        <SidebarMenuSub>
+                            {servicesMenuItems.map(item => (
+                                (item.roles.includes(user?.role || '') && !(item as any).hidden) ? (
+                                <SidebarMenuItem key={item.href}>
+                                    <Link href={item.href}>
+                                        <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
+                                            <item.icon />
+                                            <span>{item.label}</span>
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                                ) : null
+                            ))}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                </SidebarMenuItem>
+            </Collapsible>
+        )}
+        
+      </SidebarMenu>
+      <SidebarFooter>
+        <div className="md:hidden">
+            <UserNav />
+        </div>
+        <SidebarMenuButton onClick={logout}>
+            <LogOut />
+            <span>Logout</span>
+        </SidebarMenuButton>
+      </SidebarFooter>
+    </Sidebar>
   );
-}
+};
+
+export default MainSidebar;

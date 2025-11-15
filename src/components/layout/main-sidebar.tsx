@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -69,10 +70,8 @@ const MainSidebar = () => {
 
   const servicesMenuItems = [
     { href: '/services/inventory', label: 'Inventory', icon: Boxes, roles: ['admin', 'guest'] },
-    { href: '/services/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
     { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
-    { href: '/services/make-admin', label: 'Make Admin', icon: UserCog, roles: ['admin'] },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
@@ -150,3 +149,5 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
+
+    

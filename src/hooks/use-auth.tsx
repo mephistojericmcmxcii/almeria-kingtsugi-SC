@@ -70,8 +70,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const ordersQueryRef = useMemoFirebase(() => {
     if (!firestore || !user?.id) return null;
     // Query for orders where the userId matches the current user's ID
+    if (user.role === 'admin') {
+      return collection(firestore, 'placed-orders');
+    }
     return query(collection(firestore, 'placed-orders'), where('userId', '==', user.id));
-  }, [firestore, user?.id]);
+  }, [firestore, user]);
   const { data: orders } = useCollection<Order>(ordersQueryRef);
 
 
@@ -648,4 +651,5 @@ export const useAuth = () => {
   return context;
 };
 
+    
     
