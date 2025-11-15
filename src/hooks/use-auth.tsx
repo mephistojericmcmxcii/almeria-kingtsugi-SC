@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (email?: string, password?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  createAdminUser: (email: string, password: string, displayName: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -144,13 +145,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const createAdminUser = async (email: string, password: string, displayName: string): Promise<boolean> => {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const fbUser = userCredential.user;
+
+        // Create user profile in 'users' collection
+        const userRef = doc(firestore, "users", fbUser.uid);
+        const adminData = {
+            id: fbUser.uid,
+            displayName: displayName,
+            email: email,
+            role: "admin",
+            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
+        };
+        await setDoc(userRef, adminData);
+
+        // Add user to 'roles_admin' collection to grant admin privileges
+        const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
+        await setDoc(adminRoleRef, { role: "admin" });
+        
+        toast({
+            title: "Admin User Created",
+            description: `${displayName} has been added as an admin.`,
+        });
+        return true;
+    } catch (error: any) {
+        console.error("Error creating admin user:", error);
+        toast({
+            variant: "destructive",
+            title: "Creation Failed",
+            description: error.message || "Could not create the admin user.",
+        });
+        return false;
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
     router.push('/');
   };
   
-  const value = { user, login, logout, isLoading };
+  const value = { user, login, logout, isLoading, createAdminUser };
 
   return (
     <AuthContext.Provider value={value}>
