@@ -1,5 +1,4 @@
 
-
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type User = {
@@ -62,6 +61,7 @@ export type Order = {
   totalAmount: number;
   shippingAddress: string;
   status: OrderStatus;
+  paymentMethod: string;
   ref?: DocumentReference; // Available on collection group queries
   updatedAt?: Timestamp;
 };

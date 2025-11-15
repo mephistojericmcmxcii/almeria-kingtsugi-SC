@@ -32,6 +32,7 @@ export default function CheckoutPage() {
 
     const [shippingOption, setShippingOption] = useState<'profile' | 'custom'>('profile');
     const [customAddress, setCustomAddress] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'instapay'>('cod');
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
     const cartCollectionRef = useMemoFirebase(() => {
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
         if (!finalShippingAddress || !cartItems) return;
         setIsPlacingOrder(true);
 
-        const success = await placeOrder(cartItems, total, finalShippingAddress);
+        const success = await placeOrder(cartItems, total, finalShippingAddress, paymentMethod);
 
         if (success) {
             toast({
@@ -172,7 +173,7 @@ export default function CheckoutPage() {
                             <CardTitle className="font-headline text-2xl">Payment Method</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <RadioGroup defaultValue="cod">
+                            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'cod' | 'gcash' | 'instapay')}>
                                 <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
                                     <div className="flex items-center space-x-3">
                                         <RadioGroupItem value="gcash" id="gcash" disabled />

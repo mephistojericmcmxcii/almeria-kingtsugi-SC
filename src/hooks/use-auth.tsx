@@ -42,7 +42,7 @@ interface AuthContextType {
   addToCart: (variant: CombinedVariant) => Promise<void>;
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
-  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string) => Promise<boolean>;
+  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, paymentMethod: string) => Promise<boolean>;
   updateOrderStatus: (order: Order, newStatus: OrderStatus) => Promise<boolean>;
   showCartBadge: boolean;
   dismissCartBadge: () => void;
@@ -521,7 +521,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string): Promise<boolean> => {
+    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string, paymentMethod: string): Promise<boolean> => {
         if (!user) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to place an order.' });
             return false;
@@ -541,6 +541,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     totalAmount,
                     shippingAddress,
                     status: 'pending',
+                    paymentMethod,
                     updatedAt: serverTimestamp(),
                 };
                 transaction.set(newOrderRef, newOrder);
