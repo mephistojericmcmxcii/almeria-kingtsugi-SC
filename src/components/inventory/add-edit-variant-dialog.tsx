@@ -114,8 +114,17 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) { // 2MB
+        toast({
+            variant: "destructive",
+            title: "Image Too Large",
+            description: "Please select an image smaller than 2MB.",
+        });
+        return;
+    }
+
     const options = {
-      maxSizeMB: 2,
+      maxSizeMB: 0.5, // Compress to ~500KB
       maxWidthOrHeight: 1920,
       useWebWorker: true,
     };
@@ -156,13 +165,12 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     try {
         if (imageFile) {
             const storage = getStorage(firebaseApp);
-            // Create a unique filename
             const imageFileName = `${item.id}-${Date.now()}-${imageFile.name}`;
-            const imageStorageRef = storageRef(storage, `inventory/${imageFileName}`);
+            const imageStorageRef = storageRef(storage, `inventory-variant-images/${imageFileName}`);
             
             await uploadBytes(imageStorageRef, imageFile);
             finalImageUrl = await getDownloadURL(imageStorageRef);
-        } else if (imagePreview === null) {
+        } else if (imagePreview === null && variantToEdit?.imageUrl) {
             // Image was removed, so clear the URL
             finalImageUrl = '';
         }
@@ -344,3 +352,5 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
+
+    
