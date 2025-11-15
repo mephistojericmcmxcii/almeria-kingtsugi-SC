@@ -1,0 +1,180 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the Kintsugi Portal system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name."
+        },
+        "role": {
+          "type": "string",
+          "description": "User's role (e.g., 'Admin', 'Guest')."
+        },
+        "profileImageUrl": {
+          "type": "string",
+          "description": "URL of the user's profile image (optional).",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "role"
+      ]
+    },
+    "DashboardMetrics": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DashboardMetrics",
+      "type": "object",
+      "description": "Represents key business metrics displayed on the dashboard.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DashboardMetrics entity."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date for which the metrics are recorded.",
+          "format": "date-time"
+        },
+        "totalSales": {
+          "type": "number",
+          "description": "Total sales amount for the given date."
+        },
+        "newCustomers": {
+          "type": "number",
+          "description": "Number of new customers acquired on the given date."
+        },
+        "averageOrderValue": {
+          "type": "number",
+          "description": "Average order value for the given date."
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "totalSales",
+        "newCustomers",
+        "averageOrderValue"
+      ]
+    },
+    "SystemSetting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SystemSetting",
+      "type": "object",
+      "description": "Represents a system-wide setting.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SystemSetting entity."
+        },
+        "settingKey": {
+          "type": "string",
+          "description": "The key or name of the setting."
+        },
+        "settingValue": {
+          "type": "string",
+          "description": "The value of the setting (can be a string representation of a number, boolean, etc.)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the purpose of the setting."
+        }
+      },
+      "required": [
+        "id",
+        "settingKey",
+        "settingValue"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles.  Uses path-based ownership for private user data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "role",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store admin roles. The existence of a document with the user's UID implies admin access.  Authorization independence is achieved because rules only check for document existence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID. Indicates admin role when a document exists."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/dashboard_metrics/{metricId}",
+        "definition": {
+          "entityName": "DashboardMetrics",
+          "schema": {
+            "$ref": "#/backend/entities/DashboardMetrics"
+          },
+          "description": "Stores dashboard metrics.  Accessible to admins.",
+          "params": [
+            {
+              "name": "metricId",
+              "description": "The unique identifier for the metric."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/system_settings/{settingId}",
+        "definition": {
+          "entityName": "SystemSetting",
+          "schema": {
+            "$ref": "#/backend/entities/SystemSetting"
+          },
+          "description": "Stores system settings. Only accessible to admins.",
+          "params": [
+            {
+              "name": "settingId",
+              "description": "The unique identifier for the system setting."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support a business management portal with user authentication (Guest/Admin roles), a dashboard for metrics, and admin panel for user and settings management. The structure emphasizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs.\n\n**Authorization Independence:**  Authorization data is denormalized to avoid `get()` calls in security rules.  For example, admin privileges are determined by the existence of a document in `/roles_admin/{userId}`, avoiding the need to read user profile data during authorization.\n\n**Structural Segregation:** Data with different access requirements is stored in separate collections (e.g., public vs. private data).  System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data.\n\n**Access Modeling:** User-owned data will be stored in `/users/{userId}/...`. Global roles are managed via existence checks in dedicated role collections (`/roles_admin/{userId}`).\n\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations. The segregation of data based on access levels (e.g., system settings in a separate collection) ensures that listing operations can be secured without filtering based on document content.\n\n**Denormalization Strategy:**  The role is denormalized to avoid reads in security rules. The dashboard metrics do not have user based authorization requirements so it will be under a main collection. The system settings require admin only access, which is achieved via role verification."
+  }
+}
