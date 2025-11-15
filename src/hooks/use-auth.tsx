@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirebase } from '@/firebase';
-import { signOut, signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signOut, signInWithEmailAndPassword, signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
@@ -69,21 +69,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
       } else if (role === 'admin') {
-         const userCredential = await signInWithEmailAndPassword(auth, "admin@kintsugi.com", "password");
-         firebaseUser = userCredential.user;
-         const userRef = doc(firestore, "users", firebaseUser.uid);
-         const userDoc = await getDoc(userRef);
-
-         if (!userDoc.exists()) {
-            await setDoc(userRef, {
-                id: firebaseUser.uid,
-                displayName: "Admin User",
-                email: "admin@kintsugi.com",
-                role: "admin",
-                profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
-            });
-             const adminRoleRef = doc(firestore, "roles_admin", firebaseUser.uid);
-             await setDoc(adminRoleRef, { role: "admin" });
+         try {
+            const userCredential = await signInWithEmailAndPassword(auth, "admin@kintsugi.com", "password");
+            firebaseUser = userCredential.user;
+         } catch (error: any) {
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                const userCredential = await createUserWithEmailAndPassword(auth, "admin@kintsugi.com", "password");
+                firebaseUser = userCredential.user;
+                const userRef = doc(firestore, "users", firebaseUser.uid);
+                await setDoc(userRef, {
+                    id: firebaseUser.uid,
+                    displayName: "Admin User",
+                    email: "admin@kintsugi.com",
+                    role: "admin",
+                    profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
+                });
+                const adminRoleRef = doc(firestore, "roles_admin", firebaseUser.uid);
+                await setDoc(adminRoleRef, { role: "admin" });
+            } else {
+                throw error;
+            }
          }
       }
 
