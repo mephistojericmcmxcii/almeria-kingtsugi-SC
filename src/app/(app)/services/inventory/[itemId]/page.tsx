@@ -169,6 +169,7 @@ export default function ItemVariantsPage() {
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead className="text-right">Price</TableHead>
+                <TableHead className="text-right">Total Value</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -181,6 +182,7 @@ export default function ItemVariantsPage() {
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -192,6 +194,7 @@ export default function ItemVariantsPage() {
                     <TableCell className="text-muted-foreground">{variant.description || 'N/A'}</TableCell>
                     <TableCell className="text-right">{variant.quantity}</TableCell>
                     <TableCell className="text-right">{formatCurrency(variant.price)}</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(variant.price * variant.quantity)}</TableCell>
                     <TableCell className="text-right">
                        {user?.role === 'admin' && (
                         <DropdownMenu>
@@ -220,7 +223,7 @@ export default function ItemVariantsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No variants found for this item.
                   </TableCell>
                 </TableRow>
@@ -261,4 +264,3 @@ export default function ItemVariantsPage() {
     </div>
   );
 }
-
