@@ -98,7 +98,7 @@ export default function ItemVariantsPage() {
     if (variant.quantity <= variant.warningLimit) {
       return <Badge variant="secondary" className="bg-orange-500 text-orange-50 hover:bg-orange-600">Low</Badge>;
     }
-    return <Badge variant="default">Good</Badge>;
+    return <Badge className="bg-green-600 text-green-50 hover:bg-green-700 border-green-700">Good</Badge>;
   }
   
   const isLoading = isItemLoading || areVariantsLoading;
