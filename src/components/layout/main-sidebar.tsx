@@ -72,6 +72,7 @@ const MainSidebar = () => {
     { href: '/services/inventory', label: 'Inventory', icon: Boxes, roles: ['admin', 'guest'] },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
     { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
+    { href: '/services/make-admin', label: 'Make Admin', icon: UserCog, roles: ['admin'] },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
