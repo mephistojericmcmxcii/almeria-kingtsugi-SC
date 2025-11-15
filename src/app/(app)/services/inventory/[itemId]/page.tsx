@@ -96,9 +96,9 @@ export default function ItemVariantsPage() {
       return <Badge variant="destructive">Out of Stock</Badge>;
     }
     if (variant.quantity <= variant.warningLimit) {
-      return <Badge variant="secondary" className="bg-yellow-400 text-yellow-900">Low</Badge>;
+      return <Badge variant="secondary" className="bg-orange-500 text-orange-50 hover:bg-orange-600">Low</Badge>;
     }
-    return <Badge className="bg-green-500 hover:bg-green-600">Good</Badge>;
+    return <Badge variant="default">Good</Badge>;
   }
   
   const isLoading = isItemLoading || areVariantsLoading;
@@ -278,5 +278,3 @@ export default function ItemVariantsPage() {
     </div>
   );
 }
-
-    
