@@ -9,6 +9,7 @@ export type User = {
   profileImageUrl: string;
   address?: string;
   lastViewedOrdersAt?: Timestamp;
+  lastViewedAllOrdersAt?: Timestamp;
 };
 
 export type InventoryItem = {

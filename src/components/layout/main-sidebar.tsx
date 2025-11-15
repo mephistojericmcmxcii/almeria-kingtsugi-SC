@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 
 const MainSidebar = () => {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, showAdminOrderBadge } = useAuth();
   const [servicesOpen, setServicesOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -69,10 +69,10 @@ const MainSidebar = () => {
   ];
 
   const servicesMenuItems = [
-    { href: '/services/inventory', label: 'Inventory', icon: Boxes },
-    { href: '/services/orders', label: 'Orders', icon: ShoppingCart },
-    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard },
-    { href: '/services/po', label: 'PO', icon: FileText },
+    { href: '/services/inventory', label: 'Inventory', icon: Boxes, notification: false },
+    { href: '/services/orders', label: 'Orders', icon: ShoppingCart, notification: showAdminOrderBadge },
+    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, notification: false },
+    { href: '/services/po', label: 'PO', icon: FileText, notification: false },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
@@ -123,9 +123,12 @@ const MainSidebar = () => {
                             {servicesMenuItems.map(item => (
                                 <SidebarMenuItem key={item.href}>
                                     <Link href={item.href}>
-                                        <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
+                                        <SidebarMenuSubButton isActive={pathname.startsWith(item.href)} className="relative">
                                             <item.icon />
                                             <span>{item.label}</span>
+                                            {item.notification && (
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
+                                            )}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuItem>

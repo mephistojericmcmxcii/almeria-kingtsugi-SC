@@ -48,6 +48,8 @@ interface AuthContextType {
   dismissCartBadge: () => void;
   showOrderHistoryBadge: boolean;
   dismissOrderHistoryBadge: () => void;
+  showAdminOrderBadge: boolean;
+  dismissAdminOrderBadge: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,6 +60,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showCartBadge, setShowCartBadge] = useState(false);
   const [showOrderHistoryBadge, setShowOrderHistoryBadge] = useState(false);
+  const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
+
   const router = useRouter();
   const { toast } = useToast();
 
@@ -96,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
               address: userData.address || '',
               lastViewedOrdersAt: userData.lastViewedOrdersAt,
+              lastViewedAllOrdersAt: userData.lastViewedAllOrdersAt,
             };
             setUser(appUser);
           } else {
@@ -128,12 +133,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   useEffect(() => {
     if (user && orders) {
+      // For personal order history badge
       const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
       const hasNewUpdates = orders.some(order => 
-        (order.updatedAt?.toMillis() || 0) > lastViewed
+          order.userId === user.id && (order.updatedAt?.toMillis() || 0) > lastViewed
       );
       if (hasNewUpdates) {
         setShowOrderHistoryBadge(true);
+      }
+
+      // For admin order management badge
+      if (user.role === 'admin') {
+          const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
+          const hasNewAdminUpdates = orders.some(order => 
+              (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
+          );
+          if (hasNewAdminUpdates) {
+              setShowAdminOrderBadge(true);
+          }
       }
     }
   }, [user, orders]);
@@ -155,6 +172,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
         console.error("Error updating lastViewedOrdersAt:", error);
     }
+  };
+
+  const dismissAdminOrderBadge = async () => {
+      if (!user || user.role !== 'admin') return;
+      setShowAdminOrderBadge(false);
+      try {
+          const userRef = doc(firestore, 'users', user.id);
+          const newTimestamp = serverTimestamp();
+          await updateDoc(userRef, { lastViewedAllOrdersAt: newTimestamp });
+           setUser(prev => prev ? {...prev, lastViewedAllOrdersAt: Timestamp.now()} : null);
+      } catch (error) {
+          console.error("Error updating lastViewedAllOrdersAt:", error);
+      }
   };
 
 
@@ -634,7 +664,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
 
   return (
     <AuthContext.Provider value={value}>

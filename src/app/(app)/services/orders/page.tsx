@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collectionGroup } from 'firebase/firestore';
@@ -19,13 +19,17 @@ import { ShoppingCart, CheckCircle, XCircle, MoreHorizontal, Search, Eye } from 
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AllOrdersPage() {
-    const { user, updateOrderStatus } = useAuth();
+    const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
     const { firestore } = useFirebase();
     
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    useEffect(() => {
+        dismissAdminOrderBadge();
+    }, [dismissAdminOrderBadge]);
 
     const allOrdersQuery = useMemoFirebase(() => {
         if (!firestore || user?.role !== 'admin') return null;
