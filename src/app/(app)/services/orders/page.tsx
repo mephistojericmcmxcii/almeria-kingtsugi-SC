@@ -35,12 +35,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingCart, ShieldAlert } from 'lucide-react';
 
 function AdminOrdersContent() {
-  const { firestore, updateOrderStatus } = useAuth();
+  const { firestore, updateOrderStatus, user } = useAuth();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
   const placedOrdersCollectionRef = useMemoFirebase(
-    () => collection(firestore, 'placed-orders'),
-    [firestore]
+    () => (user?.role === 'admin' ? collection(firestore, 'placed-orders') : null),
+    [firestore, user?.role]
   );
   const { data: orders, isLoading } = useCollection<Order>(placedOrdersCollectionRef);
 
