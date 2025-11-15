@@ -215,9 +215,8 @@ function OrderHistory() {
 
 
 export default function ProfilePage() {
-  const { user, cart, updateUserProfile, isLoading: isAuthLoading } = useAuth();
+  const { user, cart, updateUserProfile, isLoading: isAuthLoading, showCartBadge, dismissCartBadge } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCartBadge, setShowCartBadge] = useState(false);
 
   const cartItemCount = cart?.length || 0;
 
@@ -238,17 +237,9 @@ export default function ProfilePage() {
     }
   }, [user, form]);
   
-  useEffect(() => {
-    // Show the badge if items are added to the cart
-    if (cartItemCount > 0) {
-      setShowCartBadge(true);
-    }
-  }, [cartItemCount]);
-
   const handleTabChange = (value: string) => {
-    // When the user clicks the "My Cart" tab, hide the badge.
     if (value === 'cart') {
-      setShowCartBadge(false);
+      dismissCartBadge();
     }
   };
 

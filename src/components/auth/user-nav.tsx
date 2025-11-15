@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -16,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { LogOut, User as UserIcon } from "lucide-react";
 
 export function UserNav() {
-  const { user, cart, logout } = useAuth();
+  const { user, cart, logout, showCartBadge } = useAuth();
 
   if (!user) {
     return null;
@@ -41,7 +42,7 @@ export function UserNav() {
             <AvatarImage src={user.profileImageUrl} alt={user.displayName} />
             <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
           </Avatar>
-           {cartItemCount > 0 && (
+           {showCartBadge && cartItemCount > 0 && (
             <span className="absolute top-0 right-0 block h-4 w-4 transform -translate-y-1/2 translate-x-1/2 rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center">
               {cartItemCount}
             </span>
