@@ -6,7 +6,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'Kintsugi Portal',
-  description: 'Business management portal for KINTSUGI variety shop',
+  description: 'Business management for the KINTSUGI variety shop',
 };
 
 export default function RootLayout({
