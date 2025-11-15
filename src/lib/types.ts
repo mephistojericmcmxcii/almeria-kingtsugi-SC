@@ -1,4 +1,6 @@
 
+import type { DocumentReference } from 'firebase/firestore';
+
 export type User = {
   id: string;
   displayName: string;
@@ -26,6 +28,8 @@ export type InventoryVariant = {
   description?: string;
   createdAt: any;
   updatedAt: any;
+  // This property is available on documents fetched from a collection group query
+  ref?: DocumentReference; 
 };
 
     
