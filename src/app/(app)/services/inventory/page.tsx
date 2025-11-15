@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
-import type { InventoryItem } from '@/lib/types';
+import { collection, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,9 +39,43 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [totalValue, setTotalValue] = useState(0);
+  const [isValueLoading, setIsValueLoading] = useState(true);
 
   const inventoryCollectionRef = useMemoFirebase(() => collection(firestore, 'inventory'), [firestore]);
   const { data: inventoryItems, isLoading } = useCollection<InventoryItem>(inventoryCollectionRef);
+
+  useEffect(() => {
+    if (!inventoryItems) {
+        setIsValueLoading(false);
+        return;
+    }
+
+    const fetchAllVariantsAndCalculateValue = async () => {
+        setIsValueLoading(true);
+        let accumulatedValue = 0;
+        
+        try {
+            for (const item of inventoryItems) {
+                const variantsCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+                const variantsSnapshot = await getDocs(variantsCollectionRef);
+                variantsSnapshot.forEach(variantDoc => {
+                    const variant = variantDoc.data() as InventoryVariant;
+                    accumulatedValue += (variant.quantity || 0) * (variant.price || 0);
+                });
+            }
+            setTotalValue(accumulatedValue);
+        } catch (error) {
+            console.error("Error calculating total inventory value:", error);
+            setTotalValue(0);
+        } finally {
+            setIsValueLoading(false);
+        }
+    };
+
+    fetchAllVariantsAndCalculateValue();
+
+  }, [inventoryItems, firestore]);
 
   const filteredItems = useMemo(() => {
     if (!inventoryItems) return [];
@@ -89,6 +123,10 @@ export default function InventoryPage() {
     setItemToEdit(null);
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+  };
+
 
   return (
     <div className="space-y-8">
@@ -123,11 +161,11 @@ export default function InventoryPage() {
          <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Inventory Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <div className="h-4 w-4 text-muted-foreground font-bold">₱</div>
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">₱---</div>}
-             <p className="text-xs text-muted-foreground">Calculation requires setup*</p>
+            {isLoading || isValueLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>}
+             <p className="text-xs text-muted-foreground">Sum of all variant quantities and prices</p>
           </CardContent>
         </Card>
       </div>
