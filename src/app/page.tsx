@@ -1,11 +1,14 @@
-
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LoginForm } from "@/components/auth/login-form";
+import { RegisterForm } from "@/components/auth/register-form";
 import { Gem } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 export default function LoginPage() {
   const { user, isLoading } = useAuth();
@@ -17,7 +20,6 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router]);
 
-  // Prevent flash of login page if user is already authenticated and just refreshing
   if (isLoading || (!isLoading && user)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -42,7 +44,34 @@ export default function LoginPage() {
             Business Management Suite
           </p>
         </div>
-        <LoginForm />
+        <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
+                        <CardDescription>Enter your credentials to access the portal.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <LoginForm />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="register">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
+                        <CardDescription>Sign up to start browsing our collection.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <RegisterForm />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
       </div>
     </main>
   );

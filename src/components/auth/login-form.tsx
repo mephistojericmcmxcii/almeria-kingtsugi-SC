@@ -8,14 +8,6 @@ import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
@@ -69,14 +61,8 @@ export function LoginForm() {
   const disabled = isLoading || isSubmitting;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
-        <CardDescription>Enter your credentials to access the portal.</CardDescription>
-      </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="email"
@@ -103,17 +89,15 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={disabled}>
-              <ShieldCheck className="mr-2" /> Sign In as Admin
-            </Button>
-            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={disabled}>
-              <GoogleIcon /> Sign in with Google
-            </Button>
-          </CardFooter>
+            <div className="flex flex-col gap-4 pt-2">
+                <Button type="submit" className="w-full" disabled={disabled}>
+                  <ShieldCheck className="mr-2" /> {isSubmitting ? 'Signing In...' : 'Sign In'}
+                </Button>
+                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={disabled}>
+                  <GoogleIcon /> Sign in with Google
+                </Button>
+            </div>
         </form>
       </Form>
-    </Card>
   );
 }

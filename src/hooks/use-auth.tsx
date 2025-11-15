@@ -30,6 +30,7 @@ interface AuthContextType {
   firestore: Firestore;
   toast: ({...props}: any) => void;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -216,6 +217,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
     }
   };
+  
+    const register = async (email: string, password: string, displayName: string) => {
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const fbUser = userCredential.user;
+
+      const userRef = doc(firestore, 'users', fbUser.uid);
+      const newUser: Omit<User, 'id'> = {
+        displayName: displayName,
+        email: fbUser.email!,
+        role: 'guest',
+        profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+        address: '',
+      };
+      await setDoc(userRef, {id: fbUser.uid, ...newUser});
+      
+      toast({
+        title: "Account Created!",
+        description: "You have been successfully registered.",
+      });
+      router.push('/dashboard');
+
+    } catch (error: any) {
+       console.error("Firebase registration failed", error);
+       if (error.code === 'auth/email-already-in-use') {
+           toast({
+            variant: "destructive",
+            title: "Registration Failed",
+            description: "An account with this email address already exists.",
+          });
+       } else {
+           toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong.",
+            description: error.message || "Could not create your account.",
+          });
+       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   const loginWithGoogle = async () => {
     setIsLoading(true);
@@ -587,7 +631,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, firestore, toast, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge };
+  const value = { user, cart, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge };
 
   return (
     <AuthContext.Provider value={value}>
