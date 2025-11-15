@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
-import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
+import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
@@ -13,7 +13,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 interface AuthContextType {
   user: User | null;
-  login: (email?: string, password?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -46,18 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
             };
             setUser(appUser);
-          } else if (fbUser.isAnonymous) {
-              const guestUser: User = {
-                id: fbUser.uid,
-                displayName: "Guest User",
-                email: `guest_${fbUser.uid}@example.com`,
-                role: "guest",
-                profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
-            };
-            setUser(guestUser);
           } else {
-             // This case handles users who signed up with Google but don't have a doc yet.
-             // The loginWithGoogle function handles creation, but this is a fallback.
+             // This can happen if a user is created in Auth but their Firestore doc fails to be created
+             console.warn("User document not found for authenticated user:", fbUser.uid);
              setUser(null);
           }
         } catch (error) {
@@ -79,58 +70,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [firebaseUser, isAuthLoading, firestore, router]);
 
 
-  const login = async (email?: string, password?: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
 
     try {
       let userCredential;
       
-      // Guest Login
-      if (!email || !password) {
-        userCredential = await signInAnonymously(auth);
-      } 
-      // Admin/Email login
-      else {
-         try {
-            userCredential = await signInWithEmailAndPassword(auth, email, password);
-         } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
-                // If it's the default admin email, create the user
-                if (email === "admin@kintsugi.com") {
-                    userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const fbUser = userCredential.user;
-                    const userRef = doc(firestore, "users", fbUser.uid);
-                    const adminData = {
-                        id: fbUser.uid,
-                        displayName: "Admin User",
-                        email: email,
-                        role: "admin",
-                        profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
-                    };
-                    await setDoc(userRef, adminData);
-                    const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
-                    await setDoc(adminRoleRef, { role: "admin" });
-                } else {
-                    toast({
-                        variant: "destructive",
-                        title: "User Not Found",
-                        description: "No account exists with this email address.",
-                    });
-                    setIsLoading(false);
-                    return;
-                }
-            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            // If it's the default admin email, create the user
+            if (email === "admin@kintsugi.com") {
+                userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const fbUser = userCredential.user;
+                const userRef = doc(firestore, "users", fbUser.uid);
+                const adminData = {
+                    id: fbUser.uid,
+                    displayName: "Admin User",
+                    email: email,
+                    role: "admin",
+                    profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
+                };
+                await setDoc(userRef, adminData);
+                const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
+                await setDoc(adminRoleRef, { role: "admin" });
+            } else {
                 toast({
-                  variant: "destructive",
-                  title: "Invalid Credentials",
-                  description: "Please check your email and password and try again.",
+                    variant: "destructive",
+                    title: "User Not Found",
+                    description: "No account exists with this email address.",
                 });
                 setIsLoading(false);
                 return;
-            } else {
-                throw error;
             }
-         }
+        } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+            toast({
+              variant: "destructive",
+              title: "Invalid Credentials",
+              description: "Please check your email and password and try again.",
+            });
+            setIsLoading(false);
+            return;
+        } else {
+            throw error;
+        }
       }
 
       if (userCredential?.user) {
@@ -143,9 +127,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Uh oh! Something went wrong.",
         description: error.message || "Could not sign in.",
       });
-    } finally {
-        // We let the useEffect handle the final loading state
-        // setIsLoading(false);
     }
   };
 
@@ -176,9 +157,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Google Sign-In Failed",
         description: error.message || "Could not sign in with Google.",
       });
-    } finally {
-        // We let the useEffect handle the final loading state
-        // setIsLoading(false);
     }
   };
 

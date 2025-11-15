@@ -24,8 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { User, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
@@ -60,12 +59,6 @@ export function LoginForm() {
     await login(values.email, values.password);
     setIsSubmitting(false);
   };
-  
-  const handleGuestLogin = async () => {
-    setIsSubmitting(true);
-    await login(); // No args means guest login
-    setIsSubmitting(false);
-  }
 
   const handleGoogleLogin = async () => {
     setIsSubmitting(true);
@@ -121,15 +114,6 @@ export function LoginForm() {
           </CardFooter>
         </form>
       </Form>
-      <div className="relative px-6 mb-4">
-        <Separator />
-        <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-card px-2 text-xs text-muted-foreground">OR</span>
-      </div>
-      <CardFooter>
-         <Button variant="secondary" className="w-full" onClick={handleGuestLogin} disabled={disabled}>
-          <User className="mr-2" /> Continue as Guest
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
