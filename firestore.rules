@@ -7,6 +7,7 @@
  * - /roles_admin/{userId}: Indicates admin status. The existence of a document grants admin privileges.
  * - /dashboard_metrics/{metricId}: Stores dashboard metrics. Accessible only to admins.
  * - /system_settings/{settingId}: Stores system settings. Accessible only to admins.
+ * - /inventory/{itemId}: Stores inventory items. Admins have full access, guests have read-only access.
  *
  * Key Security Decisions:
  * - User profiles are private and only accessible to the owning user.
@@ -128,5 +129,25 @@ service cloud.firestore {
       allow update: if isAdmin() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
+
+    /**
+     * @description Controls access to inventory items. Admins have full access, guests can read.
+     * @path /inventory/{itemId}
+     * @allow (get, list) All authenticated users (admins and guests) can read inventory.
+     * @allow (create, update, delete) Only admins can create, update, or delete inventory items.
+     * @principle Role-based access control for inventory management.
+     */
+    match /inventory/{itemId} {
+      function isAdmin() {
+        return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      }
+      
+      // Anyone authenticated can read the inventory
+      allow get, list: if request.auth != null;
+
+      // Only admins can create, update, or delete
+      allow write: if isAdmin();
+    }
   }
 }
+    

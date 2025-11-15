@@ -5,3 +5,16 @@ export type User = {
   role: 'admin' | 'guest';
   profileImageUrl: string;
 };
+
+export type InventoryItem = {
+    id: string;
+    name: string;
+    category: string;
+    quantity: number;
+    price: number;
+    description?: string;
+    createdAt: any; 
+    updatedAt: any;
+};
+
+    
