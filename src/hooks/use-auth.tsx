@@ -1,23 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser, useFirebase } from '@/firebase';
+import { signOut, signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
+import { useDocumentData } from 'react-firebase-hooks/firestore';
 
-const mockUsers: Record<User['role'], User> = {
-  admin: {
-    name: 'Admin User',
-    email: 'admin@kintsugi.com',
-    role: 'admin',
-    avatar: 'https://picsum.photos/seed/admin/40/40',
-  },
-  guest: {
-    name: 'Guest User',
-    email: 'guest@kintsugi.com',
-    role: 'guest',
-    avatar: 'https://picsum.photos/seed/guest/40/40',
-  },
-};
 
 interface AuthContextType {
   user: User | null;
@@ -29,43 +20,97 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const { user: firebaseUser, isLoading: isAuthLoading, auth, firestore } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const userDocRef = useMemo(() => {
+    if (!firebaseUser || !firestore) return undefined;
+    return doc(firestore, 'users', firebaseUser.uid);
+  }, [firebaseUser, firestore]);
+  
+  const [userData, isUserDocLoading] = useDocumentData(userDocRef);
+
   useEffect(() => {
+    setIsLoading(isAuthLoading || isUserDocLoading);
+
+    if (!isAuthLoading && !firebaseUser) {
+      setUser(null);
+    }
+    
+    if (firebaseUser && userData) {
+       const appUser: User = {
+         name: userData.displayName,
+         email: userData.email,
+         role: userData.role,
+         avatar: userData.profileImageUrl || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`,
+       };
+       setUser(appUser);
+    }
+
+  }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, router]);
+
+  const login = async (role: 'admin' | 'guest') => {
+    setIsLoading(true);
     try {
-      const storedUser = sessionStorage.getItem('kintsugi-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      let firebaseUser: FirebaseUser | undefined;
+
+      if (role === 'guest') {
+        const userCredential = await signInAnonymously(auth);
+        firebaseUser = userCredential.user;
+        const userRef = doc(firestore, "users", firebaseUser.uid);
+        await setDoc(userRef, {
+            id: firebaseUser.uid,
+            displayName: "Guest User",
+            email: `guest_${firebaseUser.uid}@kintsugi.com`,
+            role: "guest",
+            profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
+        });
+
+      } else if (role === 'admin') {
+         const userCredential = await signInWithEmailAndPassword(auth, "admin@kintsugi.com", "password");
+         firebaseUser = userCredential.user;
+         const userRef = doc(firestore, "users", firebaseUser.uid);
+         const userDoc = await getDoc(userRef);
+
+         if (!userDoc.exists()) {
+            await setDoc(userRef, {
+                id: firebaseUser.uid,
+                displayName: "Admin User",
+                email: "admin@kintsugi.com",
+                role: "admin",
+                profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
+            });
+             const adminRoleRef = doc(firestore, "roles_admin", firebaseUser.uid);
+             await setDoc(adminRoleRef, { role: "admin" });
+         }
+      }
+
+      if (firebaseUser) {
+        router.push('/dashboard');
       }
     } catch (error) {
-      console.error("Failed to parse user from sessionStorage", error);
-      sessionStorage.removeItem('kintsugi-user');
+      console.error("Firebase login failed", error);
+      // You might want to show a toast message here
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const login = (role: 'admin' | 'guest') => {
-    setIsLoading(true);
-    const userToLogin = mockUsers[role];
-    sessionStorage.setItem('kintsugi-user', JSON.stringify(userToLogin));
-    setUser(userToLogin);
-    router.push('/dashboard');
-    setIsLoading(false);
   };
 
-  const logout = () => {
+  const logout = async () => {
     setIsLoading(true);
-    sessionStorage.removeItem('kintsugi-user');
+    await signOut(auth);
     setUser(null);
     router.push('/');
     setIsLoading(false);
   };
+  
+  // Use a placeholder for isUserLoading for now
+  const value = { user, login, logout, isLoading: isLoading };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,8 +1,10 @@
+
 export const firebaseConfig = {
-  "projectId": "studio-5617832182-dbc8f",
-  "appId": "1:253491721710:web:2d35df6ceb47089584caff",
-  "apiKey": "AIzaSyDS-DPkb1jgxNbWbzQThRMWVO8rvbevsdM",
-  "authDomain": "studio-5617832182-dbc8f.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "253491721710"
+  apiKey: "AIzaSyD4JgXXSI2RfjnQ2oasyf9xsDgE6oW8aLU",
+  authDomain: "almeriasdb.firebaseapp.com",
+  projectId: "almeriasdb",
+  storageBucket: "almeriasdb.appspot.com",
+  messagingSenderId: "927407881844",
+  appId: "1:927407881844:web:2912e3362b8c004ba29b21",
+  measurementId: "G-Z7S88MJK95"
 };

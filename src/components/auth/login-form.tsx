@@ -7,17 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ShieldCheck, User } from "lucide-react";
 import * as React from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export function LoginForm() {
   const { login, isLoading } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const { toast } = useToast();
+  const [email, setEmail] = React.useState("admin@kintsugi.com");
+  const [password, setPassword] = React.useState("password");
 
-  const handleLogin = (role: 'admin' | 'guest') => {
+
+  const handleLogin = async (role: 'admin' | 'guest') => {
     setIsLoggingIn(true);
-    // Simulate network delay
-    setTimeout(() => {
-      login(role);
-    }, 500);
+    try {
+      await login(role);
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: error.message || "Could not sign in.",
+      });
+    } finally {
+        setIsLoggingIn(false);
+    }
   };
 
   const disabled = isLoading || isLoggingIn;
@@ -30,12 +42,12 @@ export function LoginForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="user@example.com" defaultValue="demo@kintsugi.com" disabled />
+          <Label htmlFor="email">Email (for Admin)</Label>
+          <Input id="email" type="email" placeholder="admin@kintsugi.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" defaultValue="thisisnotreal" disabled />
+          <Label htmlFor="password">Password (for Admin)</Label>
+          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-3">
