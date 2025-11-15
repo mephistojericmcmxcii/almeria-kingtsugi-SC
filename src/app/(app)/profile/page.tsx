@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -50,7 +51,11 @@ const formatCurrency = (amount: number) => {
 function CartList() {
     const { user, firestore, updateCartItemQuantity, removeCartItem } = useAuth();
     const router = useRouter();
-    const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.id, 'cart') : null, [firestore, user]);
+    
+    const cartCollectionRef = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return collection(firestore, 'users', user.id, 'cart');
+    }, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
     
     const totalCartPrice = useMemo(() => {
@@ -151,6 +156,8 @@ function OrderHistory() {
     const getStatusBadge = (status: OrderStatus) => {
         switch (status) {
             case 'pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
+            case 'confirmed': return <Badge className="bg-blue-500 text-blue-50">Confirmed</Badge>;
+            case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
             case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
             case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
         }
@@ -202,18 +209,20 @@ function OrderHistory() {
                                 <h4 className="font-semibold mb-1">Shipping Address</h4>
                                 <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
                             </div>
-                            {order.status === 'pending' && (
-                                <div className="flex gap-2 justify-end pt-4">
-                                    <Button variant="outline" size="sm" onClick={() => updateOrderStatus(order.id, 'cancelled')}>
+                            <div className="flex gap-2 justify-end pt-4">
+                                {(order.status === 'pending' || order.status === 'confirmed') && (
+                                     <Button variant="outline" size="sm" onClick={() => updateOrderStatus(order.id, 'cancelled')}>
                                         <XCircle className="mr-2 h-4 w-4"/>
                                         Cancel Order
                                     </Button>
+                                )}
+                                {order.status === 'delivering' && (
                                     <Button size="sm" onClick={() => updateOrderStatus(order.id, 'completed')}>
                                         <CheckCircle className="mr-2 h-4 w-4"/>
-                                        Mark as Delivered
+                                        Mark as Received
                                     </Button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </AccordionContent>
                 </AccordionItem>
