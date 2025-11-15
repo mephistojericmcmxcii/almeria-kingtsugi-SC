@@ -222,12 +222,12 @@ export default function AllOrdersPage() {
                         </div>
                         <div className="flex gap-2">
                              {selectedOrder.status === 'pending' && (
-                                 <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'confirmed')} disabled={isUpdating === selectedOrder.id}>
+                                 <Button size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'confirmed')} disabled={isUpdating === selectedOrder.id}>
                                     {isUpdating === selectedOrder.id ? 'Confirming...' : 'Confirm'}
                                 </Button>
                             )}
                             {selectedOrder.status === 'confirmed' && (
-                                 <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'delivering')} disabled={isUpdating === selectedOrder.id}>
+                                 <Button size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'delivering')} disabled={isUpdating === selectedOrder.id}>
                                     {isUpdating === selectedOrder.id ? 'Shipping...' : 'Ship'}
                                 </Button>
                             )}
