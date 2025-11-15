@@ -1,14 +1,14 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
-
 
 interface AuthContextType {
   user: User | null;
@@ -20,7 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { user: firebaseUser, isLoading: isAuthLoading, auth, firestore } = useFirebase();
+  const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -29,17 +29,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!firebaseUser || !firestore) return undefined;
     return doc(firestore, 'users', firebaseUser.uid);
   }, [firebaseUser, firestore]);
-  
-  const [userData, isUserDocLoading] = useDocumentData(userDocRef);
+
+  const [userData, isUserDocLoading, userDocError] = useDocumentData(userDocRef);
 
   useEffect(() => {
-    const totalLoading = isAuthLoading || (firebaseUser && isUserDocLoading);
+    // Overall loading is true if auth is loading, or if we have a user but their doc is still loading.
+    const totalLoading = isAuthLoading || (!!firebaseUser && isUserDocLoading);
     setIsLoading(totalLoading);
 
+    // If auth has finished and there's no firebase user, they are logged out.
     if (!isAuthLoading && !firebaseUser) {
       setUser(null);
+      return;
     }
-    
+
+    // If we have a firebase user and their document has loaded, create the app user object.
     if (firebaseUser && userData) {
        const appUser: User = {
          id: firebaseUser.uid,
@@ -50,8 +54,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        };
        setUser(appUser);
     }
+    
+    // If there's an error loading the user document, treat as not logged in.
+    if (userDocError) {
+      console.error("Error fetching user document:", userDocError);
+      setUser(null);
+    }
 
-  }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, router]);
+  }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, userDocError, router]);
 
   const login = async (role: 'admin' | 'guest', email?: string, password?: string) => {
     try {
@@ -61,13 +71,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await signInAnonymously(auth);
         firebaseUser = userCredential.user;
         const userRef = doc(firestore, "users", firebaseUser.uid);
-        await setDoc(userRef, {
+        const guestData = {
             id: firebaseUser.uid,
             displayName: "Guest User",
             email: `guest_${firebaseUser.uid}@example.com`,
             role: "guest",
             profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
-        });
+        };
+        await setDoc(userRef, guestData);
       } else if (role === 'admin' && email && password) {
          try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -93,6 +104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (firebaseUser) {
+        // After successful login/signup, the useEffect will handle setting the user state.
+        // We just need to navigate.
         router.push('/dashboard');
       }
     } catch (error) {
@@ -103,11 +116,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setIsLoading(true);
     await signOut(auth);
-    setUser(null);
+    setUser(null); // Immediately clear local user state
     router.push('/');
-    setIsLoading(false);
   };
   
   const value = { user, login, logout, isLoading };
@@ -126,3 +137,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
