@@ -53,6 +53,7 @@ const MainSidebar = () => {
       label: "Dashboard",
       icon: LayoutDashboard,
       roles: ['admin', 'guest'],
+      alwaysShow: true,
     },
     {
       href: "/admin",
@@ -65,6 +66,7 @@ const MainSidebar = () => {
       label: "About Us",
       icon: Info,
       roles: ['admin', 'guest'],
+      alwaysShow: true,
     },
   ];
 
@@ -88,8 +90,9 @@ const MainSidebar = () => {
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1">
-        {menuItems.map((item) =>
-          item.roles.includes(user?.role || '') ? (
+        {menuItems.map((item) => {
+          const showItem = item.alwaysShow || (item.roles && item.roles.includes(user?.role || ''));
+          return showItem ? (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
@@ -101,8 +104,8 @@ const MainSidebar = () => {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-          ) : null
-        )}
+          ) : null;
+        })}
         
         {user?.role === 'admin' && (
             <Collapsible open={servicesOpen} onOpenChange={setServicesOpen} asChild>
