@@ -344,25 +344,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateUserRole = async (targetUserId: string, newRole: 'admin' | 'guest'): Promise<boolean> => {
     try {
         const functions = getFunctions();
-        const setAdminRole = httpsCallable(functions, 'setAdminRole');
         
         if (newRole === 'admin') {
+            const setAdminRole = httpsCallable(functions, 'setAdminRole');
             await setAdminRole({ uid: targetUserId });
         } else {
-            // To revoke, we can call a different function or the same one with a flag.
-            // For now, let's assume `setAdminRole` handles revocation if no role is passed or with a flag.
-            // Let's call a hypothetical revokeAdminRole for now. We will need to implement it.
-            // For this implementation, we will just update the firestore doc.
-            // The correct way is to call a function to remove claims.
+            const revokeAdminRole = httpsCallable(functions, 'revokeAdminRole');
+            await revokeAdminRole({ uid: targetUserId });
         }
-
-        // The custom claim is set. Now update the Firestore document for client-side rendering.
-        const userRef = doc(firestore, "users", targetUserId);
-        await setDoc(userRef, { role: newRole }, { merge: true });
 
         toast({
             title: "User Role Updated",
-            description: `The user's role has been changed to ${newRole}.`,
+            description: `The user's role has been changed to ${newRole}. The user must log out and log back in for this change to take effect.`,
         });
         return true;
     } catch (error: any) {
@@ -651,8 +644,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
-    
-
-    
