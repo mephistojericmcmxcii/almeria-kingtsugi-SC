@@ -98,6 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Firebase login failed", error);
+      // Re-throw the error to be caught by the calling component
       throw error;
     } finally {
       setIsLoading(false);
