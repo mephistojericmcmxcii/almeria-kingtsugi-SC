@@ -19,13 +19,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, isLoading, router]);
 
-   // Redirect guest from admin-only pages
-  useEffect(() => {
-    if (user?.role === 'guest' && (pathname.startsWith('/admin') || pathname.startsWith('/services'))) {
-      router.push('/dashboard');
-    }
-  }, [user, pathname, router]);
-
   if (isLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">

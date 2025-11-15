@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
-  Users,
   Info,
   Gem,
   Settings,
@@ -48,7 +47,7 @@ const MainSidebar = () => {
       href: "/dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      roles: ['admin', 'guest'],
+      roles: ['admin'],
     },
     {
       href: "/admin",
@@ -60,7 +59,7 @@ const MainSidebar = () => {
       href: "/about",
       label: "About Us",
       icon: Info,
-      roles: ['admin', 'guest'],
+      roles: ['admin'],
     },
   ];
 

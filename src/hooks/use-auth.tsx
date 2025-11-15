@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirebase } from '@/firebase';
-import { signOut, signInWithEmailAndPassword, signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
@@ -12,7 +12,7 @@ import { useDocumentData } from 'react-firebase-hooks/firestore';
 
 interface AuthContextType {
   user: User | null;
-  login: (role: 'admin' | 'guest', email?: string, password?: string) => Promise<void>;
+  login: (role: 'admin', email?: string, password?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -52,24 +52,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, router]);
 
-  const login = async (role: 'admin' | 'guest', email?: string, password?: string) => {
+  const login = async (role: 'admin', email?: string, password?: string) => {
     setIsLoading(true);
     try {
       let firebaseUser: FirebaseUser | undefined;
 
-      if (role === 'guest') {
-        const userCredential = await signInAnonymously(auth);
-        firebaseUser = userCredential.user;
-        const userRef = doc(firestore, "users", firebaseUser.uid);
-        await setDoc(userRef, {
-            id: firebaseUser.uid,
-            displayName: "Guest User",
-            email: `guest_${firebaseUser.uid}@kintsugi.com`,
-            role: "guest",
-            profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
-        });
-
-      } else if (role === 'admin' && email && password) {
+      if (role === 'admin' && email && password) {
          try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             firebaseUser = userCredential.user;

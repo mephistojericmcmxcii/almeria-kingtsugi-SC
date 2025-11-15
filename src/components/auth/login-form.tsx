@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, User } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,7 +17,7 @@ export function LoginForm() {
   const [password, setPassword] = React.useState("");
 
 
-  const handleLogin = async (role: 'admin' | 'guest') => {
+  const handleLogin = async (role: 'admin') => {
     setIsLoggingIn(true);
     try {
       if (role === 'admin') {
@@ -31,8 +31,6 @@ export function LoginForm() {
             return;
         }
         await login(role, email, password);
-      } else {
-        await login(role);
       }
     } catch (error: any) {
        toast({
@@ -51,24 +49,21 @@ export function LoginForm() {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Welcome</CardTitle>
-        <CardDescription>Select a role to sign in to the portal.</CardDescription>
+        <CardDescription>Sign in to the admin portal.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email (for Admin)</Label>
+          <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" placeholder="admin@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password (for Admin)</Label>
+          <Label htmlFor="password">Password</Label>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-3">
         <Button className="w-full" onClick={() => handleLogin('admin')} disabled={disabled}>
           <ShieldCheck className="mr-2 h-4 w-4" /> Sign In as Admin
-        </Button>
-        <Button variant="secondary" className="w-full" onClick={() => handleLogin('guest')} disabled={disabled}>
-          <User className="mr-2 h-4 w-4" /> Sign In as Guest
         </Button>
       </CardFooter>
     </Card>
