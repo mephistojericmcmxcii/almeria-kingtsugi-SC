@@ -252,7 +252,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                     className="hidden"
                     ref={fileInputRef}
                   />
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
                     {imagePreview ? 'Change Image' : 'Upload Image'}
                   </Button>
                 </div>
