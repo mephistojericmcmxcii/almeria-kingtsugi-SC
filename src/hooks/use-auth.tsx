@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
-import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
@@ -14,6 +14,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 interface AuthContextType {
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   createAdminUser: (email: string, password: string, displayName: string) => Promise<boolean>;
@@ -42,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               displayName: userData.displayName,
               email: userData.email,
               role: userData.role,
-              profileImageUrl: userData.profileImageUrl || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
             };
             setUser(appUser);
           } else if (fbUser.isAnonymous) {
@@ -55,6 +56,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             setUser(guestUser);
           } else {
+             // This case handles users who signed up with Google but don't have a doc yet.
+             // The loginWithGoogle function handles creation, but this is a fallback.
              setUser(null);
           }
         } catch (error) {
@@ -146,6 +149,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const additionalInfo = getAdditionalUserInfo(userCredential);
+      const fbUser = userCredential.user;
+
+      // If it's a new user, create their document in Firestore
+      if (additionalInfo?.isNewUser) {
+        const userRef = doc(firestore, 'users', fbUser.uid);
+        const newUser: Omit<User, 'id'> = {
+          displayName: fbUser.displayName || 'New User',
+          email: fbUser.email!,
+          role: 'guest', // Default role for new Google sign-ups
+          profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+        };
+        await setDoc(userRef, newUser);
+      }
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Google Sign-In failed", error);
+      toast({
+        variant: "destructive",
+        title: "Google Sign-In Failed",
+        description: error.message || "Could not sign in with Google.",
+      });
+    } finally {
+        // We let the useEffect handle the final loading state
+        // setIsLoading(false);
+    }
+  };
+
+
   const createAdminUser = async (email: string, password: string, displayName: string): Promise<boolean> => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -217,7 +254,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, login, logout, isLoading, createAdminUser, updateUserRole };
+  const value = { user, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole };
 
   return (
     <AuthContext.Provider value={value}>
