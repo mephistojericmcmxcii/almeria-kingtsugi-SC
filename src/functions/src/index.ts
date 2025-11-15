@@ -24,13 +24,7 @@ export const setAdminRole = onCall(async (request) => {
 
   // Check if the caller is an admin by verifying their custom claim.
   if (auth.token.admin !== true) {
-      const adminDoc = await db.collection("roles_admin").doc(auth.uid).get();
-      if (!adminDoc.exists) {
-        const existingAdmins = await db.collection("roles_admin").limit(1).get();
-        if (!existingAdmins.empty) {
-          throw new Error("Only admins can assign roles.");
-        }
-      }
+      throw new Error("Only admins can assign roles.");
   }
 
   // Set the custom claim { admin: true } on the target user's token
