@@ -66,9 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { data: cart } = useCollection<CartItem>(cartCollectionRef);
   
   const ordersCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.id) return null;
     return collection(firestore, 'users', user.id, 'orders');
-  }, [firestore, user]);
+  }, [firestore, user?.id]);
   const { data: orders } = useCollection<Order>(ordersCollectionRef);
 
   useEffect(() => {
@@ -345,10 +345,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
             // To revoke, we can call a different function or the same one with a flag.
             // For now, let's assume `setAdminRole` handles revocation if no role is passed or with a flag.
-            // Let's modify setAdminRole to handle this. For now, we will just call it.
-            // A more robust implementation would have a revokeAdminRole function.
-            // We will assume the current function revokes if called on an admin.
-            // This is a simplification. A dedicated revoke function is better.
             // Let's call a hypothetical revokeAdminRole for now. We will need to implement it.
             // For this implementation, we will just update the firestore doc.
             // The correct way is to call a function to remove claims.
