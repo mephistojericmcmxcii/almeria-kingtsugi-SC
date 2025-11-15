@@ -41,39 +41,49 @@ export default function InventoryPage() {
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   const [totalValue, setTotalValue] = useState(0);
   const [isValueLoading, setIsValueLoading] = useState(true);
+  const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
+  const [areCountsLoading, setAreCountsLoading] = useState(true);
+
 
   const inventoryCollectionRef = useMemoFirebase(() => collection(firestore, 'inventory'), [firestore]);
   const { data: inventoryItems, isLoading } = useCollection<InventoryItem>(inventoryCollectionRef);
 
   useEffect(() => {
     if (!inventoryItems) {
-        setIsValueLoading(false);
-        return;
+      setIsValueLoading(false);
+      setAreCountsLoading(false);
+      return;
     }
 
-    const fetchAllVariantsAndCalculateValue = async () => {
+    const fetchAllVariants = async () => {
         setIsValueLoading(true);
+        setAreCountsLoading(true);
         let accumulatedValue = 0;
+        const counts: Record<string, number> = {};
         
         try {
             for (const item of inventoryItems) {
                 const variantsCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
                 const variantsSnapshot = await getDocs(variantsCollectionRef);
+                counts[item.id] = variantsSnapshot.size;
                 variantsSnapshot.forEach(variantDoc => {
                     const variant = variantDoc.data() as InventoryVariant;
                     accumulatedValue += (variant.quantity || 0) * (variant.price || 0);
                 });
             }
             setTotalValue(accumulatedValue);
+            setVariantCounts(counts);
         } catch (error) {
             console.error("Error calculating total inventory value:", error);
             setTotalValue(0);
+            setVariantCounts({});
         } finally {
             setIsValueLoading(false);
+            setAreCountsLoading(false);
         }
     };
 
-    fetchAllVariantsAndCalculateValue();
+    fetchAllVariants();
 
   }, [inventoryItems, firestore]);
 
@@ -194,6 +204,7 @@ export default function InventoryPage() {
               <TableRow>
                 <TableHead>Item Name</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead># Variants</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -204,6 +215,7 @@ export default function InventoryPage() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
@@ -214,6 +226,9 @@ export default function InventoryPage() {
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{item.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                        {areCountsLoading ? <Skeleton className="h-5 w-5" /> : variantCounts[item.id] ?? 0}
                     </TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-sm">{item.description || 'N/A'}</TableCell>
                     <TableCell className="text-right">
@@ -293,4 +308,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
