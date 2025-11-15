@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirebase } from '@/firebase';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { setDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,7 +51,7 @@ interface AddEditVariantDialogProps {
 }
 
 export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit }: AddEditVariantDialogProps) {
-  const { firebaseApp, firestore } = useFirebase();
+  const { storage, firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -157,7 +156,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
     try {
         if (imageFile) {
-            const storage = getStorage(firebaseApp);
             const imageFileName = `${item.id}-${Date.now()}-${imageFile.name}`;
             const imageStorageRef = storageRef(storage, `inventory-variant-images/${imageFileName}`);
             
@@ -172,13 +170,8 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
 
       const dataToSave = {
-        brand: values.brand,
-        source: values.source,
-        quantity: values.quantity,
-        price: values.price,
-        warningLimit: values.warningLimit,
+        ...values,
         imageUrl: finalImageUrl,
-        description: values.description || '',
         updatedAt: serverTimestamp(),
         ...(!variantToEdit && { createdAt: serverTimestamp() })
       };
