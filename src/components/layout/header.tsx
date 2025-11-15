@@ -21,7 +21,7 @@ const Header = () => {
       </div>
       <div className="flex-1">
         <h1 className="text-lg font-semibold">
-            {getGreeting()}, {user?.name.split(' ')[0]}!
+            {getGreeting()}, {user?.displayName?.split(' ')[0]}!
         </h1>
       </div>
       <div className="hidden md:block">

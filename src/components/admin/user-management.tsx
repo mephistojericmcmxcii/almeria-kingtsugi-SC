@@ -12,7 +12,8 @@ import type { User } from "@/lib/types"
 import { collection } from "firebase/firestore"
 import { Skeleton } from "../ui/skeleton"
 
-const getInitials = (name: string) => {
+const getInitials = (name?: string) => {
+    if (!name) return '';
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[1][0]}`;
@@ -72,10 +73,10 @@ export function UserManagement() {
                     <TableCell>
                         <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
-                                <AvatarImage src={user.avatar} alt={user.name} />
-                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                <AvatarImage src={user.profileImageUrl} alt={user.displayName} />
+                                <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
                             </Avatar>
-                            <div className="font-medium">{user.name}</div>
+                            <div className="font-medium">{user.displayName}</div>
                         </div>
                     </TableCell>
                     <TableCell>

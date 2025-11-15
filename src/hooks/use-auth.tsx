@@ -3,12 +3,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
+import { useToast } from "@/hooks/use-toast";
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   const userDocRef = useMemo(() => {
     if (!firebaseUser || !firestore) return undefined;
@@ -33,29 +36,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userData, isUserDocLoading, userDocError] = useDocumentData(userDocRef);
 
   useEffect(() => {
-    // Overall loading is true if auth is loading, or if we have a user but their doc is still loading.
     const totalLoading = isAuthLoading || (!!firebaseUser && isUserDocLoading);
     setIsLoading(totalLoading);
 
-    // If auth has finished and there's no firebase user, they are logged out.
     if (!isAuthLoading && !firebaseUser) {
       setUser(null);
       return;
     }
 
-    // If we have a firebase user and their document has loaded, create the app user object.
     if (firebaseUser && userData) {
        const appUser: User = {
          id: firebaseUser.uid,
-         name: userData.displayName,
+         displayName: userData.displayName,
          email: userData.email,
          role: userData.role,
-         avatar: userData.profileImageUrl || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`,
+         profileImageUrl: userData.profileImageUrl || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`,
        };
        setUser(appUser);
     }
     
-    // If there's an error loading the user document, treat as not logged in.
     if (userDocError) {
       console.error("Error fetching user document:", userDocError);
       setUser(null);
@@ -64,12 +63,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, userDocError, router]);
 
   const login = async (role: 'admin' | 'guest', email?: string, password?: string) => {
+    let userCredential;
     try {
-      let firebaseUser: FirebaseUser | undefined;
-
       if (role === 'guest') {
-        const userCredential = await signInAnonymously(auth);
-        firebaseUser = userCredential.user;
+        userCredential = await signInAnonymously(auth);
+        const firebaseUser = userCredential.user;
         const userRef = doc(firestore, "users", firebaseUser.uid);
         const guestData = {
             id: firebaseUser.uid,
@@ -78,46 +76,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             role: "guest",
             profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
         };
-        await setDoc(userRef, guestData);
+        setDoc(userRef, guestData).catch(error => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'create',
+            requestResourceData: guestData,
+          }))
+        });
       } else if (role === 'admin' && email && password) {
          try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            firebaseUser = userCredential.user;
+            userCredential = await signInWithEmailAndPassword(auth, email, password);
          } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                firebaseUser = userCredential.user;
+                userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const firebaseUser = userCredential.user;
                 const userRef = doc(firestore, "users", firebaseUser.uid);
-                await setDoc(userRef, {
+                const adminData = {
                     id: firebaseUser.uid,
                     displayName: "Admin User",
                     email: email,
                     role: "admin",
                     profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
-                });
+                };
+                await setDoc(userRef, adminData);
                 const adminRoleRef = doc(firestore, "roles_admin", firebaseUser.uid);
                 await setDoc(adminRoleRef, { role: "admin" });
+            } else if (error.code === 'auth/invalid-credential') {
+                toast({
+                  variant: "destructive",
+                  title: "Invalid Credentials",
+                  description: "Please check your email and password and try again.",
+                });
+                return;
             } else {
                 throw error;
             }
          }
       }
 
-      if (firebaseUser) {
-        // After successful login/signup, the useEffect will handle setting the user state.
-        // We just need to navigate.
+      if (userCredential?.user) {
         router.push('/dashboard');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Firebase login failed", error);
-      // Re-throw the error to be caught by the calling component
-      throw error;
+       toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: error.message || "Could not sign in.",
+      });
     }
   };
 
   const logout = async () => {
     await signOut(auth);
-    setUser(null); // Immediately clear local user state
+    setUser(null);
     router.push('/');
   };
   
@@ -137,4 +149,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
