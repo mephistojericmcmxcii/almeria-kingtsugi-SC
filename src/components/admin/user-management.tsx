@@ -37,7 +37,7 @@ const getInitials = (name?: string) => {
 };
 
 export function UserManagement() {
-  const { firestore, user: currentUser } = useFirebase();
+  const { user: currentUser, firestore } = useAuth();
   const { updateUserRole } = useAuth();
   const [isAddAdminDialogOpen, setIsAddAdminDialogOpen] = useState(false);
   const [userToUpdate, setUserToUpdate] = useState<{user: User, newRole: 'admin' | 'guest'} | null>(null);
@@ -124,7 +124,7 @@ export function UserManagement() {
                       <TableCell className="text-right">
                           <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                  <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.id === currentUser?.uid}>
+                                  <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.id === currentUser?.id}>
                                       <MoreHorizontal className="h-4 w-4" />
                                       <span className="sr-only">Toggle menu</span>
                                   </Button>

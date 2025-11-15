@@ -36,7 +36,7 @@ export default function CheckoutPage() {
 
     const cartCollectionRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
-        return collection(firestore, 'users', user.uid, 'cart');
+        return collection(firestore, 'users', user.id, 'cart');
     }, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
 
@@ -232,5 +232,3 @@ export default function CheckoutPage() {
         </div>
     );
 }
-
-    
