@@ -100,33 +100,35 @@ const MainSidebar = () => {
           ) : null
         )}
         
-        <Collapsible open={servicesOpen} onOpenChange={setServicesOpen} asChild>
-            <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Services" isActive={isServicesActive}>
-                        <Briefcase />
-                        <span>Services</span>
-                        <ChevronDown className={cn("ml-auto transition-transform", servicesOpen && "rotate-180")} />
-                    </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent asChild>
-                    <SidebarMenuSub>
-                        {servicesMenuItems.map(item => (
-                            item.roles.includes(user?.role || '') ? (
-                            <SidebarMenuItem key={item.href}>
-                                 <Link href={item.href}>
-                                    <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
-                                        <item.icon />
-                                        <span>{item.label}</span>
-                                    </SidebarMenuSubButton>
-                                </Link>
-                            </SidebarMenuItem>
-                            ) : null
-                        ))}
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-            </SidebarMenuItem>
-        </Collapsible>
+        {user?.role === 'admin' && (
+            <Collapsible open={servicesOpen} onOpenChange={setServicesOpen} asChild>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Services" isActive={isServicesActive}>
+                            <Briefcase />
+                            <span>Services</span>
+                            <ChevronDown className={cn("ml-auto transition-transform", servicesOpen && "rotate-180")} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent asChild>
+                        <SidebarMenuSub>
+                            {servicesMenuItems.map(item => (
+                                item.roles.includes(user?.role || '') ? (
+                                <SidebarMenuItem key={item.href}>
+                                    <Link href={item.href}>
+                                        <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
+                                            <item.icon />
+                                            <span>{item.label}</span>
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                                ) : null
+                            ))}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                </SidebarMenuItem>
+            </Collapsible>
+        )}
         
       </SidebarMenu>
       <SidebarFooter>
