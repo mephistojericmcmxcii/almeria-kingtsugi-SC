@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirebase } from '@/firebase';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { setDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,8 +27,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
+import imageCompression from 'browser-image-compression';
+import { Upload, X } from 'lucide-react';
+import Image from 'next/image';
 
 const formSchema = z.object({
   brand: z.string().min(2, { message: 'Brand must be at least 2 characters.' }),
@@ -36,6 +40,7 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, { message: 'Price must be a positive number.' }),
   warningLimit: z.coerce.number().int().min(0, { message: 'Warning limit must be a positive number.' }),
   description: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 type AddEditVariantFormValues = z.infer<typeof formSchema>;
@@ -48,9 +53,12 @@ interface AddEditVariantDialogProps {
 }
 
 export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit }: AddEditVariantDialogProps) {
-  const { firestore } = useFirebase();
+  const { firebaseApp, firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<AddEditVariantFormValues>({
     resolver: zodResolver(formSchema),
@@ -61,6 +69,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       price: 0,
       warningLimit: 10,
       description: '',
+      imageUrl: '',
     },
   });
 
@@ -74,7 +83,11 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 price: variantToEdit.price || 0,
                 warningLimit: variantToEdit.warningLimit || 0,
                 description: variantToEdit.description || '',
+                imageUrl: variantToEdit.imageUrl || '',
             });
+            if (variantToEdit.imageUrl) {
+                setImagePreview(variantToEdit.imageUrl);
+            }
         } else {
             form.reset({
                 brand: '',
@@ -83,10 +96,52 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 price: 0,
                 warningLimit: 10,
                 description: '',
+                imageUrl: '',
             });
+        }
+    } else {
+        // Reset image state when dialog closes
+        setImagePreview(null);
+        setImageFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
         }
     }
   }, [variantToEdit, form, isOpen]);
+
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const options = {
+      maxSizeMB: 2,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
+
+    try {
+      const compressedFile = await imageCompression(file, options);
+      setImageFile(compressedFile);
+      setImagePreview(URL.createObjectURL(compressedFile));
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      toast({
+        variant: "destructive",
+        title: "Image Compression Failed",
+        description: "Could not process the image. Please try another file.",
+      });
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    form.setValue('imageUrl', '');
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
 
 
   const onSubmit = async (values: AddEditVariantFormValues) => {
@@ -96,12 +151,28 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       }
 
     setIsSubmitting(true);
+    let finalImageUrl = variantToEdit?.imageUrl || '';
+
     try {
+        if (imageFile) {
+            const storage = getStorage(firebaseApp);
+            // Create a unique filename
+            const imageFileName = `${item.id}-${Date.now()}-${imageFile.name}`;
+            const imageStorageRef = storageRef(storage, `inventory/${imageFileName}`);
+            
+            await uploadBytes(imageStorageRef, imageFile);
+            finalImageUrl = await getDownloadURL(imageStorageRef);
+        } else if (imagePreview === null) {
+            // Image was removed, so clear the URL
+            finalImageUrl = '';
+        }
+
       const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
       const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
 
       const dataToSave = {
         ...values,
+        imageUrl: finalImageUrl,
         description: values.description || '',
         updatedAt: serverTimestamp(),
         ...( !variantToEdit && { createdAt: serverTimestamp() })
@@ -144,6 +215,43 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormItem>
+              <FormLabel>Variant Image</FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-4">
+                  <div className="relative h-24 w-24 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
+                    {imagePreview ? (
+                      <>
+                        <Image src={imagePreview} alt="Variant preview" layout="fill" objectFit="cover" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-0 right-0 h-6 w-6 z-10"
+                          onClick={removeImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Upload className="h-8 w-8" />
+                    )}
+                  </div>
+                  <Input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageChange}
+                    className="hidden"
+                    ref={fileInputRef}
+                  />
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    {imagePreview ? 'Change Image' : 'Upload Image'}
+                  </Button>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+
             <FormField
               control={form.control}
               name="brand"

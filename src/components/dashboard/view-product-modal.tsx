@@ -41,13 +41,23 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
     onOpenChange(false);
   }
 
-  const getPlaceholderImage = (itemId: string) => {
-    const itemImage = PlaceHolderImages.find(p => p.id === itemId);
-    const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
-    return itemImage || fallbackImage!;
+  const getPlaceholderImage = (item: CombinedVariant) => {
+      if (item.imageUrl) {
+          return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
+      }
+      const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+      const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
+      if (categoryImage) {
+          return categoryImage;
+      }
+      const itemImage = PlaceHolderImages.find(p => p.id === item.parentItemId);
+      if (itemImage) {
+        return itemImage;
+      }
+      return PlaceHolderImages.find(p => p.id === 'product-fallback')!;
   };
 
-  const placeholder = getPlaceholderImage(variant.parentItemId);
+  const placeholder = getPlaceholderImage(variant);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);

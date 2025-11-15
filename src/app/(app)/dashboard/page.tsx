@@ -94,10 +94,20 @@ export default function DashboardPage() {
     setIsModalOpen(true);
   }
 
-  const getPlaceholderImage = (itemId: string) => {
-      const itemImage = PlaceHolderImages.find(p => p.id === itemId);
-      const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
-      return itemImage || fallbackImage!;
+  const getPlaceholderImage = (item: CombinedVariant) => {
+      if (item.imageUrl) {
+          return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
+      }
+      const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+      const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
+      if (categoryImage) {
+          return categoryImage;
+      }
+      const itemImage = PlaceHolderImages.find(p => p.id === item.parentItemId);
+      if (itemImage) {
+        return itemImage;
+      }
+      return PlaceHolderImages.find(p => p.id === 'product-fallback')!;
   }
   
   const formatCurrency = (amount: number) => {
@@ -156,7 +166,7 @@ export default function DashboardPage() {
         ) : filteredItems.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {filteredItems.map((item) => {
-                    const placeholder = getPlaceholderImage(item.parentItemId);
+                    const placeholder = getPlaceholderImage(item);
                     return (
                         <Card key={item.id} className="flex flex-col overflow-hidden group">
                             <div className="aspect-video relative">

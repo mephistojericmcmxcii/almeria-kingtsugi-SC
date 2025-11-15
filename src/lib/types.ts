@@ -29,6 +29,7 @@ export type InventoryVariant = {
   price: number;
   warningLimit: number;
   description?: string;
+  imageUrl?: string;
   createdAt: any;
   updatedAt: any;
   // This property is available on documents fetched from a collection group query

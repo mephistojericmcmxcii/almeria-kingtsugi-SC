@@ -3,7 +3,7 @@
     {
       "id": "kintsugi-shop",
       "description": "Aesthetic interior of the Kintsugi variety shop.",
-      "imageUrl": "https://images.unsplash.com/photo-1641816482139-c04a5fe29b90?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzaG9wJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzYzMDg2Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1641816482139-cfa2066a298e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzaG9wJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzYzMDg2Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "shop interior"
     },
     {
@@ -23,6 +23,42 @@
       "description": "A high-quality ballpen for everyday use.",
       "imageUrl": "https://images.unsplash.com/photo-1587135991058-8816b028691f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGVufGVufDB8fHx8MTc2MzEwMzE1MXww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "pen"
+    },
+    {
+      "id": "office-supplies-category",
+      "description": "A placeholder image for the Office Supplies category.",
+      "imageUrl": "https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "office supplies"
+    },
+    {
+      "id": "laboratory-supplies-category",
+      "description": "A placeholder image for the Laboratory Supplies category.",
+      "imageUrl": "https://images.unsplash.com/photo-1579168288092-20921226ed33?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "lab equipment"
+    },
+    {
+      "id": "ict-supplies-category",
+      "description": "A placeholder image for the ICT Supplies category.",
+      "imageUrl": "https://images.unsplash.com/photo-1550745165-9bc0b252726a?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "computer hardware"
+    },
+    {
+      "id": "furnitures-fixture-category",
+      "description": "A placeholder image for the Furniture's & Fixture category.",
+      "imageUrl": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "modern furniture"
+    },
+    {
+      "id": "electronics-category",
+      "description": "A placeholder image for the Electronics category.",
+      "imageUrl": "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?q=80&w=1925&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG9טby1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "electronic gadgets"
+    },
+    {
+      "id": "other-category",
+      "description": "A generic placeholder image for the Other category.",
+      "imageUrl": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "abstract"
     }
   ]
 }
