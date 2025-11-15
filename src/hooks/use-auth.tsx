@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   createAdminUser: (email: string, password: string, displayName: string) => Promise<boolean>;
+  updateUserRole: (targetUserId: string, newRole: 'admin' | 'guest') => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -181,13 +182,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUserRole = async (targetUserId: string, newRole: 'admin' | 'guest'): Promise<boolean> => {
+    try {
+        const userRef = doc(firestore, "users", targetUserId);
+        const adminRoleRef = doc(firestore, "roles_admin", targetUserId);
+
+        await setDoc(userRef, { role: newRole }, { merge: true });
+
+        if (newRole === 'admin') {
+            await setDoc(adminRoleRef, { role: "admin" });
+        } else {
+            await deleteDoc(adminRoleRef);
+        }
+
+        toast({
+            title: "User Role Updated",
+            description: `The user's role has been changed to ${newRole}.`,
+        });
+        return true;
+    } catch (error: any) {
+        console.error("Error updating user role:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: error.message || "Could not update the user's role.",
+        });
+        return false;
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
     router.push('/');
   };
   
-  const value = { user, login, logout, isLoading, createAdminUser };
+  const value = { user, login, logout, isLoading, createAdminUser, updateUserRole };
 
   return (
     <AuthContext.Provider value={value}>
