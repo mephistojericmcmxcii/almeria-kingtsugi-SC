@@ -8,6 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShoppingCart, History, User } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useEffect, useState } from 'react';
+
+const profileFormSchema = z.object({
+  displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
+  address: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
 
 const getInitials = (name?: string) => {
   if (!name) return '';
@@ -19,7 +33,32 @@ const getInitials = (name?: string) => {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateUserProfile, isLoading: isAuthLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      displayName: '',
+      address: '',
+    },
+  });
+  
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        displayName: user.displayName,
+        address: user.address || '',
+      });
+    }
+  }, [user, form]);
+  
+  const onSubmit = async (values: ProfileFormValues) => {
+    setIsSubmitting(true);
+    await updateUserProfile(values);
+    setIsSubmitting(false);
+  };
+
 
   if (!user) {
     return null;
@@ -54,25 +93,53 @@ export default function ProfilePage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your personal details here.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input id="displayName" defaultValue={user.displayName} />
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" defaultValue={user.email} disabled />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Update Profile</Button>
-            </CardFooter>
-          </Card>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Update your personal details here.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" defaultValue={user.email} disabled />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="123 Main St, Anytown, PH" {...field} />
+                        </FormControl>
+                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" disabled={isSubmitting || isAuthLoading}>
+                    {isSubmitting ? 'Updating...' : 'Update Profile'}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </form>
+          </Form>
         </TabsContent>
         <TabsContent value="orders">
           <Card>

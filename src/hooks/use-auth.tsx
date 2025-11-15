@@ -11,6 +11,11 @@ import type { User } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 
+interface ProfileUpdateData {
+    displayName: string;
+    address?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
@@ -19,6 +24,7 @@ interface AuthContextType {
   isLoading: boolean;
   createAdminUser: (email: string, password: string, displayName: string) => Promise<boolean>;
   updateUserRole: (targetUserId: string, newRole: 'admin' | 'guest') => Promise<boolean>;
+  updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               email: userData.email,
               role: userData.role,
               profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+              address: userData.address || '',
             };
             setUser(appUser);
           } else {
@@ -67,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
     }
 
-  }, [firebaseUser, isAuthLoading, firestore, router]);
+  }, [firebaseUser, isAuthLoading, firestore]);
 
 
   const login = async (email: string, password: string) => {
@@ -90,7 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     displayName: "Admin User",
                     email: email,
                     role: "admin",
-                    profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
+                    profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+                    address: ""
                 };
                 await setDoc(userRef, adminData);
                 const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
@@ -148,6 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: fbUser.email!,
           role: 'guest', // Default role for new Google sign-ups
           profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+          address: '',
         };
         await setDoc(userRef, newUser);
       }
@@ -177,7 +186,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             displayName: displayName,
             email: email,
             role: "admin",
-            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`
+            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+            address: "",
         };
         await setDoc(userRef, adminData);
 
@@ -230,13 +240,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUserProfile = async (data: ProfileUpdateData): Promise<boolean> => {
+    if (!firebaseUser) {
+        toast({ variant: "destructive", title: "Not Authenticated", description: "You must be logged in to update your profile." });
+        return false;
+    }
+
+    try {
+        const userRef = doc(firestore, "users", firebaseUser.uid);
+        const dataToUpdate: ProfileUpdateData = {
+            displayName: data.displayName,
+            address: data.address || "",
+        };
+        await setDoc(userRef, dataToUpdate, { merge: true });
+
+        setUser(prevUser => prevUser ? { ...prevUser, ...dataToUpdate } : null);
+
+        toast({
+            title: "Profile Updated",
+            description: "Your profile information has been successfully updated.",
+        });
+        return true;
+    } catch (error: any) {
+        console.error("Error updating user profile:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: error.message || "Could not update your profile.",
+        });
+        return false;
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
     router.push('/');
   };
   
-  const value = { user, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole };
+  const value = { user, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile };
 
   return (
     <AuthContext.Provider value={value}>

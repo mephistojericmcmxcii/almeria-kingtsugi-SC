@@ -7,6 +7,7 @@ export type User = {
   email: string;
   role: 'admin' | 'guest';
   profileImageUrl: string;
+  address?: string;
 };
 
 export type InventoryItem = {
