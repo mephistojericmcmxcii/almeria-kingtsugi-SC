@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -111,7 +112,7 @@ const MainSidebar = () => {
                         <SidebarMenuSub>
                             {servicesMenuItems.map(item => (
                                 <SidebarMenuItem key={item.href}>
-                                     <Link href={item.href}>
+                                     <Link href={item.href} legacyBehavior passHref>
                                         <SidebarMenuSubButton isActive={pathname === item.href}>
                                             <item.icon />
                                             <span>{item.label}</span>
