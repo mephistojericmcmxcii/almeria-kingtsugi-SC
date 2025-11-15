@@ -13,6 +13,7 @@ import type { User, InventoryVariant, CartItem, Order, OrderStatus } from '@/lib
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useDoc } from '@/firebase/firestore/use-doc';
 
 interface ProfileUpdateData {
     displayName: string;
@@ -65,6 +66,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
+  const maintenanceRef = useMemoFirebase(() => doc(firestore, 'system_settings', 'maintenance_mode'), [firestore]);
+  const { data: maintenanceSetting } = useDoc<{enabled: boolean}>(maintenanceRef);
+
+  useEffect(() => {
+    if (maintenanceSetting?.enabled && user?.role !== 'admin') {
+        toast({
+            variant: "destructive",
+            title: "Under Maintenance",
+            description: "The portal is currently under maintenance. You have been logged out.",
+        });
+        logout();
+    }
+  }, [maintenanceSetting, user]);
+
+
   const cartCollectionRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'users', user.id, 'cart');
@@ -104,8 +120,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             setUser(appUser);
           } else {
-             console.warn("User document not found for authenticated user:", fbUser.uid);
-             setUser(null);
+            // This case handles newly registered users whose doc might not exist yet.
+            // The register function will create it.
+            if (fbUser.displayName) { // From Google Sign-In
+                const newUser: User = {
+                    id: fbUser.uid,
+                    displayName: fbUser.displayName,
+                    email: fbUser.email!,
+                    role: userIsAdmin ? 'admin' : 'guest',
+                    profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+                    address: '',
+                };
+                await setDoc(userDocRef, newUser, { merge: true });
+                setUser(newUser);
+            }
           }
         } catch (error) {
           console.error("Error fetching user document or token:", error);
@@ -189,6 +217,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = async (email: string, password: string) => {
+    if (maintenanceSetting?.enabled && email !== 'admin@kintsugi.com') {
+        toast({
+            variant: "destructive",
+            title: "Under Maintenance",
+            description: "The portal is currently under maintenance. Please try again later.",
+        });
+        return;
+    }
     setIsLoading(true);
 
     try {
@@ -258,6 +294,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
     const register = async (email: string, password: string, displayName: string) => {
+    if (maintenanceSetting?.enabled) {
+        toast({
+            variant: "destructive",
+            title: "Under Maintenance",
+            description: "New account registrations are temporarily disabled.",
+        });
+        return;
+    }
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -302,6 +346,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const loginWithGoogle = async () => {
+    if (maintenanceSetting?.enabled) {
+        toast({
+            variant: "destructive",
+            title: "Under Maintenance",
+            description: "The portal is currently under maintenance. Please try again later.",
+        });
+        return;
+    }
     setIsLoading(true);
     try {
       const provider = new GoogleAuthProvider();
