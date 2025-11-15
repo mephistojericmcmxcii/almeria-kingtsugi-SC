@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
