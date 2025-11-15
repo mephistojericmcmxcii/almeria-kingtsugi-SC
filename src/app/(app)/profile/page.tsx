@@ -147,6 +147,7 @@ function OrderHistory() {
             case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
             case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
             case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
+            case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined by Seller</Badge>;
         }
     };
 
@@ -201,25 +202,7 @@ function OrderHistory() {
                                 <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
                             </div>
                            
-                            {user?.role === 'admin' ? (
-                                <div className="flex gap-2 justify-end pt-4">
-                                     {order.status === 'pending' && (
-                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'confirmed')} disabled={isUpdating === order.id}>
-                                            {isUpdating === order.id ? '...' : 'Confirm'}
-                                        </Button>
-                                    )}
-                                    {order.status === 'confirmed' && (
-                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'delivering')} disabled={isUpdating === order.id}>
-                                            {isUpdating === order.id ? '...' : 'Ship'}
-                                        </Button>
-                                    )}
-                                    {(order.status === 'pending' || order.status === 'confirmed' || order.status === 'delivering') && (
-                                         <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                            {isUpdating === order.id ? '...' : 'Cancel'}
-                                        </Button>
-                                    )}
-                                </div>
-                            ) : (
+                            {user?.role === 'admin' && user?.id === order.userId ? ( // Admin viewing their own order
                                 <div className="flex gap-2 justify-end pt-4">
                                     {(order.status === 'pending' || order.status === 'confirmed') && (
                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
@@ -234,7 +217,22 @@ function OrderHistory() {
                                         </Button>
                                     )}
                                 </div>
-                            )}
+                            ) : user?.role !== 'admin' ? ( // Non-admin user
+                                <div className="flex gap-2 justify-end pt-4">
+                                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                                        <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                            <XCircle className="mr-2 h-4 w-4"/>
+                                            {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
+                                        </Button>
+                                    )}
+                                    {order.status === 'delivering' && (
+                                        <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                                            <CheckCircle className="mr-2 h-4 w-4"/>
+                                            {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : null }
                         </div>
                     </AccordionContent>
                 </AccordionItem>

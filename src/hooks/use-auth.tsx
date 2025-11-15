@@ -618,7 +618,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 updatedAt: serverTimestamp(),
             };
 
-            if (newStatus === 'cancelled' && order.status !== 'cancelled') {
+            if ((newStatus === 'cancelled' || newStatus === 'declined') && order.status !== 'cancelled' && order.status !== 'declined') {
                 await runTransaction(firestore, async (transaction: Transaction) => {
                     transaction.update(orderRef, dataToUpdate);
 

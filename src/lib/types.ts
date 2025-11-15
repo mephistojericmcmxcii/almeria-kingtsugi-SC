@@ -50,7 +50,7 @@ export type CartItem = {
   stock?: number;
 };
 
-export type OrderStatus = 'pending' | 'confirmed' | 'delivering' | 'completed' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'delivering' | 'completed' | 'cancelled' | 'declined';
 
 export type Order = {
   id: string;

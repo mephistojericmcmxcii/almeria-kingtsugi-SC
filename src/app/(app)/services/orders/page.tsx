@@ -13,9 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, CheckCircle, XCircle, MoreHorizontal, Search, Eye } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, Search, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AllOrdersPage() {
@@ -64,6 +63,7 @@ export default function AllOrdersPage() {
             case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
             case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
             case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
+            case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined</Badge>;
         }
     };
     
@@ -237,10 +237,10 @@ export default function AllOrdersPage() {
                                     {isUpdating === selectedOrder.id ? 'Completing...' : 'Mark as Completed'}
                                 </Button>
                             )}
-                            {(selectedOrder.status === 'pending' || selectedOrder.status === 'confirmed' || selectedOrder.status === 'delivering') && (
-                                 <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'cancelled')} disabled={isUpdating === selectedOrder.id}>
+                            {(selectedOrder.status === 'pending' || selectedOrder.status === 'confirmed') && (
+                                 <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'declined')} disabled={isUpdating === selectedOrder.id}>
                                      <XCircle className="mr-2 h-4 w-4" />
-                                    {isUpdating === selectedOrder.id ? 'Cancelling...' : 'Cancel'}
+                                    {isUpdating === selectedOrder.id ? 'Declining...' : 'Decline'}
                                 </Button>
                             )}
                         </div>
