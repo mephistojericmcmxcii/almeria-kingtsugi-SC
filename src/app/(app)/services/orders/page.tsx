@@ -231,12 +231,6 @@ export default function AllOrdersPage() {
                                     {isUpdating === selectedOrder.id ? 'Shipping...' : 'Ship'}
                                 </Button>
                             )}
-                            {selectedOrder.status === 'delivering' && (
-                                <Button size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'completed')} disabled={isUpdating === selectedOrder.id}>
-                                    <CheckCircle className="mr-2 h-4 w-4"/>
-                                    {isUpdating === selectedOrder.id ? 'Completing...' : 'Mark as Completed'}
-                                </Button>
-                            )}
                             {(selectedOrder.status === 'pending' || selectedOrder.status === 'confirmed') && (
                                  <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'declined')} disabled={isUpdating === selectedOrder.id}>
                                      <XCircle className="mr-2 h-4 w-4" />
