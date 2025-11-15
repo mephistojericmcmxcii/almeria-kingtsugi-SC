@@ -69,6 +69,7 @@ function CartList() {
         <div className="space-y-4">
             {cartItems.map(item => {
                 const placeholder = getPlaceholderImage(item.parentItemId);
+                const isStockLimitReached = item.quantity >= (item.stock || 0);
                 return (
                 <div key={item.id} className="flex items-center gap-4 border-b pb-4">
                      <Image 
@@ -83,9 +84,9 @@ function CartList() {
                         <p className="font-semibold">{item.parentName}</p>
                         <p className="text-sm text-muted-foreground">{item.brand}</p>
                         <div className="flex items-center gap-2 mt-2">
-                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
                             <span className="w-8 text-center">{item.quantity}</span>
-                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item, item.quantity + 1)} disabled={isStockLimitReached}><Plus className="h-4 w-4" /></Button>
                         </div>
                     </div>
                     <div className="text-right">

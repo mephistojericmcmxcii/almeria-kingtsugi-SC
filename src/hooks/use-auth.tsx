@@ -33,7 +33,7 @@ interface AuthContextType {
   updateUserRole: (targetUserId: string, newRole: 'admin' | 'guest') => Promise<boolean>;
   updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
   addToCart: (variant: CombinedVariant) => Promise<void>;
-  updateCartItemQuantity: (cartItemId: string, newQuantity: number) => Promise<void>;
+  updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
 }
 
@@ -293,9 +293,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             await runTransaction(firestore, async (transaction) => {
                 const cartItemDoc = await transaction.get(cartItemRef);
+                const currentQuantityInCart = cartItemDoc.exists() ? cartItemDoc.data().quantity : 0;
+                
+                if (currentQuantityInCart >= variant.quantity) {
+                    toast({ variant: 'destructive', title: 'Stock Limit Reached', description: `You cannot add more of ${variant.parentName} - ${variant.brand}.` });
+                    return;
+                }
 
                 if (cartItemDoc.exists()) {
-                    const newQuantity = (cartItemDoc.data().quantity || 0) + 1;
+                    const newQuantity = currentQuantityInCart + 1;
                     transaction.update(cartItemRef, { quantity: newQuantity });
                 } else {
                     const getPlaceholderImage = (itemId: string) => {
@@ -305,7 +311,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     }
                     const placeholder = getPlaceholderImage(variant.parentItemId);
 
-                    const newCartItem: Omit<CartItem, 'id'> = {
+                    const newCartItem: CartItem = {
+                        id: variant.id,
                         variantId: variant.id,
                         parentItemId: variant.parentItemId,
                         quantity: 1,
@@ -315,6 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         price: variant.price,
                         imageUrl: placeholder.imageUrl,
                         imageHint: placeholder.imageHint,
+                        stock: variant.quantity, // Store current stock for checks
                     };
                     transaction.set(cartItemRef, newCartItem);
                 }
@@ -325,6 +333,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: `${variant.parentName} - ${variant.brand} has been added to your cart.`,
             });
         } catch (error: any) {
+            if (error.message.includes('Stock Limit Reached')) {
+                // The toast is already shown inside the transaction, so we just log and exit
+                console.warn(error.message);
+                return;
+            }
             console.error("Error adding to cart:", error);
             const permissionError = new FirestorePermissionError({
                 path: `users/${user.id}/cart/${variant.id}`,
@@ -335,20 +348,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const updateCartItemQuantity = async (cartItemId: string, newQuantity: number) => {
+    const updateCartItemQuantity = async (cartItem: CartItem, newQuantity: number) => {
         if (!user) return;
         if (newQuantity <= 0) {
-            await removeCartItem(cartItemId);
+            await removeCartItem(cartItem.id);
             return;
         }
 
+        // Check against available stock
+        if (newQuantity > (cartItem.stock || 0)) {
+            toast({
+                variant: 'destructive',
+                title: 'Stock Limit Reached',
+                description: `Only ${cartItem.stock} units available for ${cartItem.parentName}.`,
+            });
+            return;
+        }
+
+
         try {
-            const cartItemRef = doc(firestore, 'users', user.id, 'cart', cartItemId);
+            const cartItemRef = doc(firestore, 'users', user.id, 'cart', cartItem.id);
             await updateDoc(cartItemRef, { quantity: newQuantity });
         } catch (error: any) {
              console.error("Error updating cart quantity:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${user.id}/cart/${cartItemId}`,
+                path: `users/${user.id}/cart/${cartItem.id}`,
                 operation: 'update',
                 requestResourceData: { quantity: newQuantity },
             });
