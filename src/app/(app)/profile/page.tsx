@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -18,7 +19,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { CartItem, Order, OrderStatus } from '@/lib/types';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -125,9 +126,7 @@ function CartList() {
 }
 
 function OrderHistory() {
-    const { user, firestore, updateOrderStatus } = useAuth();
-    const ordersCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.id, 'orders') : null, [firestore, user]);
-    const { data: orders, isLoading } = useCollection<Order>(ordersCollectionRef);
+    const { user, orders, isLoading, updateOrderStatus } = useAuth();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
     const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
@@ -369,3 +368,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

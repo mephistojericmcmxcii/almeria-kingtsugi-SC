@@ -23,15 +23,14 @@ service cloud.firestore {
         // A user can read/write their own cart items
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
-
-      // --- Orders subcollection ---
-      match /orders/{orderId} {
+    }
+    
+    // --- Placed Orders collection ---
+    match /placed-orders/{orderId} {
         // A user can read their own orders
-        allow read: if request.auth != null && request.auth.uid == userId;
-
+        allow read: if request.auth != null && request.auth.uid == resource.data.userId;
         // An admin can read and update any order
         allow read, write: if isAdmin();
-      }
     }
 
     // --- Inventory collection ---
@@ -58,12 +57,6 @@ service cloud.firestore {
       // Writes should only happen from a secure backend.
       allow read: if isAdmin();
     }
-    
-    // --- All other orders (for collectionGroup query) ---
-    match /{path=**}/orders/{orderId} {
-      // Admins can read all orders from any user path
-      allow read: if isAdmin();
-    }
 
     // Fallback: deny everything else
     match /{document=**} {
@@ -71,3 +64,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

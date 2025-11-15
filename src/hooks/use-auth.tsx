@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/fir
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -27,6 +28,7 @@ type CombinedVariant = InventoryVariant & {
 interface AuthContextType {
   user: User | null;
   cart: CartItem[] | null;
+  orders: Order[] | null;
   firestore: Firestore;
   toast: ({...props}: any) => void;
   login: (email: string, password: string) => Promise<void>;
@@ -65,11 +67,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [firestore, user]);
   const { data: cart } = useCollection<CartItem>(cartCollectionRef);
   
-  const ordersCollectionRef = useMemoFirebase(() => {
+  const ordersQueryRef = useMemoFirebase(() => {
     if (!firestore || !user?.id) return null;
-    return collection(firestore, 'users', user.id, 'orders');
+    // Query for orders where the userId matches the current user's ID
+    return query(collection(firestore, 'placed-orders'), where('userId', '==', user.id));
   }, [firestore, user?.id]);
-  const { data: orders } = useCollection<Order>(ordersCollectionRef);
+  const { data: orders } = useCollection<Order>(ordersQueryRef);
+
 
   useEffect(() => {
     const handleAuthChange = async (fbUser: FirebaseUser | null) => {
@@ -525,7 +529,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
             await runTransaction(firestore, async (transaction) => {
-                const newOrderRef = doc(collection(firestore, 'users', user.id, 'orders'));
+                const newOrderRef = doc(collection(firestore, 'placed-orders'));
                 const newOrder: Omit<Order, 'id'> = {
                     orderDate: serverTimestamp(),
                     userId: user.id,
@@ -562,7 +566,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             if (error.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
-                    path: `users/${user.id}`,
+                    path: `placed-orders`,
                     operation: 'write',
                     requestResourceData: { note: "Order placement transaction" }
                 });
@@ -573,7 +577,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const updateOrderStatus = async (order: Order, newStatus: OrderStatus): Promise<boolean> => {
-        const orderRef = order.ref || doc(firestore, 'users', order.userId, 'orders', order.id);
+        const orderRef = doc(firestore, 'placed-orders', order.id);
         
         try {
             const dataToUpdate: { status: OrderStatus; updatedAt: any } = {
@@ -627,7 +631,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge };
 
   return (
     <AuthContext.Provider value={value}>
@@ -643,3 +647,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

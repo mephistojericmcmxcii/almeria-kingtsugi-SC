@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup } from 'firebase/firestore';
+import { collection, collectionGroup } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
@@ -37,12 +38,11 @@ function AdminOrdersContent() {
   const { firestore, updateOrderStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-  // This query is now safe because this component only renders for admins.
-  const ordersCollectionGroup = useMemoFirebase(
-    () => collectionGroup(firestore, 'orders'),
+  const placedOrdersCollectionRef = useMemoFirebase(
+    () => collection(firestore, 'placed-orders'),
     [firestore]
   );
-  const { data: orders, isLoading } = useCollection<Order>(ordersCollectionGroup);
+  const { data: orders, isLoading } = useCollection<Order>(placedOrdersCollectionRef);
 
   const sortedOrders = useMemo(() => {
     if (!orders) return [];
@@ -222,3 +222,5 @@ export default function AdminOrdersPage() {
     </div>
   );
 }
+
+    
