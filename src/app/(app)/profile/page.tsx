@@ -51,15 +51,15 @@ const formatCurrency = (amount: number) => {
 function CartList() {
     const { user, cart: cartItems, isLoading: isAuthLoading, updateCartItemQuantity, removeCartItem } = useAuth();
     const router = useRouter();
+
+    if (isAuthLoading) {
+        return <div className="text-center py-12 text-muted-foreground">Loading your cart...</div>;
+    }
     
     const totalCartPrice = useMemo(() => {
         if (!cartItems) return 0;
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }, [cartItems]);
-
-    if (isAuthLoading) {
-        return <div className="text-center py-12 text-muted-foreground">Loading your cart...</div>;
-    }
 
     if (!cartItems || cartItems.length === 0) {
         return (
@@ -165,7 +165,7 @@ function OrderHistory() {
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
                             <div className="flex flex-col text-left">
-                                <span className="font-semibold text-base font-mono">Order #{order.id}</span>
+                                <span className="font-semibold text-base font-mono">{order.id}</span>
                                 <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
                             </div>
                             <div className="flex items-center gap-4">
@@ -215,8 +215,11 @@ function OrderHistory() {
 
 
 export default function ProfilePage() {
-  const { user, updateUserProfile, isLoading: isAuthLoading } = useAuth();
+  const { user, cart, updateUserProfile, isLoading: isAuthLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCartBadge, setShowCartBadge] = useState(false);
+
+  const cartItemCount = cart?.length || 0;
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -235,6 +238,20 @@ export default function ProfilePage() {
     }
   }, [user, form]);
   
+  useEffect(() => {
+    // Show the badge if items are added to the cart
+    if (cartItemCount > 0) {
+      setShowCartBadge(true);
+    }
+  }, [cartItemCount]);
+
+  const handleTabChange = (value: string) => {
+    // When the user clicks the "My Cart" tab, hide the badge.
+    if (value === 'cart') {
+      setShowCartBadge(false);
+    }
+  };
+
   const onSubmit = async (values: ProfileFormValues) => {
     setIsSubmitting(true);
     await updateUserProfile(values);
@@ -259,15 +276,20 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs defaultValue="profile" className="space-y-4" onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="profile">
             <User className="mr-2" />
             Profile
           </TabsTrigger>
-           <TabsTrigger value="cart">
+           <TabsTrigger value="cart" className="relative">
             <ShoppingCart className="mr-2" />
             My Cart
+            {showCartBadge && cartItemCount > 0 && (
+              <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
+                {cartItemCount}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="orders">
             <History className="mr-2" />
