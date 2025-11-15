@@ -1,6 +1,6 @@
 
 import {setGlobalOptions} from "firebase-functions/v2";
-import {onCall} from "firebase-functions/v2/https";
+import {HttpsError, onCall} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {getFirestore} from "firebase-admin/firestore";
 
@@ -14,17 +14,17 @@ export const setAdminRole = onCall(async (request) => {
   const auth = request.auth;
 
   if (!auth) {
-    throw new Error("Authentication required.");
+    throw new HttpsError("unauthenticated", "Authentication required.");
   }
 
   const uid = data.uid;
   if (!uid) {
-    throw new Error("Missing UID.");
+    throw new HttpsError("invalid-argument", "Missing UID.");
   }
 
   // Check if the caller is an admin by verifying their custom claim.
   if (auth.token.admin !== true) {
-      throw new Error("Only admins can assign roles.");
+    throw new HttpsError("permission-denied", "Only admins can assign roles.");
   }
 
   // Set the custom claim { admin: true } on the target user's token
@@ -51,17 +51,17 @@ export const revokeAdminRole = onCall(async (request) => {
   const auth = request.auth;
 
   if (!auth) {
-    throw new Error("Authentication required.");
+    throw new HttpsError("unauthenticated", "Authentication required.");
   }
 
   // Check if the caller is an admin.
   if (auth.token.admin !== true) {
-    throw new Error("Only admins can revoke roles.");
+    throw new HttpsError("permission-denied", "Only admins can revoke roles.");
   }
 
   const uid = data.uid;
   if (!uid) {
-    throw new Error("Missing UID.");
+    throw new HttpsError("invalid-argument", "Missing UID.");
   }
 
   // Set the custom claim to null to remove it.
