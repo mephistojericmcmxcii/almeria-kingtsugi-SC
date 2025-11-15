@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { Order, OrderStatus } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
@@ -222,5 +222,3 @@ export default function AdminOrdersPage() {
     </div>
   );
 }
-
-    

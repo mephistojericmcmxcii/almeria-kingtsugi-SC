@@ -63,9 +63,6 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // TEMPORARY DEBUG LOG
-    console.log("useCollection triggered with query:", memoizedTargetRefOrQuery);
-
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
