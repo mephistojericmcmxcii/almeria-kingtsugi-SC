@@ -7,24 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
-
-const users = [
-  { name: "Admin User", email: "admin@kintsugi.com", role: "admin", avatar: "https://picsum.photos/seed/admin/40/40" },
-  { name: "Guest User", email: "guest@kintsugi.com", role: "guest", avatar: "https://picsum.photos/seed/guest/40/40" },
-  { name: "Liam Johnson", email: "liam@example.com", role: "guest", avatar: "https://picsum.photos/seed/liam/40/40" },
-  { name: "Noah Williams", email: "noah@example.com", role: "guest", avatar: "https://picsum.photos/seed/noah/40/40" },
-  { name: "Emma Brown", email: "emma@example.com", role: "guest", avatar: "https://picsum.photos/seed/emma/40/40" },
-];
+import { useFirebase, useCollection, useMemoFirebase } from "@/firebase"
+import type { User } from "@/lib/types"
+import { collection } from "firebase/firestore"
+import { Skeleton } from "../ui/skeleton"
 
 const getInitials = (name: string) => {
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[1][0]}`;
     }
-    return names[0].substring(0, 2);
+    return names[0] ? names[0].substring(0, 2) : '';
 };
 
 export function UserManagement() {
+  const { firestore } = useFirebase();
+  const usersCollectionRef = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const { data: users, isLoading } = useCollection<User>(usersCollectionRef);
+
   return (
     <Card>
       <CardHeader>
@@ -43,7 +43,31 @@ export function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
+            {isLoading && (
+              <>
+                <TableRow>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <Skeleton className="h-4 w-[150px]" />
+                    </div>
+                  </TableCell>
+                  <TableCell><Skeleton className="h-6 w-[60px] rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+                 <TableRow>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <Skeleton className="h-4 w-[150px]" />
+                    </div>
+                  </TableCell>
+                  <TableCell><Skeleton className="h-6 w-[60px] rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+              </>
+            )}
+            {users?.map((user) => (
                 <TableRow key={user.email}>
                     <TableCell>
                         <div className="flex items-center gap-3">

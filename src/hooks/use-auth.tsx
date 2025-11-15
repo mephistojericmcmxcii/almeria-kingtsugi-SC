@@ -12,7 +12,7 @@ import { useDocumentData } from 'react-firebase-hooks/firestore';
 
 interface AuthContextType {
   user: User | null;
-  login: (role: 'admin' | 'guest') => void;
+  login: (role: 'admin' | 'guest', email?: string, password?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -41,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     if (firebaseUser && userData) {
        const appUser: User = {
+         id: firebaseUser.uid,
          name: userData.displayName,
          email: userData.email,
          role: userData.role,
@@ -51,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   }, [firebaseUser, isAuthLoading, userData, isUserDocLoading, router]);
 
-  const login = async (role: 'admin' | 'guest') => {
+  const login = async (role: 'admin' | 'guest', email?: string, password?: string) => {
     setIsLoading(true);
     try {
       let firebaseUser: FirebaseUser | undefined;
@@ -68,19 +69,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
         });
 
-      } else if (role === 'admin') {
+      } else if (role === 'admin' && email && password) {
          try {
-            const userCredential = await signInWithEmailAndPassword(auth, "admin@kintsugi.com", "password");
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
             firebaseUser = userCredential.user;
          } catch (error: any) {
             if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-                const userCredential = await createUserWithEmailAndPassword(auth, "admin@kintsugi.com", "password");
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 firebaseUser = userCredential.user;
                 const userRef = doc(firestore, "users", firebaseUser.uid);
                 await setDoc(userRef, {
                     id: firebaseUser.uid,
                     displayName: "Admin User",
-                    email: "admin@kintsugi.com",
+                    email: email,
                     role: "admin",
                     profileImageUrl: `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
                 });
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Firebase login failed", error);
-      // You might want to show a toast message here
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +112,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   };
   
-  // Use a placeholder for isUserLoading for now
   const value = { user, login, logout, isLoading: isLoading };
 
   return (

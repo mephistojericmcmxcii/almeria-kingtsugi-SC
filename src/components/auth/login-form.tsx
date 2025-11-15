@@ -13,14 +13,27 @@ export function LoginForm() {
   const { login, isLoading } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   const { toast } = useToast();
-  const [email, setEmail] = React.useState("admin@kintsugi.com");
-  const [password, setPassword] = React.useState("password");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
 
 
   const handleLogin = async (role: 'admin' | 'guest') => {
     setIsLoggingIn(true);
     try {
-      await login(role);
+      if (role === 'admin') {
+        if (!email || !password) {
+            toast({
+                variant: "destructive",
+                title: "Login Error",
+                description: "Email and password are required for admin login.",
+            });
+            setIsLoggingIn(false);
+            return;
+        }
+        await login(role, email, password);
+      } else {
+        await login(role);
+      }
     } catch (error: any) {
        toast({
         variant: "destructive",
@@ -43,7 +56,7 @@ export function LoginForm() {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email (for Admin)</Label>
-          <Input id="email" type="email" placeholder="admin@kintsugi.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input id="email" type="email" placeholder="admin@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password (for Admin)</Label>
