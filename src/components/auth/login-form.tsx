@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, User } from "lucide-react";
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,7 +17,7 @@ export function LoginForm() {
   const [password, setPassword] = React.useState("");
 
 
-  const handleLogin = async (role: 'admin') => {
+  const handleLogin = async (role: 'admin' | 'guest') => {
     setIsLoggingIn(true);
     try {
       if (role === 'admin') {
@@ -31,6 +31,8 @@ export function LoginForm() {
             return;
         }
         await login(role, email, password);
+      } else if (role === 'guest') {
+        await login(role);
       }
     } catch (error: any) {
        toast({
@@ -49,7 +51,7 @@ export function LoginForm() {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Welcome</CardTitle>
-        <CardDescription>Sign in to the admin portal.</CardDescription>
+        <CardDescription>Sign in to access the portal.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -64,6 +66,9 @@ export function LoginForm() {
       <CardFooter className="flex flex-col gap-3">
         <Button className="w-full" onClick={() => handleLogin('admin')} disabled={disabled}>
           <ShieldCheck className="mr-2 h-4 w-4" /> Sign In as Admin
+        </Button>
+        <Button variant="secondary" className="w-full" onClick={() => handleLogin('guest')} disabled={disabled}>
+          <User className="mr-2 h-4 w-4" /> Sign In as Guest
         </Button>
       </CardFooter>
     </Card>
