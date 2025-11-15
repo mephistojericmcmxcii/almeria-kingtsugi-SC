@@ -157,16 +157,22 @@ function OrderHistory() {
             </div>
         );
     }
+    
+    // Admins see all orders, users see only their own. The query in useAuth handles this.
+    const userOrders = (user?.role === 'admin' ? orders : orders.filter(o => o.userId === user?.id))
+        .sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+
 
     return (
         <Accordion type="single" collapsible className="w-full space-y-4">
-            {orders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis()).map(order => (
+            {userOrders.map(order => (
                 <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
                             <div className="flex flex-col text-left">
                                 <span className="font-semibold text-base font-mono">{order.id}</span>
                                 <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
+                                {user?.role === 'admin' && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                             </div>
                             <div className="flex items-center gap-4">
                                <span className="font-semibold text-lg">{formatCurrency(order.totalAmount)}</span>
@@ -191,20 +197,41 @@ function OrderHistory() {
                                 <h4 className="font-semibold mb-1">Shipping Address</h4>
                                 <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
                             </div>
-                            <div className="flex gap-2 justify-end pt-4">
-                                {(order.status === 'pending' || order.status === 'confirmed') && (
-                                     <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                        <XCircle className="mr-2 h-4 w-4"/>
-                                        {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
-                                    </Button>
-                                )}
-                                {order.status === 'delivering' && (
-                                    <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
-                                        <CheckCircle className="mr-2 h-4 w-4"/>
-                                         {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
-                                    </Button>
-                                )}
-                            </div>
+                           
+                            {user?.role === 'admin' ? (
+                                <div className="flex gap-2 justify-end pt-4">
+                                     {order.status === 'pending' && (
+                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'confirmed')} disabled={isUpdating === order.id}>
+                                            {isUpdating === order.id ? '...' : 'Confirm'}
+                                        </Button>
+                                    )}
+                                    {order.status === 'confirmed' && (
+                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'delivering')} disabled={isUpdating === order.id}>
+                                            {isUpdating === order.id ? '...' : 'Ship'}
+                                        </Button>
+                                    )}
+                                    {(order.status === 'pending' || order.status === 'confirmed' || order.status === 'delivering') && (
+                                         <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                            {isUpdating === order.id ? '...' : 'Cancel'}
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex gap-2 justify-end pt-4">
+                                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                                        <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                            <XCircle className="mr-2 h-4 w-4"/>
+                                            {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
+                                        </Button>
+                                    )}
+                                    {order.status === 'delivering' && (
+                                        <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                                            <CheckCircle className="mr-2 h-4 w-4"/>
+                                            {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
@@ -368,5 +395,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
 
     
