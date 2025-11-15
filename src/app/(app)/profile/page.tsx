@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -45,6 +45,7 @@ const formatCurrency = (amount: number) => {
 
 function CartList() {
     const { firestore, user } = useFirebase();
+    const { updateCartItemQuantity, removeCartItem } = useAuth();
     const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'cart') : null, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
 
@@ -61,6 +62,8 @@ function CartList() {
       const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
       return itemImage || fallbackImage!;
     }
+    
+    const totalCartPrice = cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
 
     return (
         <div className="space-y-4">
@@ -79,15 +82,26 @@ function CartList() {
                     <div className="flex-grow">
                         <p className="font-semibold">{item.parentName}</p>
                         <p className="text-sm text-muted-foreground">{item.brand}</p>
-                        <p className="text-sm">Quantity: {item.quantity}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
+                        </div>
                     </div>
                     <div className="text-right">
                         <p className="font-semibold">{formatCurrency((item.price || 0) * item.quantity)}</p>
                         <p className="text-sm text-muted-foreground">({formatCurrency(item.price || 0)} each)</p>
+                         <Button size="icon" variant="ghost" className="h-8 w-8 mt-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeCartItem(item.id)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
                 )
             })}
+             <div className="flex justify-end items-center pt-4 font-semibold text-lg">
+                <span>Total:</span>
+                <span className="ml-4">{formatCurrency(totalCartPrice)}</span>
+            </div>
         </div>
     );
 }

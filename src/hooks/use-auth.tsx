@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -33,6 +33,8 @@ interface AuthContextType {
   updateUserRole: (targetUserId: string, newRole: 'admin' | 'guest') => Promise<boolean>;
   updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
   addToCart: (variant: CombinedVariant) => Promise<void>;
+  updateCartItemQuantity: (cartItemId: string, newQuantity: number) => Promise<void>;
+  removeCartItem: (cartItemId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -287,26 +289,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         try {
-            const cartRef = collection(firestore, 'users', user.id, 'cart');
-            const cartItemRef = doc(cartRef, variant.id); // Use variant ID as cart item ID
-
-            const getPlaceholderImage = (itemId: string) => {
-                const itemImage = PlaceHolderImages.find(p => p.id === itemId);
-                const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
-                return itemImage || fallbackImage!;
-            }
-            const placeholder = getPlaceholderImage(variant.parentItemId);
-
+            const cartItemRef = doc(firestore, 'users', user.id, 'cart', variant.id);
 
             await runTransaction(firestore, async (transaction) => {
                 const cartItemDoc = await transaction.get(cartItemRef);
 
                 if (cartItemDoc.exists()) {
-                    // If item is already in cart, increment quantity
                     const newQuantity = (cartItemDoc.data().quantity || 0) + 1;
                     transaction.update(cartItemRef, { quantity: newQuantity });
                 } else {
-                    // If item is not in cart, add it
+                    const getPlaceholderImage = (itemId: string) => {
+                        const itemImage = PlaceHolderImages.find(p => p.id === itemId);
+                        const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
+                        return itemImage || fallbackImage!;
+                    }
+                    const placeholder = getPlaceholderImage(variant.parentItemId);
+
                     const newCartItem: Omit<CartItem, 'id'> = {
                         variantId: variant.id,
                         parentItemId: variant.parentItemId,
@@ -329,18 +327,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
             console.error("Error adding to cart:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${user.id}/cart`,
+                path: `users/${user.id}/cart/${variant.id}`,
                 operation: 'write',
                 requestResourceData: { variantId: variant.id },
             });
             errorEmitter.emit('permission-error', permissionError);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not add item to cart. Please try again.",
-            });
         }
     };
+    
+    const updateCartItemQuantity = async (cartItemId: string, newQuantity: number) => {
+        if (!user) return;
+        if (newQuantity <= 0) {
+            await removeCartItem(cartItemId);
+            return;
+        }
+
+        try {
+            const cartItemRef = doc(firestore, 'users', user.id, 'cart', cartItemId);
+            await updateDoc(cartItemRef, { quantity: newQuantity });
+        } catch (error: any) {
+             console.error("Error updating cart quantity:", error);
+            const permissionError = new FirestorePermissionError({
+                path: `users/${user.id}/cart/${cartItemId}`,
+                operation: 'update',
+                requestResourceData: { quantity: newQuantity },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }
+    };
+
+    const removeCartItem = async (cartItemId: string) => {
+        if (!user) return;
+        try {
+            const cartItemRef = doc(firestore, 'users', user.id, 'cart', cartItemId);
+            await deleteDoc(cartItemRef);
+             toast({
+                title: "Item Removed",
+                description: "The item has been removed from your cart.",
+            });
+        } catch (error: any) {
+            console.error("Error removing cart item:", error);
+            const permissionError = new FirestorePermissionError({
+                path: `users/${user.id}/cart/${cartItemId}`,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }
+    };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -348,7 +382,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart };
+  const value = { user, login, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem };
 
   return (
     <AuthContext.Provider value={value}>
