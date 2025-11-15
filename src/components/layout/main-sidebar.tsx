@@ -73,6 +73,7 @@ const MainSidebar = () => {
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
     { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
     { href: '/services/create-admin', label: 'Create Admin', icon: UserPlus, roles: ['admin'] },
+    { href: '/services/make-admin', label: 'Make Admin', icon: UserCog, roles: ['admin'] },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
@@ -118,7 +119,7 @@ const MainSidebar = () => {
                     <CollapsibleContent asChild>
                         <SidebarMenuSub>
                             {servicesMenuItems.map(item => (
-                                (item.roles.includes(user?.role || '') && !item.hidden) ? (
+                                (item.roles.includes(user?.role || '') && !(item as any).hidden) ? (
                                 <SidebarMenuItem key={item.href}>
                                     <Link href={item.href}>
                                         <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
