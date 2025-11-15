@@ -82,6 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (fbUser) {
         const userDocRef = doc(firestore, 'users', fbUser.uid);
         try {
+          const idTokenResult = await fbUser.getIdTokenResult();
+          const userIsAdmin = idTokenResult.claims.admin === true;
+
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
@@ -89,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               id: fbUser.uid,
               displayName: userData.displayName,
               email: userData.email,
-              role: userData.role,
+              role: userIsAdmin ? 'admin' : 'guest',
               profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
               address: userData.address || '',
               lastViewedOrdersAt: userData.lastViewedOrdersAt,
@@ -100,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              setUser(null);
           }
         } catch (error) {
-          console.error("Error fetching user document:", error);
+          console.error("Error fetching user document or token:", error);
           setUser(null);
         }
       } else {
@@ -645,4 +648,5 @@ export const useAuth = () => {
   return context;
 };
 
+    
     
