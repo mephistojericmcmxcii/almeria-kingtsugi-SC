@@ -22,18 +22,9 @@ export const setAdminRole = onCall(async (request) => {
     throw new Error("Missing UID.");
   }
 
-  // Check if caller is admin, but allow the first admin to be created
-  const adminDoc = await db.collection("roles_admin").doc(auth.uid).get();
-
-  if (!adminDoc.exists) {
-    const existingAdmins =
-      await db.collection("roles_admin").limit(1).get();
-
-    // If there are existing admins, but the caller is not one, deny access.
-    // This logic allows the very first user to become an admin.
-    if (!existingAdmins.empty) {
+  // Check if the caller is an admin by verifying their custom claim.
+  if (auth.token.admin !== true) {
       throw new Error("Only admins can assign roles.");
-    }
   }
 
   // Set the custom claim { admin: true } on the target user's token
