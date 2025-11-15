@@ -26,6 +26,7 @@ import {
   FileText,
   ChevronDown,
   ShoppingCart,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
@@ -70,6 +71,7 @@ const MainSidebar = () => {
     { href: '/services/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin'] },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
     { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
+    { href: '/services/make-admin', label: 'Make Admin', icon: UserCog, roles: ['admin'], hidden: true },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
@@ -115,7 +117,7 @@ const MainSidebar = () => {
                     <CollapsibleContent asChild>
                         <SidebarMenuSub>
                             {servicesMenuItems.map(item => (
-                                item.roles.includes(user?.role || '') ? (
+                                (item.roles.includes(user?.role || '') && !item.hidden) ? (
                                 <SidebarMenuItem key={item.href}>
                                     <Link href={item.href}>
                                         <SidebarMenuSubButton isActive={pathname.startsWith(item.href)}>
@@ -147,5 +149,3 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
-
-    
