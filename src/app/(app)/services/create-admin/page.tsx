@@ -12,39 +12,52 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { ShieldAlert, UserPlus } from 'lucide-react';
+import { ShieldAlert, UserCog } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useToast } from '@/hooks/use-toast';
 
-const formSchema = z.object({
-  displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-});
-
-type AddAdminFormValues = z.infer<typeof formSchema>;
 
 export default function CreateAdminPage() {
-  const { user, createAdminUser } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+  const [uid, setUid] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<AddAdminFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      displayName: '',
-      email: '',
-      password: '',
-    },
-  });
-
-  const onSubmit = async (values: AddAdminFormValues) => {
-    setIsSubmitting(true);
-    const success = await createAdminUser(values.email, values.password, values.displayName);
-    if (success) {
-      form.reset();
-      router.push('/admin'); // Redirect to user management on success
+  async function makeAdmin() {
+    if (!uid) {
+        toast({
+            variant: "destructive",
+            title: "UID Required",
+            description: "Please enter a user ID.",
+        });
+        return;
     }
-    setIsSubmitting(false);
-  };
+    setIsSubmitting(true);
+    const functions = getFunctions();
+    const setAdminRole = httpsCallable(functions, "setAdminRole");
+
+    try {
+        const result = await setAdminRole({ uid });
+        console.log(result.data);
+        toast({
+            title: "Success!",
+            description: `User ${uid} has been granted admin privileges. They must log out and log back in for the change to take effect.`,
+        });
+        setUid("");
+    } catch (err: any) {
+        console.error(err);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description:
+            err.message || "An unknown error occurred while setting the admin role.",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
 
   if (user?.role !== 'admin') {
     return (
@@ -61,70 +74,36 @@ export default function CreateAdminPage() {
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
         <div className="flex items-center gap-4">
-            <UserPlus className="w-8 h-8 text-primary" />
+            <UserCog className="w-8 h-8 text-primary" />
             <div>
-                <h1 className="text-3xl font-bold tracking-tight font-headline">Create New Admin User</h1>
-                <p className="text-muted-foreground">Add a new user with administrative privileges to the portal.</p>
+                <h1 className="text-3xl font-bold tracking-tight font-headline">Make User Admin</h1>
+                <p className="text-muted-foreground">Grant an existing user administrative privileges by providing their UID.</p>
             </div>
         </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Card>
-                <CardHeader>
-                    <CardTitle>User Details</CardTitle>
-                    <CardDescription>
-                        Enter the details for the new admin account. An invitation will not be sent; you must provide the credentials to the user directly.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Jane Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+        <Card>
+            <CardHeader>
+                <CardTitle>Grant Admin Privileges</CardTitle>
+                <CardDescription>
+                    Enter a user's UID to grant them admin privileges. The user must sign out and sign back in for the new role to take effect.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <FormLabel htmlFor="uid">User ID (UID)</FormLabel>
+                    <Input
+                        id="uid"
+                        value={uid}
+                        onChange={(e) => setUid(e.target.value)}
+                        placeholder="Enter the user's Firebase UID"
                     />
-                    <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input placeholder="user@kintsugi.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? "Creating User..." : "Create Admin User"}
-                    </Button>
-                </CardFooter>
-            </Card>
-          </form>
-        </Form>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={makeAdmin} disabled={isSubmitting}>
+                    {isSubmitting ? "Processing..." : "Set as Admin"}
+                </Button>
+            </CardFooter>
+        </Card>
     </div>
   );
 }
