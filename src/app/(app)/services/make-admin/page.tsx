@@ -2,72 +2,40 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { ShieldAlert, UserCog } from 'lucide-react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { useToast } from '@/hooks/use-toast';
-
-
-const formSchema = z.object({
-  uid: z.string().min(10, { message: 'Please enter a valid UID.' }),
-});
-
-type MakeAdminFormValues = z.infer<typeof formSchema>;
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { UserCog } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function MakeAdminPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<MakeAdminFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      uid: '',
-    },
-  });
+  async function makeSelfAdmin() {
+    if (!user) {
+      setError("You must be logged in to use this tool.");
+      return;
+    }
 
-  const onSubmit = async (values: MakeAdminFormValues) => {
     setIsSubmitting(true);
+    setStatus("Calling Cloud Function to grant admin privileges...");
+    setError(null);
+
     const functions = getFunctions();
     const setAdminRole = httpsCallable(functions, "setAdminRole");
 
     try {
-      const result = await setAdminRole({ uid: values.uid });
-      toast({
-          title: "Success!",
-          description: `User ${values.uid} has been made an admin.`,
-      });
-      form.reset();
+      const result = await setAdminRole({ uid: user.uid });
+      setStatus(`Success! You are now an admin. Please refresh the page to see updated permissions.`);
     } catch (err: any) {
-        toast({
-            variant: "destructive",
-            title: "Operation Failed",
-            description: err.message || "Could not set admin role.",
-        });
-      console.error(err);
+      setError(err.message || "An unknown error occurred.");
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-  };
-
-
-  if (user?.role !== 'admin') {
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-             <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-            <h1 className="text-3xl font-bold font-headline text-destructive">Access Denied</h1>
-            <p className="text-muted-foreground mt-2">
-                You do not have permission to view this page.
-            </p>
-        </div>
-    )
   }
 
   return (
@@ -75,42 +43,40 @@ export default function MakeAdminPage() {
         <div className="flex items-center gap-4">
             <UserCog className="w-8 h-8 text-primary" />
             <div>
-                <h1 className="text-3xl font-bold tracking-tight font-headline">Make User Admin</h1>
-                <p className="text-muted-foreground">Grant administrative privileges to an existing user by their UID.</p>
+                <h1 className="text-3xl font-bold tracking-tight font-headline">Make Me Admin</h1>
+                <p className="text-muted-foreground">Grant administrative privileges to your own account.</p>
             </div>
         </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Target User</CardTitle>
-                    <CardDescription>
-                        Enter the UID of the user you wish to promote to an admin. This action is reversible in the User Management table.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <FormField
-                    control={form.control}
-                    name="uid"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>User ID (UID)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Enter the user's UID..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? "Processing..." : "Make Admin"}
-                    </Button>
-                </CardFooter>
-            </Card>
-        </form>
-       </Form>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Become an Administrator</CardTitle>
+                <CardDescription>
+                    Click the button below to grant your currently logged-in account (`{user?.email}`) full admin rights. This tool is designed for initial setup and will only work if no other admins exist.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Button onClick={makeSelfAdmin} disabled={isSubmitting || !!status}>
+                    {isSubmitting ? "Processing..." : "Grant Admin To My Account"}
+                </Button>
+
+                {isSubmitting && <p className="text-sm text-muted-foreground">{status}</p>}
+
+                {error && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Operation Failed</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
+
+                {status && !error && (
+                    <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700">
+                        <AlertTitle className="text-green-800 dark:text-green-200">Success!</AlertTitle>
+                        <AlertDescription className="text-green-700 dark:text-green-300">{status}</AlertDescription>
+                    </Alert>
+                )}
+            </CardContent>
+        </Card>
     </div>
   );
 }
