@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import * as React from "react";
 import {
   Sidebar,
   SidebarHeader,
@@ -9,6 +10,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -17,13 +20,28 @@ import {
   Gem,
   Settings,
   LogOut,
+  Briefcase,
+  Boxes,
+  CreditCard,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+
 
 const MainSidebar = () => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [servicesOpen, setServicesOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (pathname.startsWith('/services')) {
+      setServicesOpen(true);
+    }
+  }, [pathname]);
 
   const menuItems = [
     {
@@ -38,13 +56,21 @@ const MainSidebar = () => {
       icon: Settings,
       roles: ['admin'],
     },
-    {
+     {
       href: "/about",
       label: "About Us",
       icon: Info,
       roles: ['admin', 'guest'],
     },
   ];
+
+  const servicesMenuItems = [
+    { href: '/services/inventory', label: 'Inventory', icon: Boxes, roles: ['admin'] },
+    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, roles: ['admin'] },
+    { href: '/services/po', label: 'PO', icon: FileText, roles: ['admin'] },
+  ];
+
+  const isServicesActive = servicesMenuItems.some(item => pathname === item.href);
 
   return (
     <Sidebar>
@@ -71,6 +97,33 @@ const MainSidebar = () => {
               </Link>
             </SidebarMenuItem>
           ) : null
+        )}
+        {user?.role === 'admin' && (
+            <Collapsible open={servicesOpen} onOpenChange={setServicesOpen} asChild>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Services" isActive={isServicesActive}>
+                            <Briefcase />
+                            <span>Services</span>
+                            <ChevronDown className={cn("ml-auto transition-transform", servicesOpen && "rotate-180")} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent asChild>
+                        <SidebarMenuSub>
+                            {servicesMenuItems.map(item => (
+                                <SidebarMenuItem key={item.href}>
+                                     <Link href={item.href} legacyBehavior passHref>
+                                        <SidebarMenuSubButton isActive={pathname === item.href}>
+                                            <item.icon />
+                                            <span>{item.label}</span>
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                </SidebarMenuItem>
+            </Collapsible>
         )}
       </SidebarMenu>
       <SidebarFooter>

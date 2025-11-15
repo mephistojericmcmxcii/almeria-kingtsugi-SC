@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MainSidebar from '@/components/layout/main-sidebar';
@@ -11,12 +11,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/');
     }
   }, [user, isLoading, router]);
+
+   // Redirect guest from admin-only pages
+  useEffect(() => {
+    if (user?.role === 'guest' && (pathname.startsWith('/admin') || pathname.startsWith('/services'))) {
+      router.push('/dashboard');
+    }
+  }, [user, pathname, router]);
 
   if (isLoading || !user) {
     return (
