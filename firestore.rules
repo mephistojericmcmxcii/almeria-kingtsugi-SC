@@ -37,17 +37,26 @@ service cloud.firestore {
     match /inventory/{itemId} {
 
       // Admin full access
-      allow read, write: if isAdmin();
+      allow write: if isAdmin();
 
-      // Normal users: read only
+      // All users: read only for parent item
       allow read: if request.auth != null;
 
       // --- Variants subcollection ---
       match /variants/{variantId} {
         // Allow reads for authenticated users (for dashboard)
         allow read: if request.auth != null;
-        // Allow writes only for admins
-        allow write: if isAdmin();
+        
+        // Allow full writes only for admins
+        allow create, delete: if isAdmin();
+        
+        // Allow updates for admins.
+        // Allow updates for any authenticated user ONLY IF they are decrementing quantity
+        // and not changing any other field. This is for order placement.
+        allow update: if isAdmin() || 
+                      (request.auth != null && 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity']) &&
+                       request.resource.data.quantity == resource.data.quantity - request.resource.data.diff(resource.data).unchangedKeys().quantity);
       }
     }
     
