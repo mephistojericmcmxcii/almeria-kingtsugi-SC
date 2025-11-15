@@ -52,23 +52,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handleAuthChange = async (fbUser: FirebaseUser | null) => {
       if (fbUser) {
-        const userDocRef = doc(firestore, 'users', fbUser.id);
+        const userDocRef = doc(firestore, 'users', fbUser.uid);
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             const appUser: User = {
-              id: fbUser.id,
+              id: fbUser.uid,
               displayName: userData.displayName,
               email: userData.email,
               role: userData.role,
-              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.id}/40/40`,
+              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
               address: userData.address || '',
             };
             setUser(appUser);
           } else {
              // This can happen if a user is created in Auth but their Firestore doc fails to be created
-             console.warn("User document not found for authenticated user:", fbUser.id);
+             console.warn("User document not found for authenticated user:", fbUser.uid);
              setUser(null);
           }
         } catch (error) {
@@ -104,17 +104,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               if (email === "admin@kintsugi.com") {
                   userCredential = await createUserWithEmailAndPassword(auth, email, password);
                   const fbUser = userCredential.user;
-                  const userRef = doc(firestore, "users", fbUser.id);
+                  const userRef = doc(firestore, "users", fbUser.uid);
                   const adminData = {
-                      id: fbUser.id,
+                      id: fbUser.uid,
                       displayName: "Admin User",
                       email: email,
                       role: "admin",
-                      profileImageUrl: `https://picsum.photos/seed/${fbUser.id}/40/40`,
+                      profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
                       address: ""
                   };
                   await setDoc(userRef, adminData);
-                  const adminRoleRef = doc(firestore, "roles_admin", fbUser.id);
+                  const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
                   await setDoc(adminRoleRef, { role: "admin" });
               } else {
                   toast({
@@ -163,15 +163,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // If it's a new user, create their document in Firestore
       if (additionalInfo?.isNewUser) {
-        const userRef = doc(firestore, 'users', fbUser.id);
+        const userRef = doc(firestore, 'users', fbUser.uid);
         const newUser: Omit<User, 'id'> = {
           displayName: fbUser.displayName || 'New User',
           email: fbUser.email!,
           role: 'guest', // Default role for new Google sign-ups
-          profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.id}/40/40`,
+          profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
           address: '',
         };
-        await setDoc(userRef, newUser);
+        // We need to spread the id in here since the Omit removed it
+        await setDoc(userRef, {id: fbUser.uid, ...newUser});
       }
       router.push('/dashboard');
     } catch (error: any) {
@@ -193,19 +194,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const fbUser = userCredential.user;
 
         // Create user profile in 'users' collection
-        const userRef = doc(firestore, "users", fbUser.id);
+        const userRef = doc(firestore, "users", fbUser.uid);
         const adminData = {
-            id: fbUser.id,
+            id: fbUser.uid,
             displayName: displayName,
             email: email,
             role: "admin",
-            profileImageUrl: `https://picsum.photos/seed/${fbUser.id}/40/40`,
+            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
             address: "",
         };
         await setDoc(userRef, adminData);
 
         // Add user to 'roles_admin' collection to grant admin privileges
-        const adminRoleRef = doc(firestore, "roles_admin", fbUser.id);
+        const adminRoleRef = doc(firestore, "roles_admin", fbUser.uid);
         await setDoc(adminRoleRef, { role: "admin" });
         
         toast({
@@ -260,7 +261,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-        const userRef = doc(firestore, "users", firebaseUser.id);
+        const userRef = doc(firestore, "users", firebaseUser.uid);
         const dataToUpdate: ProfileUpdateData = {
             displayName: data.displayName,
             address: data.address || "",
@@ -481,3 +482,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
