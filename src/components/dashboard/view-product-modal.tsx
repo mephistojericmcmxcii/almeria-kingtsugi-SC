@@ -55,7 +55,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl" showCloseButton={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="aspect-square relative">
                 <Image
@@ -78,10 +78,6 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
                 
                 <div className="space-y-4 text-sm">
                     <p className="text-muted-foreground">{variant.description || 'A unique variant from our collection.'}</p>
-                    <div className="flex items-center gap-2">
-                        <Boxes className="w-4 h-4 text-muted-foreground" />
-                        <span>Sourced from: <span className="font-medium text-foreground">{variant.source}</span></span>
-                    </div>
                     <div className="flex items-center justify-between text-base pt-4">
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <Tag className="w-5 h-5" />
@@ -106,4 +102,3 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
     </Dialog>
   );
 }
-
