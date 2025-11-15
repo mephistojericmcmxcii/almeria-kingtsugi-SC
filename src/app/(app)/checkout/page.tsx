@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -35,7 +36,10 @@ export default function CheckoutPage() {
     const [shippingOption, setShippingOption] = useState<'profile' | 'custom'>('profile');
     const [customAddress, setCustomAddress] = useState('');
 
-    const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'cart') : null, [firestore, user]);
+    const cartCollectionRef = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return collection(firestore, 'users', user.uid, 'cart');
+    }, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
 
     const subtotal = useMemo(() => {
