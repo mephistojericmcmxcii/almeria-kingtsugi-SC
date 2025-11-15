@@ -42,7 +42,10 @@ export function UserManagement() {
   const [isAddAdminDialogOpen, setIsAddAdminDialogOpen] = useState(false);
   const [userToUpdate, setUserToUpdate] = useState<{user: User, newRole: 'admin' | 'guest'} | null>(null);
 
-  const usersCollectionRef = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+  const usersCollectionRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
   const { data: users, isLoading } = useCollection<User>(usersCollectionRef);
 
   const handleRoleChangeConfirm = async () => {
