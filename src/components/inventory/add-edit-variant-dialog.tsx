@@ -189,7 +189,11 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
 
       const dataToSave: Omit<InventoryVariant, 'id'> = {
-        ...values,
+        brand: values.brand,
+        source: values.source,
+        quantity: values.quantity,
+        price: values.price,
+        warningLimit: values.warningLimit,
         imageUrl: finalImageUrl,
         description: values.description || '',
         updatedAt: serverTimestamp(),
@@ -363,5 +367,3 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
-
-    
