@@ -51,6 +51,11 @@ function CartList() {
     const cartCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'cart') : null, [firestore, user]);
     const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
 
+    const totalCartPrice = useMemo(() => {
+        if (!cartItems) return 0;
+        return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
+    }, [cartItems]);
+
     if (isLoading) {
         return <div className="text-center py-12 text-muted-foreground">Loading your cart...</div>;
     }
@@ -69,10 +74,6 @@ function CartList() {
       const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
       return itemImage || fallbackImage!;
     }
-    
-    const totalCartPrice = useMemo(() => {
-        return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
-    }, [cartItems]);
 
     return (
         <div className="space-y-4">
@@ -260,4 +261,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
