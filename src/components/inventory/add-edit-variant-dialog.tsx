@@ -146,36 +146,36 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     }
 
     setIsSubmitting(true);
-    let finalImageUrl = variantToEdit?.imageUrl || '';
-
+    
     try {
-      if (imageFile) {
-        const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-        const tempDocRef = doc(variantCollectionRef); // Create a ref to get an ID
-        const variantId = variantToEdit ? variantToEdit.id : tempDocRef.id;
+      let finalImageUrl = variantToEdit?.imageUrl || '';
 
+      const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+      const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
+
+      // Step 1: Upload image if a new one is provided
+      if (imageFile) {
         const timestamp = Date.now();
         const imageFileName = `${variantId}-${timestamp}-${imageFile.name}`;
         const imageStoragePath = `inventory-item-variant-images/${imageFileName}`;
         const imageStorageRef = storageRef(storage, imageStoragePath);
         
-        const uploadResult = await uploadBytes(imageStorageRef, imageFile, { contentType: imageFile.type });
+        const uploadResult = await uploadBytes(imageStorageRef, imageFile);
         finalImageUrl = await getDownloadURL(uploadResult.ref);
-
       } else if (!imagePreview && variantToEdit?.imageUrl) {
-          try {
-            const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
-            await deleteObject(oldImageRef);
-            finalImageUrl = '';
-          } catch (deleteError) {
-             console.warn('[v0] Could not delete old image:', deleteError);
-             finalImageUrl = '';
-          }
+        // If image was removed, delete old one from storage
+        try {
+          const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
+          await deleteObject(oldImageRef);
+          finalImageUrl = '';
+        } catch (deleteError) {
+          console.warn('Could not delete old image, may have already been removed:', deleteError);
+          finalImageUrl = '';
+        }
       }
 
-      const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-      const variantRef = variantToEdit ? doc(variantCollectionRef, variantToEdit.id) : doc(variantCollectionRef);
-
+      // Step 2: Prepare data to save
+      const variantRef = doc(variantCollectionRef, variantId);
       const dataToSave = {
         ...values,
         imageUrl: finalImageUrl,
@@ -183,6 +183,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         ...(!variantToEdit && { createdAt: serverTimestamp() }),
       };
 
+      // Step 3: Save data to Firestore
       await setDoc(variantRef, dataToSave, { merge: true });
 
       toast({
