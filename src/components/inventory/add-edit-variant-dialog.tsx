@@ -65,24 +65,26 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   });
 
   useEffect(() => {
-    if (variantToEdit) {
-      form.reset({
-        brand: variantToEdit.brand,
-        source: variantToEdit.source,
-        quantity: variantToEdit.quantity,
-        price: variantToEdit.price,
-        warningLimit: variantToEdit.warningLimit,
-        description: variantToEdit.description || '',
-      });
-    } else {
-      form.reset({
-        brand: '',
-        source: '',
-        quantity: 0,
-        price: 0,
-        warningLimit: 10,
-        description: '',
-      });
+    if (isOpen) {
+        if (variantToEdit) {
+            form.reset({
+                brand: variantToEdit.brand || '',
+                source: variantToEdit.source || '',
+                quantity: variantToEdit.quantity || 0,
+                price: variantToEdit.price || 0,
+                warningLimit: variantToEdit.warningLimit || 0,
+                description: variantToEdit.description || '',
+            });
+        } else {
+            form.reset({
+                brand: '',
+                source: '',
+                quantity: 0,
+                price: 0,
+                warningLimit: 10,
+                description: '',
+            });
+        }
     }
   }, [variantToEdit, form, isOpen]);
 
@@ -234,5 +236,3 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
-
-    
