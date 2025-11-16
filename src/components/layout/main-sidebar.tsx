@@ -29,6 +29,7 @@ import {
   ShoppingCart,
   UserCog,
   UserPlus,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
@@ -58,6 +59,12 @@ const MainSidebar = () => {
       href: "/about",
       label: "About Us",
       icon: Info,
+      adminOnly: false,
+    },
+    {
+      href: "/profile",
+      label: "Profile",
+      icon: User,
       adminOnly: false,
     },
     {
@@ -154,3 +161,5 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
+
+    

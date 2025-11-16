@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +18,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { CartItem, Order, OrderStatus } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -67,25 +67,18 @@ function CartList() {
         );
     }
     
-    const getPlaceholderImage = (itemId: string | undefined) => {
-      const itemImage = PlaceHolderImages.find(p => p.id === itemId);
-      const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
-      return itemImage || fallbackImage!;
-    }
-
     return (
         <div className="space-y-4">
             <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
                 {cartItems.map(item => {
-                    const placeholder = getPlaceholderImage(item.parentItemId);
                     const isStockLimitReached = item.quantity >= (item.stock || 0);
                     return (
                     <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
                          <img 
-                            src={item.imageUrl || placeholder.imageUrl} 
+                            src={item.imageUrl} 
                             alt={item.parentName || 'product'} 
                             className="rounded-md object-cover w-16 h-16"
-                            data-ai-hint={item.imageHint || placeholder.imageHint}
+                            data-ai-hint={item.imageHint}
                             />
                         <div className="flex-grow">
                             <p className="font-semibold">{item.parentName}</p>
@@ -118,7 +111,7 @@ function CartList() {
     );
 }
 
-function OrderHistory() {
+function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
     const { user, updateOrderStatus } = useAuth();
     const { firestore } = useFirebase();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
@@ -146,26 +139,43 @@ function OrderHistory() {
             case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined by Seller</Badge>;
         }
     };
+    
+    const filteredOrders = useMemo(() => {
+        if (!orders) return [];
+        const sorted = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+        if (statusFilter === 'active') {
+            return sorted.filter(o => ['pending', 'confirmed', 'delivering'].includes(o.status));
+        } else { // 'completed'
+            return sorted.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
+        }
+    }, [orders, statusFilter]);
+
 
     if (isLoading) {
-        return <div className="text-center py-12 text-muted-foreground">Loading order history...</div>;
+        return <div className="text-center py-12 text-muted-foreground">Loading orders...</div>;
     }
 
-    if (!orders || orders.length === 0) {
+    if (!filteredOrders || filteredOrders.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">
-                <History className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4">You have no past orders.</p>
+                {statusFilter === 'active' ? (
+                     <>
+                        <Truck className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4">You have no active purchases.</p>
+                     </>
+                ) : (
+                    <>
+                        <History className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4">You have no past orders.</p>
+                    </>
+                )}
             </div>
         );
     }
-    
-    const sortedOrders = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
-
 
     return (
         <Accordion type="single" collapsible className="w-full space-y-4">
-            {sortedOrders.map(order => (
+            {filteredOrders.map(order => (
                 <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
@@ -187,7 +197,10 @@ function OrderHistory() {
                                 <div className="space-y-2">
                                 {order.items.map(item => (
                                     <div key={item.id} className="flex justify-between items-center text-sm">
-                                        <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
+                                        <div className="flex items-center gap-2">
+                                            <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
+                                            <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
+                                        </div>
                                         <span>{formatCurrency((item.price || 0) * item.quantity)}</span>
                                     </div>
                                 ))}
@@ -265,7 +278,7 @@ export default function ProfilePage() {
     if (value === 'cart') {
       dismissCartBadge();
     }
-    if (value === 'orders') {
+    if (value === 'orders' || value === 'purchases') {
         dismissOrderHistoryBadge();
     }
   };
@@ -309,12 +322,16 @@ export default function ProfilePage() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="orders" className="relative">
-            <History className="mr-2" />
-            Order History
+           <TabsTrigger value="purchases" className="relative">
+            <Truck className="mr-2" />
+            My Purchases
              {showOrderHistoryBadge && (
                 <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
              )}
+          </TabsTrigger>
+          <TabsTrigger value="orders">
+            <History className="mr-2" />
+            Order History
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
@@ -366,14 +383,25 @@ export default function ProfilePage() {
             </form>
           </Form>
         </TabsContent>
+        <TabsContent value="purchases">
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Purchases</CardTitle>
+                    <CardDescription>Track your active and ongoing orders here.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <OrderList statusFilter="active" />
+                </CardContent>
+            </Card>
+        </TabsContent>
         <TabsContent value="orders">
           <Card>
             <CardHeader>
               <CardTitle>Order History</CardTitle>
-              <CardDescription>A record of your past purchases.</CardDescription>
+              <CardDescription>A record of your completed or cancelled purchases.</CardDescription>
             </CardHeader>
             <CardContent>
-              <OrderHistory />
+              <OrderList statusFilter="completed" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -392,3 +420,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
