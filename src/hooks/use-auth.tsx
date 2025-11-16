@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -491,6 +490,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+    const getPlaceholderImage = (item: CombinedVariant) => {
+        if (item.imageUrl) {
+            return { imageUrl: item.imageUrl, imageHint: 'product' };
+        }
+        const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+        const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
+        if (categoryImage) {
+            return { imageUrl: categoryImage.imageUrl, imageHint: categoryImage.imageHint };
+        }
+        const itemImage = PlaceHolderImages.find(p => p.id === item.parentItemId);
+        if (itemImage) {
+            return { imageUrl: itemImage.imageUrl, imageHint: itemImage.imageHint };
+        }
+        const fallback = PlaceHolderImages.find(p => p.id === 'product-fallback')!;
+        return { imageUrl: fallback.imageUrl, imageHint: fallback.imageHint };
+    };
+
     const addToCart = async (variant: CombinedVariant) => {
         if (!user) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'Please log in to add items to your cart.' });
@@ -509,17 +525,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     return;
                 }
 
+                const placeholder = getPlaceholderImage(variant);
+
                 if (cartItemDoc.exists()) {
                     const newQuantity = currentQuantityInCart + 1;
                     transaction.update(cartItemRef, { quantity: newQuantity });
                 } else {
-                    const getPlaceholderImage = (itemId: string) => {
-                        const itemImage = PlaceHolderImages.find(p => p.id === itemId);
-                        const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-fallback');
-                        return itemImage || fallbackImage!;
-                    }
-                    const placeholder = getPlaceholderImage(variant.parentItemId);
-
                     const newCartItem: CartItem = {
                         id: variant.id,
                         variantId: variant.id,
@@ -766,5 +777,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
 
     
