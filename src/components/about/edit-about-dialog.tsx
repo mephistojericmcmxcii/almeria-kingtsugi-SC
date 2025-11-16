@@ -1,9 +1,7 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useForm, Controller } from 'react-hook-form';
 import { useFirebase } from '@/firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -16,14 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -31,18 +21,8 @@ import { useState, useEffect, useRef } from 'react';
 import type { AboutPageContent } from '@/app/(app)/about/page';
 import { Upload } from 'lucide-react';
 import Image from 'next/image';
+import { Label } from '../ui/label';
 
-const formSchema = z.object({
-  title: z.string().min(5, 'Title is required.'),
-  heading: z.string().min(5, 'Heading is required.'),
-  p1: z.string().min(10, 'Paragraph 1 is required.'),
-  p2: z.string().min(10, 'Paragraph 2 is required.'),
-  missionHeading: z.string().min(5, 'Mission heading is required.'),
-  missionP: z.string().min(10, 'Mission paragraph is required.'),
-  imageUrl: z.string().url('A valid image URL is required.').optional().or(z.literal('')),
-});
-
-type EditAboutFormValues = z.infer<typeof formSchema>;
 
 interface EditAboutDialogProps {
   isOpen: boolean;
@@ -58,21 +38,20 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<EditAboutFormValues>({
-    resolver: zodResolver(formSchema),
+  const { control, handleSubmit, reset } = useForm<AboutPageContent>({
     defaultValues: content,
   });
   
   useEffect(() => {
     if (isOpen) {
-        form.reset(content);
+        reset(content);
         setImagePreview(content.imageUrl);
         setImageFile(null);
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     }
-  }, [content, form, isOpen]);
+  }, [content, reset, isOpen]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -93,7 +72,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
   };
 
 
-  const onSubmit = async (values: EditAboutFormValues) => {
+  const onSubmit = async (values: AboutPageContent) => {
     if (!storage || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Firebase services not available.' });
       return;
@@ -102,61 +81,52 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     let finalImageUrl = content.imageUrl || '';
 
     try {
-        // Step 1: If a new image file exists, upload it and get the URL
-        if (imageFile) {
-            console.log("New image file detected. Starting upload...");
-            const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
-            const imageStorageRef = storageRef(storage, imageStoragePath);
-            
-            await uploadBytes(imageStorageRef, imageFile);
-            finalImageUrl = await getDownloadURL(imageStorageRef);
-            console.log("Image URL retrieved:", finalImageUrl);
-            
-            // If there was an old image, delete it
-            if (content.imageUrl && content.imageUrl !== finalImageUrl) {
-                 try {
-                    const oldImageRef = storageRef(storage, content.imageUrl);
-                    await deleteObject(oldImageRef);
-                    console.log("Old image deleted successfully.");
-                } catch (deleteError: any) {
-                    if (deleteError.code !== 'storage/object-not-found') {
-                        console.warn("Could not delete old image:", deleteError);
-                    }
-                }
+      // Step 1: If a new image file exists, upload it and get the URL
+      if (imageFile) {
+        const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
+        const imageStorageRef = storageRef(storage, imageStoragePath);
+        
+        await uploadBytes(imageStorageRef, imageFile);
+        finalImageUrl = await getDownloadURL(imageStorageRef);
+        
+        // If there was an old image, delete it
+        if (content.imageUrl && content.imageUrl !== finalImageUrl) {
+            try {
+              const oldImageRef = storageRef(storage, content.imageUrl);
+              await deleteObject(oldImageRef);
+            } catch (deleteError: any) {
+              if (deleteError.code !== 'storage/object-not-found') {
+                console.warn("Could not delete old image:", deleteError);
+              }
             }
         }
+      }
 
-        // Step 2: Prepare the data object for Firestore
-        const dataToSave: AboutPageContent = { 
-            title: values.title,
-            heading: values.heading,
-            p1: values.p1,
-            p2: values.p2,
-            missionHeading: values.missionHeading,
-            missionP: values.missionP,
-            imageUrl: finalImageUrl,
-        };
+      // Step 2: Prepare the data object for Firestore
+      const dataToSave: AboutPageContent = { 
+        ...values,
+        imageUrl: finalImageUrl,
+      };
 
-        // Step 3: Save the data to Firestore
-        console.log("Saving data to Firestore:", dataToSave);
-        const aboutRef = doc(firestore, 'system_settings', 'about_page');
-        await setDoc(aboutRef, dataToSave, { merge: true });
-        console.log("Firestore document saved successfully.");
+      // Step 3: Save the data to Firestore
+      const aboutRef = doc(firestore, 'system_settings', 'about_page');
+      await setDoc(aboutRef, dataToSave, { merge: true });
 
-        toast({
-            title: "Success",
-            description: "The About page has been updated.",
-        });
-        onOpenChange(false);
+      toast({
+        title: "Success",
+        description: "The About page has been updated.",
+      });
+      onOpenChange(false);
+
     } catch (error: any) {
-        console.error("Failed to update About page:", error);
-         toast({
-            variant: "destructive",
-            title: "Error",
-            description: error.message || "Could not update the About page. Please try again.",
-        });
+      console.error("Failed to update About page:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Could not update the About page. Please try again.",
+      });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
   
@@ -181,65 +151,46 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
           <DialogTitle>Edit About Page</DialogTitle>
           <DialogDescription>Update the content displayed on the About page.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            <FormItem>
-              <FormLabel>Page Image</FormLabel>
-              <FormControl>
-                <div className="flex items-center gap-4">
-                  <div className="relative h-24 w-40 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
-                    {imagePreview ? (
-                      <Image src={imagePreview} alt="About page preview" fill style={{objectFit: "cover"}} />
-                    ) : (
-                      <Upload className="h-8 w-8" />
-                    )}
-                  </div>
-                  <Input 
-                    type="file" 
-                    accept="image/png, image/jpeg, image/webp" 
-                    onChange={handleImageChange}
-                    className="hidden"
-                    ref={fileInputRef}
-                    disabled={isSubmitting}
-                  />
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
-                    {imagePreview ? 'Change Image' : 'Upload Image'}
-                  </Button>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+          <div className="space-y-2">
+            <Label>Page Image</Label>
+              <div className="flex items-center gap-4">
+                <div className="relative h-24 w-40 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
+                  {imagePreview ? (
+                    <Image src={imagePreview} alt="About page preview" fill style={{objectFit: "cover"}} />
+                  ) : (
+                    <Upload className="h-8 w-8" />
+                  )}
                 </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-
-            <FormField control={form.control} name="title" render={({ field }) => (
-                <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            <FormField control={form.control} name="heading" render={({ field }) => (
-                <FormItem><FormLabel>Main Heading</FormLabel><FormControl><Input {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-            )}/>
-             <FormField control={form.control} name="p1" render={({ field }) => (
-                <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea {...field} rows={5} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            <FormField control={form.control} name="p2" render={({ field }) => (
-                <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea {...field} rows={4} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            <FormField control={form.control} name="missionHeading" render={({ field }) => (
-                <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            <FormField control={form.control} name="missionP" render={({ field }) => (
-                <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea {...field} rows={3} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            
-             <DialogFooter className="mt-8">
-              <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                <Input 
+                  type="file" 
+                  accept="image/png, image/jpeg, image/webp" 
+                  onChange={handleImageChange}
+                  className="hidden"
+                  ref={fileInputRef}
+                  disabled={isSubmitting}
+                />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
+                  {imagePreview ? 'Change Image' : 'Upload Image'}
+                </Button>
+              </div>
+          </div>
+          
+          <Controller name="title" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Page Title</Label><Input {...field} disabled={isSubmitting} /></div> )}/>
+          <Controller name="heading" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Main Heading</Label><Input {...field} disabled={isSubmitting} /></div> )}/>
+          <Controller name="p1" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Paragraph 1</Label><Textarea {...field} rows={5} disabled={isSubmitting} /></div> )}/>
+          <Controller name="p2" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Paragraph 2</Label><Textarea {...field} rows={4} disabled={isSubmitting} /></div> )}/>
+          <Controller name="missionHeading" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Mission Heading</Label><Input {...field} disabled={isSubmitting} /></div> )}/>
+          <Controller name="missionP" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Mission Paragraph</Label><Textarea {...field} rows={3} disabled={isSubmitting} /></div> )}/>
+          
+            <DialogFooter className="mt-8">
+            <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
