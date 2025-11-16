@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
 import { useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -80,12 +79,10 @@ export default function AboutPage() {
                                     <Skeleton className="w-full aspect-video rounded-lg" />
                                 ) : (
                                      displayContent.imageUrl && (
-                                        <Image
+                                        <img
                                             src={displayContent.imageUrl}
                                             alt="About the Kintsugi Shop"
-                                            width={1200}
-                                            height={800}
-                                            className="rounded-lg object-cover aspect-video"
+                                            className="rounded-lg object-cover aspect-video w-full h-full"
                                             data-ai-hint="shop interior"
                                         />
                                     )

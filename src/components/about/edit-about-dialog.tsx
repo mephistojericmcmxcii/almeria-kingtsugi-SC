@@ -27,7 +27,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 import type { AboutPageContent } from '@/app/(app)/about/page';
 
@@ -115,7 +114,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
               <FormLabel>Image Preview</FormLabel>
                 <div className="relative mt-2 h-48 w-full border rounded overflow-hidden">
                   {imageUrl ? (
-                      <Image src={imageUrl} fill alt="preview" style={{ objectFit: "cover" }} onError={(e) => e.currentTarget.style.display = 'none'}/>
+                      <img src={imageUrl} alt="preview" style={{ objectFit: "cover", width: '100%', height: '100%' }} onError={(e) => (e.currentTarget.style.display = 'none')}/>
                   ) : (
                       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
                       No Image URL Provided
@@ -145,7 +144,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 )}/>
 
                 <FormField name="missionP" control={form.control} render={({ field }) => (
-                  <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={1} {...field}/></FormControl><FormMessage/></FormItem>
+                  <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={3} {...field}/></FormControl><FormMessage/></FormItem>
                 )}/>
 
             </div>
