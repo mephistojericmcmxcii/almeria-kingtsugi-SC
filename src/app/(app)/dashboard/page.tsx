@@ -106,6 +106,11 @@ export default function DashboardPage() {
     setIsModalOpen(true);
   }
 
+  const handleAddToCartRequest = (variant: CombinedVariant) => {
+    setIsModalOpen(false); // Close the view modal
+    setVariantToAddToCart(variant); // Open the confirmation dialog
+  };
+
   const getPlaceholderImage = (item: CombinedVariant) => {
       if (item.imageUrl) {
           return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
@@ -237,6 +242,7 @@ export default function DashboardPage() {
             isOpen={isModalOpen}
             onOpenChange={setIsModalOpen}
             variant={selectedVariant}
+            onAddToCart={handleAddToCartRequest}
         />
     )}
 
@@ -259,5 +265,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    

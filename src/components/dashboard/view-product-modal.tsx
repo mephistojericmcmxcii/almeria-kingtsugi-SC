@@ -2,7 +2,6 @@
 
 import type { InventoryVariant } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth } from '@/hooks/use-auth';
 
 import {
   Dialog,
@@ -27,16 +26,15 @@ interface ViewProductModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   variant: CombinedVariant | null;
+  onAddToCart: (variant: CombinedVariant) => void;
 }
 
-export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductModalProps) {
-  const { addToCart } = useAuth();
+export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }: ViewProductModalProps) {
   
   if (!variant) return null;
 
-  const handleAddToCart = () => {
-    addToCart(variant);
-    onOpenChange(false);
+  const handleAddToCartClick = () => {
+    onAddToCart(variant);
   }
 
   const getPlaceholderImage = (item: CombinedVariant) => {
@@ -108,7 +106,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
                 </div>
 
                 <div className="pt-4 flex flex-col gap-2">
-                    <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCart}>
+                    <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
                         <ShoppingCart className="mr-2" /> Add to Cart
                     </Button>
                     <Button size="lg" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
