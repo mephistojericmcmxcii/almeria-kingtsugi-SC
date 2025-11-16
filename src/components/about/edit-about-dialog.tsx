@@ -101,29 +101,39 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     setIsSubmitting(true);
 
     try {
-        let finalImageUrl = content.imageUrl || ''; // Start with the original image URL or an empty string
+        let finalImageUrl = content.imageUrl; 
 
+        // Step 1: If a new image file exists, upload it and get the URL
         if (imageFile) {
+            console.log("New image file detected. Starting upload...");
             const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
             const imageStorageRef = storageRef(storage, imageStoragePath);
             
+            // Step 1a: Upload the file
             await uploadBytes(imageStorageRef, imageFile);
-            
+            console.log("Image uploaded successfully.");
+
+            // Step 1b: Get the download URL
             finalImageUrl = await getDownloadURL(imageStorageRef);
+            console.log("Image URL retrieved:", finalImageUrl);
         }
 
-        const aboutRef = doc(firestore, 'system_settings', 'about_page');
+        // Step 2: Prepare the data object for Firestore
         const dataToSave: AboutPageContent = { 
-            title: values.title || '',
-            heading: values.heading || '',
-            p1: values.p1 || '',
-            p2: values.p2 || '',
-            missionHeading: values.missionHeading || '',
-            missionP: values.missionP || '',
-            imageUrl: finalImageUrl 
+            title: values.title,
+            heading: values.heading,
+            p1: values.p1,
+            p2: values.p2,
+            missionHeading: values.missionHeading,
+            missionP: values.missionP,
+            imageUrl: finalImageUrl || '', // Ensure it's never undefined
         };
 
+        // Step 3: Save the data to Firestore
+        console.log("Saving data to Firestore:", dataToSave);
+        const aboutRef = doc(firestore, 'system_settings', 'about_page');
         await setDoc(aboutRef, dataToSave, { merge: true });
+        console.log("Firestore document saved successfully.");
 
         toast({
             title: "Success",
@@ -135,10 +145,12 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
          toast({
             variant: "destructive",
             title: "Error",
-            description: "Could not update the About page. Please try again.",
+            description: error.message || "Could not update the About page. Please try again.",
         });
     } finally {
-      setIsSubmitting(false);
+        // Step 4: Always stop the loading indicator
+        setIsSubmitting(false);
+        console.log("Submission process finished.");
     }
   };
   
