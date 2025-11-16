@@ -1,7 +1,5 @@
-
 'use client';
 
-import Image from 'next/image';
 import type { InventoryVariant } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/hooks/use-auth';
@@ -78,11 +76,10 @@ export function ViewProductModal({ isOpen, onOpenChange, variant }: ViewProductM
       <DialogContent className="sm:max-w-3xl" showCloseButton={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="aspect-square relative">
-                <Image
+                <img
                     src={placeholder.imageUrl}
                     alt={placeholder.description}
-                    fill
-                    className="object-cover rounded-lg"
+                    className="object-cover rounded-lg w-full h-full"
                     data-ai-hint={placeholder.imageHint}
                 />
             </div>

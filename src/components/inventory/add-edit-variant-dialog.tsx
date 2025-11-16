@@ -1,8 +1,6 @@
-
 'use client';
 
 import { useFirebase } from '@/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { setDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,10 +14,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
-import { Upload, X } from 'lucide-react';
-import Image from 'next/image';
 import { Label } from '../ui/label';
 
 type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' | 'ref'>;
@@ -31,29 +27,11 @@ interface AddEditVariantDialogProps {
   variantToEdit?: InventoryVariant | null;
 }
 
-function getPathFromUrl(url: string) {
-    try {
-        const urlObj = new URL(url);
-        const pathName = urlObj.pathname;
-        // The path will be something like /v0/b/your-bucket.appspot.com/o/path%2Fto%2Fimage.jpg
-        const parts = pathName.split('/o/');
-        if (parts.length > 1) {
-            return decodeURIComponent(parts[1]);
-        }
-        return null;
-    } catch (error) {
-        console.error("Invalid URL for getPathFromUrl:", error);
-        return null;
-    }
-}
 
 export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit }: AddEditVariantDialogProps) {
-  const { storage, firestore } = useFirebase();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initialFormState: VariantFormData = {
       brand: '',
@@ -71,14 +49,8 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     if (isOpen) {
         if (variantToEdit) {
             setFormState(variantToEdit);
-            setImagePreview(variantToEdit.imageUrl || null);
         } else {
             setFormState(initialFormState);
-            setImagePreview(null);
-        }
-        setImageFile(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
         }
     }
   }, [variantToEdit, isOpen]);
@@ -88,83 +60,18 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     setFormState(prevState => ({ ...prevState, [name]: value }));
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!acceptedTypes.includes(file.type)) {
-        toast({
-            variant: "destructive",
-            title: "Invalid File Type",
-            description: "Please select a PNG, JPEG, or WEBP image.",
-        });
-        return;
-    }
-
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setFormState(prevState => ({...prevState, imageUrl: ''}));
-    if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-    }
-  };
-
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!item || !firestore || !storage) {
+    if (!item || !firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'Required services are not available.' });
         return;
     }
 
     setIsSubmitting(true);
-    let finalImageUrl = formState.imageUrl || '';
 
     try {
         const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
         const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
-
-        if (imageFile) {
-            const imageStoragePath = `inventory-item-variant-images/${variantId}`;
-            const imageStorageRef = storageRef(storage, imageStoragePath);
-            
-            await uploadBytes(imageStorageRef, imageFile);
-            finalImageUrl = await getDownloadURL(imageStorageRef);
-
-            if (variantToEdit?.imageUrl && variantToEdit.imageUrl !== finalImageUrl) {
-                 try {
-                    const oldPath = getPathFromUrl(variantToEdit.imageUrl);
-                    if (oldPath) {
-                        const oldImageRef = storageRef(storage, oldPath);
-                        await deleteObject(oldImageRef);
-                    }
-                } catch (deleteError: any) {
-                    if (deleteError.code !== 'storage/object-not-found') {
-                        console.warn("Could not delete old image:", deleteError);
-                    }
-                }
-            }
-        } else if (!formState.imageUrl && variantToEdit?.imageUrl) {
-            try {
-                const oldPath = getPathFromUrl(variantToEdit.imageUrl);
-                if(oldPath) {
-                    const oldImageRef = storageRef(storage, oldPath);
-                    await deleteObject(oldImageRef);
-                }
-                finalImageUrl = '';
-            } catch (deleteError: any) {
-                 if (deleteError.code !== 'storage/object-not-found') {
-                    console.warn("Could not delete old image:", deleteError);
-                }
-                finalImageUrl = '';
-            }
-        }
 
         const variantRef = doc(variantCollectionRef, variantId);
         const dataToSave = {
@@ -172,7 +79,6 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             quantity: Number(formState.quantity) || 0,
             price: Number(formState.price) || 0,
             warningLimit: Number(formState.warningLimit) || 0,
-            imageUrl: finalImageUrl,
             updatedAt: serverTimestamp(),
             ...(!variantToEdit && { createdAt: serverTimestamp() }),
         };
@@ -223,42 +129,11 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-          <div className="space-y-2">
-            <Label>Variant Image</Label>
-            <div className="flex items-center gap-4">
-              <div className="relative h-24 w-24 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
-                {imagePreview ? (
-                  <>
-                    <Image src={imagePreview} alt="Variant preview" fill style={{objectFit: "cover"}} />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-0 right-0 h-6 w-6 z-10"
-                      onClick={removeImage}
-                      disabled={isSubmitting}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <Upload className="h-8 w-8" />
-                )}
-              </div>
-              <Input 
-                type="file" 
-                accept="image/png, image/jpeg, image/webp" 
-                onChange={handleImageChange}
-                className="hidden"
-                ref={fileInputRef}
-                disabled={isSubmitting}
-              />
-              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
-                {imagePreview ? 'Change Image' : 'Upload Image'}
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl} onChange={handleInputChange} disabled={isSubmitting} />
             </div>
-          </div>
-          
+
             <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand} onChange={handleInputChange} disabled={isSubmitting} /></div>
             <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source} onChange={handleInputChange} disabled={isSubmitting} /></div>
           

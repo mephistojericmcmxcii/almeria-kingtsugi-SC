@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -18,7 +17,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { CartItem, Order, OrderStatus } from '@/lib/types';
-import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -83,13 +81,11 @@ function CartList() {
                     const isStockLimitReached = item.quantity >= (item.stock || 0);
                     return (
                     <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
-                         <Image 
-                            src={placeholder.imageUrl} 
+                         <img 
+                            src={item.imageUrl || placeholder.imageUrl} 
                             alt={item.parentName || 'product'} 
-                            width={64} 
-                            height={64} 
-                            className="rounded-md object-cover"
-                            data-ai-hint={placeholder.imageHint}
+                            className="rounded-md object-cover w-16 h-16"
+                            data-ai-hint={item.imageHint || placeholder.imageHint}
                             />
                         <div className="flex-grow">
                             <p className="font-semibold">{item.parentName}</p>
@@ -396,9 +392,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
-
-    
-
-    

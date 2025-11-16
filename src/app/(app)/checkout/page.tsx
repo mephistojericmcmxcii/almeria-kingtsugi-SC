@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -9,7 +8,6 @@ import { collection } from 'firebase/firestore';
 import type { CartItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -216,12 +214,10 @@ export default function CheckoutPage() {
                         <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                         {cartItems.map(item => (
                             <div key={item.id} className="flex items-center gap-4">
-                                <Image 
+                                <img 
                                     src={item.imageUrl!} 
                                     alt={item.parentName || 'product'} 
-                                    width={48} 
-                                    height={48} 
-                                    className="rounded-md object-cover"
+                                    className="rounded-md object-cover w-12 h-12"
                                     data-ai-hint={item.imageHint}
                                 />
                                 <div className="flex-grow">

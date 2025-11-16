@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -13,7 +12,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, ShoppingCart, Search, Tag, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -170,11 +168,10 @@ export default function DashboardPage() {
                     return (
                         <Card key={item.id} className="flex flex-col overflow-hidden group">
                             <div className="aspect-video relative">
-                                <Image
+                                <img
                                     src={placeholder.imageUrl}
                                     alt={placeholder.description}
-                                    fill
-                                    className="object-cover"
+                                    className="object-cover w-full h-full"
                                     data-ai-hint={placeholder.imageHint}
                                 />
                                 <div className="absolute top-2 right-2">
