@@ -39,7 +39,7 @@ const formSchema = z.object({
   p2: z.string().min(10, 'Paragraph 2 is required.'),
   missionHeading: z.string().min(5, 'Mission heading is required.'),
   missionP: z.string().min(10, 'Mission paragraph is required.'),
-  imageUrl: z.string().url('A valid image URL is required.'),
+  imageUrl: z.string().url('A valid image URL is required.').optional().or(z.literal('')),
 });
 
 type EditAboutFormValues = z.infer<typeof formSchema>;
@@ -101,7 +101,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     setIsSubmitting(true);
 
     try {
-        let finalImageUrl = values.imageUrl;
+        let finalImageUrl = content.imageUrl; // Start with the original image URL
 
         if (imageFile) {
             const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
@@ -113,7 +113,15 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
         }
 
         const aboutRef = doc(firestore, 'system_settings', 'about_page');
-        const dataToSave: AboutPageContent = { ...values, imageUrl: finalImageUrl };
+        const dataToSave: AboutPageContent = { 
+            title: values.title || '',
+            heading: values.heading || '',
+            p1: values.p1 || '',
+            p2: values.p2 || '',
+            missionHeading: values.missionHeading || '',
+            missionP: values.missionP || '',
+            imageUrl: finalImageUrl 
+        };
 
         await setDoc(aboutRef, dataToSave, { merge: true });
 
