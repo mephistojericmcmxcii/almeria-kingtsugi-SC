@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -167,7 +168,7 @@ export default function DashboardPage() {
                     const placeholder = getPlaceholderImage(item);
                     return (
                         <Card key={item.id} className="flex flex-col overflow-hidden group">
-                            <div className="aspect-video relative">
+                            <div className="aspect-square relative">
                                 <img
                                     src={placeholder.imageUrl}
                                     alt={placeholder.description}
