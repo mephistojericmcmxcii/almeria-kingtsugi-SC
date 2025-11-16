@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, Timestamp, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
 
