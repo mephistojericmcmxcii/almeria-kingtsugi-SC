@@ -237,15 +237,15 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 
                 <div className="md:col-span-2">
                     <FormField name="body" control={form.control} render={({ field }) => (
-                    <FormItem><FormLabel>Body Content</FormLabel><FormControl><Textarea rows={4} {...field}/></FormControl><FormMessage/></FormItem>
+                    <FormItem><FormLabel>Body Content</FormLabel><FormControl><Textarea rows={6} {...field}/></FormControl><FormMessage/></FormItem>
                     )}/>
                 </div>
 
-                <FormField name="missionHeading" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-                )}/>
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField name="missionHeading" control={form.control} render={({ field }) => (
+                    <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
 
-                <div className="md:col-span-2">
                     <FormField name="missionP" control={form.control} render={({ field }) => (
                     <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={1} {...field}/></FormControl><FormMessage/></FormItem>
                     )}/>
