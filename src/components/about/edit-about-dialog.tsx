@@ -225,13 +225,13 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 
                 <div className="md:col-span-2">
                     <FormField name="p1" control={form.control} render={({ field }) => (
-                    <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={3} {...field}/></FormControl><FormMessage/></FormItem>
+                    <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
                     )}/>
                 </div>
                 
                 <div className="md:col-span-2">
                     <FormField name="p2" control={form.control} render={({ field }) => (
-                    <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={3} {...field}/></FormControl><FormMessage/></FormItem>
+                    <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
                     )}/>
                 </div>
 
@@ -241,7 +241,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
                 <div className="md:col-span-2">
                     <FormField name="missionP" control={form.control} render={({ field }) => (
-                    <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
+                    <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={1} {...field}/></FormControl><FormMessage/></FormItem>
                     )}/>
                 </div>
             </div>
