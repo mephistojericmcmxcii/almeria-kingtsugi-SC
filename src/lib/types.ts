@@ -78,8 +78,8 @@ export type PurchaseOrder = {
   careOf: string;
   totalAmount: number;
   status: PurchaseOrderStatus;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 };
 
     

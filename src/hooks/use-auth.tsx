@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, Go
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order, OrderStatus } from '@/lib/types';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -45,6 +46,7 @@ interface AuthContextType {
   removeCartItem: (cartItemId: string) => Promise<void>;
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, paymentMethod: string) => Promise<boolean>;
   updateOrderStatus: (order: Order, newStatus: OrderStatus) => Promise<boolean>;
+  updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   showCartBadge: boolean;
   dismissCartBadge: () => void;
   showOrderHistoryBadge: boolean;
@@ -710,6 +712,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const updatePoStatus = async (poId: string, newStatus: PurchaseOrderStatus): Promise<boolean> => {
+        const poRef = doc(firestore, 'purchase_orders', poId);
+        try {
+            await updateDoc(poRef, {
+                status: newStatus,
+                updatedAt: serverTimestamp(),
+            });
+            toast({
+                title: 'PO Status Updated',
+                description: `The purchase order has been marked as ${newStatus}.`,
+            });
+            return true;
+        } catch (error: any) {
+            console.error("Error updating PO status:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: 'Could not update the PO status. Please try again.',
+            });
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: poRef.path,
+                    operation: 'update',
+                    requestResourceData: { status: newStatus },
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            }
+            return false;
+        }
+    };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -717,7 +750,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
 
   return (
     <AuthContext.Provider value={value}>

@@ -4,9 +4,10 @@
 import { useState, useMemo } from 'react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection } from 'firebase/firestore';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
 import type { PurchaseOrder } from '@/lib/types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,17 +15,23 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AddEditPoDialog } from '@/components/po/add-edit-po-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ViewPoDialog } from '@/components/po/view-po-dialog';
 
 export default function PoPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
+  const [poToView, setPoToView] = useState<PurchaseOrder | null>(null);
+  const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
   
   const poCollectionRef = useMemoFirebase(() => collection(firestore, 'purchase_orders'), [firestore]);
   const { data: purchaseOrders, isLoading } = useCollection<PurchaseOrder>(poCollectionRef);
@@ -37,15 +44,35 @@ export default function PoPage() {
     );
   }, [purchaseOrders, searchTerm]);
 
-  const handleEdit = (po: PurchaseOrder) => {
-    setPoToEdit(po);
-    setIsDialogOpen(true);
+  const handleView = (po: PurchaseOrder) => {
+    setPoToView(po);
+    setIsViewDialogOpen(true);
   };
   
   const handleAddNew = () => {
     setPoToEdit(null);
-    setIsDialogOpen(true);
+    setIsAddDialogOpen(true);
   };
+  
+  const handleDeleteConfirm = async () => {
+      if (!poToDelete) return;
+      try {
+        await deleteDoc(doc(firestore, 'purchase_orders', poToDelete.id));
+        toast({
+            title: "PO Deleted",
+            description: `Purchase Order ${poToDelete.poNumber} has been deleted.`,
+        });
+        setPoToDelete(null);
+      } catch (error) {
+        console.error("Error deleting PO:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not delete the purchase order.",
+        });
+      }
+      setPoToDelete(null);
+  }
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
@@ -137,10 +164,12 @@ export default function PoPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEdit(po)}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                             <DropdownMenuItem onSelect={() => handleView(po)}>
+                              <Eye className="mr-2 h-4 w-4" /> View
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => setPoToDelete(po)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -161,10 +190,34 @@ export default function PoPage() {
         </Card>
       </div>
       <AddEditPoDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
         poToEdit={poToEdit}
       />
+      {poToView && (
+        <ViewPoDialog 
+            isOpen={isViewDialogOpen}
+            onOpenChange={setIsViewDialogOpen}
+            po={poToView}
+        />
+      )}
+
+       <AlertDialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete PO #<span className="font-bold">{poToDelete?.poNumber}</span>. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

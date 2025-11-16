@@ -14,8 +14,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, CheckCircle, XCircle, Search, Eye } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const ORDER_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'delivering', 'completed', 'cancelled', 'declined'];
 
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
@@ -41,7 +44,6 @@ export default function AllOrdersPage() {
         setIsUpdating(order.id);
         const success = await updateOrderStatus(order, status);
         if (success) {
-            // Optimistically update the selected order in the modal
             setSelectedOrder(prev => prev ? { ...prev, status } : null);
         }
         setIsUpdating(null);
@@ -83,8 +85,11 @@ export default function AllOrdersPage() {
     if (user?.role !== 'admin') {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center">
-                <h1 className="text-2xl font-bold">Access Denied</h1>
-                <p className="text-muted-foreground">You do not have permission to view this page.</p>
+                 <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+                <h1 className="text-3xl font-bold font-headline text-destructive">Access Denied</h1>
+                <p className="text-muted-foreground mt-2">
+                    You do not have permission to view this page.
+                </p>
             </div>
         );
     }
@@ -217,26 +222,24 @@ export default function AllOrdersPage() {
                         </div>
                     </div>
                     <DialogFooter className="sm:justify-between items-center">
-                         <div className="font-semibold">
+                         <div className="font-semibold flex items-center gap-2">
                             Status: {getStatusBadge(selectedOrder.status)}
                         </div>
-                        <div className="flex gap-2">
-                             {selectedOrder.status === 'pending' && (
-                                 <Button size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'confirmed')} disabled={isUpdating === selectedOrder.id}>
-                                    {isUpdating === selectedOrder.id ? 'Confirming...' : 'Confirm'}
-                                </Button>
-                            )}
-                            {selectedOrder.status === 'confirmed' && (
-                                 <Button size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'delivering')} disabled={isUpdating === selectedOrder.id}>
-                                    {isUpdating === selectedOrder.id ? 'Shipping...' : 'Ship'}
-                                </Button>
-                            )}
-                            {(selectedOrder.status === 'pending' || selectedOrder.status === 'confirmed') && (
-                                 <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(selectedOrder, 'declined')} disabled={isUpdating === selectedOrder.id}>
-                                     <XCircle className="mr-2 h-4 w-4" />
-                                    {isUpdating === selectedOrder.id ? 'Declining...' : 'Decline'}
-                                </Button>
-                            )}
+                        <div className="flex items-center gap-2">
+                            <Select 
+                                value={selectedOrder.status} 
+                                onValueChange={(newStatus) => handleUpdateStatus(selectedOrder, newStatus as OrderStatus)}
+                                disabled={isUpdating === selectedOrder.id || selectedOrder.status === 'completed' || selectedOrder.status === 'cancelled' || selectedOrder.status === 'declined'}
+                            >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Update status..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {ORDER_STATUSES.map(status => (
+                                        <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </DialogFooter>
                 </DialogContent>
