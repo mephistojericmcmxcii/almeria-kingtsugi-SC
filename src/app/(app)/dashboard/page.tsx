@@ -16,6 +16,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, ShoppingCart, Search, Tag, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type CombinedVariant = InventoryVariant & {
     parentName: string;
@@ -34,6 +44,7 @@ export default function DashboardPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<CombinedVariant | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [variantToAddToCart, setVariantToAddToCart] = useState<CombinedVariant | null>(null);
 
   const variantsCollectionGroup = useMemoFirebase(() => collectionGroup(firestore, 'variants'), [firestore]);
   const { data: variants, isLoading: areVariantsLoading } = useCollection<InventoryVariant>(variantsCollectionGroup);
@@ -84,8 +95,10 @@ export default function DashboardPage() {
     );
   }, [combinedVariants, searchTerm]);
   
-  const handleAddToCart = (variant: CombinedVariant) => {
-    addToCart(variant);
+  const handleAddToCartConfirm = () => {
+    if (!variantToAddToCart) return;
+    addToCart(variantToAddToCart);
+    setVariantToAddToCart(null);
   };
 
   const handleViewDetails = (variant: CombinedVariant) => {
@@ -205,7 +218,7 @@ export default function DashboardPage() {
                                 <Button variant="outline" size="sm" onClick={() => handleViewDetails(item)}>
                                     <Eye className="mr-2 h-4 w-4" /> View
                                 </Button>
-                                <Button size="sm" onClick={() => handleAddToCart(item)} disabled={item.quantity <= 0}>
+                                <Button size="sm" onClick={() => setVariantToAddToCart(item)} disabled={item.quantity <= 0}>
                                     <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
                                 </Button>
                             </CardFooter>
@@ -226,6 +239,25 @@ export default function DashboardPage() {
             variant={selectedVariant}
         />
     )}
+
+    <AlertDialog open={!!variantToAddToCart} onOpenChange={(open) => !open && setVariantToAddToCart(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Add to Cart</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Are you sure you want to add <strong>{variantToAddToCart?.parentName} ({variantToAddToCart?.brand})</strong> to your cart?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleAddToCartConfirm}>
+                    Confirm
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
+
+    
