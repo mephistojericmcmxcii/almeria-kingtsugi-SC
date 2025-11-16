@@ -32,11 +32,11 @@ import Image from 'next/image';
 
 import type { AboutPageContent } from '@/app/(app)/about/page';
 
+
 const formSchema = z.object({
   title: z.string().min(3),
   heading: z.string().min(3),
-  p1: z.string().min(5),
-  p2: z.string().min(5),
+  body: z.string().min(10),
   missionHeading: z.string().min(3),
   missionP: z.string().min(5),
 });
@@ -70,12 +70,24 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: content,
+    defaultValues: {
+      title: content.title,
+      heading: content.heading,
+      body: content.p1 && content.p2 ? `${content.p1}\n\n${content.p2}` : (content.body || ''),
+      missionHeading: content.missionHeading,
+      missionP: content.missionP,
+    },
   });
 
   useEffect(() => {
     if (isOpen) {
-      form.reset(content);
+      form.reset({
+        title: content.title,
+        heading: content.heading,
+        body: content.p1 && content.p2 ? `${content.p1}\n\n${content.p2}` : (content.body || ''),
+        missionHeading: content.missionHeading,
+        missionP: content.missionP,
+      });
       setImagePreview(content.imageUrl || null);
       setImageFile(null);
       if (fileRef.current) fileRef.current.value = "";
@@ -101,7 +113,6 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log("onSubmit triggered");
     if (!imageFile && !content.imageUrl) {
       toast({
         variant: "destructive",
@@ -112,12 +123,12 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
     }
 
     setIsSubmitting(true);
-    console.log("isSubmitting set to true");
-
-    let finalImageUrl = content.imageUrl;
 
     try {
+        let finalImageUrl = content.imageUrl;
+
         if (imageFile) {
+            console.log("Starting image upload...");
             const path = `about-images/about-${Date.now()}`;
             console.log("Uploading to storage path:", path);
             const imgRef = storageRef(storage, path);
@@ -144,10 +155,12 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 }
             }
         }
-
+        
         const dataToSave = {
             ...values,
             imageUrl: finalImageUrl || '',
+            p1: undefined, // remove old fields
+            p2: undefined,
         };
         console.log("Data to save to Firestore:", dataToSave);
         const aboutRef = doc(firestore, "system_settings", "about_page");
@@ -222,13 +235,11 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 <FormItem><FormLabel>Primary Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
                 )}/>
                 
-                <FormField name="p1" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
-                )}/>
-
-                <FormField name="p2" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
-                )}/>
+                <div className="md:col-span-2">
+                    <FormField name="body" control={form.control} render={({ field }) => (
+                    <FormItem><FormLabel>Body Content</FormLabel><FormControl><Textarea rows={4} {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                </div>
 
                 <FormField name="missionHeading" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>

@@ -120,13 +120,9 @@
           "type": "string",
           "description": "The primary heading within the content."
         },
-        "p1": {
+        "body": {
           "type": "string",
-          "description": "The first paragraph of text."
-        },
-        "p2": {
-          "type": "string",
-          "description": "The second paragraph of text."
+          "description": "The main body of text content for the page."
         },
         "missionHeading": {
           "type": "string",
@@ -142,7 +138,7 @@
           "description": "The URL of the image to display."
         }
       },
-      "required": ["title", "heading", "p1", "p2", "missionHeading", "missionP", "imageUrl"]
+      "required": ["title", "heading", "body", "missionHeading", "missionP", "imageUrl"]
     },
     "InventoryItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",

@@ -15,8 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 export type AboutPageContent = {
   title: string;
   heading: string;
-  p1: string;
-  p2: string;
+  p1?: string; // Kept for backwards compatibility
+  p2?: string; // Kept for backwards compatibility
+  body?: string;
   missionHeading: string;
   missionP: string;
   imageUrl: string;
@@ -25,8 +26,7 @@ export type AboutPageContent = {
 const defaultContent: AboutPageContent = {
     title: 'About Kintsugi Variety Shop',
     heading: 'Embracing Imperfection',
-    p1: 'Kintsugi (金継ぎ, "golden joinery") is the Japanese art of repairing broken pottery by mending the areas of breakage with lacquer dusted or mixed with powdered gold, silver, or platinum. As a philosophy, it treats breakage and repair as part of the history of an object, rather than something to disguise.',
-    p2: 'At Kintsugi Variety Shop, we celebrate this philosophy. We believe in finding beauty in imperfection and giving new life to what was once broken. Our portal is an extension of this belief, designed to manage our craft with precision, care, and a touch of elegance.',
+    body: 'Kintsugi (金継ぎ, "golden joinery") is the Japanese art of repairing broken pottery by mending the areas of breakage with lacquer dusted or mixed with powdered gold, silver, or platinum. As a philosophy, it treats breakage and repair as part of the history of an object, rather than something to disguise.\n\nAt Kintsugi Variety Shop, we celebrate this philosophy. We believe in finding beauty in imperfection and giving new life to what was once broken. Our portal is an extension of this belief, designed to manage our craft with precision, care, and a touch of elegance.',
     missionHeading: 'Our Mission',
     missionP: 'Our mission is to provide unique, handcrafted items that tell a story. This management portal helps us streamline our operations, from inventory to customer relations, ensuring that we can focus on what truly matters: the art of kintsugi.',
     imageUrl: 'https://images.unsplash.com/photo-1641816482139-cfa2066a298e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzaG9wJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzYzMDg2Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080'
@@ -42,7 +42,11 @@ export default function AboutPage() {
     );
     const { data: aboutContentData, isLoading } = useDoc<AboutPageContent>(aboutContentRef);
     
-    const content = aboutContentData || defaultContent;
+    // Handle migrating from p1/p2 to body
+    const content = aboutContentData ? {
+        ...aboutContentData,
+        body: aboutContentData.body || (aboutContentData.p1 && aboutContentData.p2 ? `${aboutContentData.p1}\n\n${aboutContentData.p2}` : '')
+    } : defaultContent;
     
     return (
         <>
@@ -71,8 +75,7 @@ export default function AboutPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        <p className="text-muted-foreground leading-relaxed">{content.p1}</p>
-                                        <p className="text-muted-foreground leading-relaxed">{content.p2}</p>
+                                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{content.body}</p>
                                         <h3 className="text-xl font-semibold font-headline text-accent pt-4">{content.missionHeading}</h3>
                                         <p className="text-muted-foreground leading-relaxed">{content.missionP}</p>
                                     </>
