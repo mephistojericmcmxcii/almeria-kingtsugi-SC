@@ -101,7 +101,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     setIsSubmitting(true);
 
     try {
-        let finalImageUrl = content.imageUrl; // Start with the original image URL
+        let finalImageUrl = content.imageUrl || ''; // Start with the original image URL or an empty string
 
         if (imageFile) {
             const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
