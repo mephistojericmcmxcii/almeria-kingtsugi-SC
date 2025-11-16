@@ -15,9 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export type AboutPageContent = {
   title: string;
   heading: string;
-  p1?: string; // Kept for backwards compatibility
-  p2?: string; // Kept for backwards compatibility
-  body?: string;
+  body: string;
   missionHeading: string;
   missionP: string;
   imageUrl: string;
@@ -40,19 +38,15 @@ export default function AboutPage() {
         () => (firestore ? doc(firestore, 'system_settings', 'about_page') : null),
         [firestore]
     );
-    const { data: aboutContentData, isLoading } = useDoc<AboutPageContent>(aboutContentRef);
+    const { data: content, isLoading } = useDoc<AboutPageContent>(aboutContentRef);
     
-    // Handle migrating from p1/p2 to body
-    const content = aboutContentData ? {
-        ...aboutContentData,
-        body: aboutContentData.body || (aboutContentData.p1 && aboutContentData.p2 ? `${aboutContentData.p1}\n\n${aboutContentData.p2}` : '')
-    } : defaultContent;
+    const displayContent = content || defaultContent;
     
     return (
         <>
             <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold tracking-tight font-headline">{content.title}</h1>
+                    <h1 className="text-3xl font-bold tracking-tight font-headline">{displayContent.title}</h1>
                     {user?.role === 'admin' && (
                         <Button variant="outline" size="icon" onClick={() => setIsEditDialogOpen(true)}>
                             <Pencil className="h-4 w-4" />
@@ -64,7 +58,7 @@ export default function AboutPage() {
                     <CardContent className="p-6">
                         <div className="grid md:grid-cols-2 gap-8 items-center">
                             <div className="space-y-4">
-                                <h2 className="text-2xl font-semibold font-headline text-primary">{content.heading}</h2>
+                                <h2 className="text-2xl font-semibold font-headline text-primary">{displayContent.heading}</h2>
                                 {isLoading ? (
                                     <div className="space-y-4">
                                         <Skeleton className="h-4 w-full" />
@@ -75,9 +69,9 @@ export default function AboutPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{content.body}</p>
-                                        <h3 className="text-xl font-semibold font-headline text-accent pt-4">{content.missionHeading}</h3>
-                                        <p className="text-muted-foreground leading-relaxed">{content.missionP}</p>
+                                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{displayContent.body}</p>
+                                        <h3 className="text-xl font-semibold font-headline text-accent pt-4">{displayContent.missionHeading}</h3>
+                                        <p className="text-muted-foreground leading-relaxed">{displayContent.missionP}</p>
                                     </>
                                 )}
                             </div>
@@ -85,9 +79,9 @@ export default function AboutPage() {
                                 {isLoading ? (
                                     <Skeleton className="w-full aspect-video rounded-lg" />
                                 ) : (
-                                     content.imageUrl && (
+                                     displayContent.imageUrl && (
                                         <Image
-                                            src={content.imageUrl}
+                                            src={displayContent.imageUrl}
                                             alt="About the Kintsugi Shop"
                                             width={1200}
                                             height={800}
@@ -105,7 +99,7 @@ export default function AboutPage() {
                 <EditAboutDialog 
                     isOpen={isEditDialogOpen}
                     onOpenChange={setIsEditDialogOpen}
-                    content={content}
+                    content={displayContent}
                 />
             )}
         </>
