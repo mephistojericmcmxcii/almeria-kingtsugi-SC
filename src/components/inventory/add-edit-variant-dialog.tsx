@@ -71,19 +71,11 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       imageUrl: '',
     },
   });
-
+  
   useEffect(() => {
     if (isOpen) {
         if (variantToEdit) {
-            form.reset({
-                brand: variantToEdit.brand || '',
-                source: variantToEdit.source || '',
-                quantity: variantToEdit.quantity || 0,
-                price: variantToEdit.price || 0,
-                warningLimit: variantToEdit.warningLimit || 0,
-                description: variantToEdit.description || '',
-                imageUrl: variantToEdit.imageUrl || '',
-            });
+            form.reset(variantToEdit);
             setImagePreview(variantToEdit.imageUrl || null);
         } else {
             form.reset({
@@ -96,9 +88,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 imageUrl: '',
             });
         }
-    } else {
-        // Reset everything when dialog closes
-        setImagePreview(null);
+        // Always reset image file state when dialog opens
         setImageFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -151,15 +141,15 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         // Step 1: Handle image upload if a new file is provided
         if (imageFile) {
             console.log("New image file detected. Starting upload...");
-            const imageStoragePath = `inventory-item-variant-images/${variantId}-${Date.now()}-${imageFile.name}`;
+            const imageStoragePath = `inventory-item-variant-images/${variantId}`;
             const imageStorageRef = storageRef(storage, imageStoragePath);
             
             await uploadBytes(imageStorageRef, imageFile);
             finalImageUrl = await getDownloadURL(imageStorageRef);
             console.log("Image uploaded successfully. URL:", finalImageUrl);
 
-            // If we were editing and there was an old image, delete it
-            if (variantToEdit?.imageUrl) {
+            // If we were editing and there was an old image that wasn't this new one, delete it
+            if (variantToEdit?.imageUrl && variantToEdit.imageUrl !== finalImageUrl) {
                 try {
                     const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
                     await deleteObject(oldImageRef);
@@ -170,8 +160,8 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                     }
                 }
             }
-        } else if (!imagePreview && variantToEdit?.imageUrl) {
-            // This case handles when the user clicks 'X' to remove an existing image
+        } else if (!values.imageUrl && variantToEdit?.imageUrl) {
+            // This case handles when the user clicks 'X' to remove an existing image without uploading a new one
              try {
                 const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
                 await deleteObject(oldImageRef);
@@ -375,3 +365,4 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   );
 }
 
+    

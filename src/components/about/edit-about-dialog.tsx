@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirebase } from '@/firebase';
 import { setDoc, doc } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -78,12 +78,12 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     const file = event.target.files?.[0];
     if (!file) return;
     
-    const acceptedTypes = ['image/jpeg', 'image/png'];
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!acceptedTypes.includes(file.type)) {
         toast({
             variant: "destructive",
             title: "Invalid File Type",
-            description: "Please select a PNG or JPEG image.",
+            description: "Please select a PNG, JPEG, or WEBP image.",
         });
         return;
     }
@@ -99,23 +99,31 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
       return;
     }
     setIsSubmitting(true);
+    let finalImageUrl = content.imageUrl || '';
 
     try {
-        let finalImageUrl = content.imageUrl; 
-
         // Step 1: If a new image file exists, upload it and get the URL
         if (imageFile) {
             console.log("New image file detected. Starting upload...");
             const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
             const imageStorageRef = storageRef(storage, imageStoragePath);
             
-            // Step 1a: Upload the file
             await uploadBytes(imageStorageRef, imageFile);
-            console.log("Image uploaded successfully.");
-
-            // Step 1b: Get the download URL
             finalImageUrl = await getDownloadURL(imageStorageRef);
             console.log("Image URL retrieved:", finalImageUrl);
+            
+            // If there was an old image, delete it
+            if (content.imageUrl && content.imageUrl !== finalImageUrl) {
+                 try {
+                    const oldImageRef = storageRef(storage, content.imageUrl);
+                    await deleteObject(oldImageRef);
+                    console.log("Old image deleted successfully.");
+                } catch (deleteError: any) {
+                    if (deleteError.code !== 'storage/object-not-found') {
+                        console.warn("Could not delete old image:", deleteError);
+                    }
+                }
+            }
         }
 
         // Step 2: Prepare the data object for Firestore
@@ -126,7 +134,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
             p2: values.p2,
             missionHeading: values.missionHeading,
             missionP: values.missionP,
-            imageUrl: finalImageUrl || '', // Ensure it's never undefined
+            imageUrl: finalImageUrl,
         };
 
         // Step 3: Save the data to Firestore
@@ -148,9 +156,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
             description: error.message || "Could not update the About page. Please try again.",
         });
     } finally {
-        // Step 4: Always stop the loading indicator
         setIsSubmitting(false);
-        console.log("Submission process finished.");
     }
   };
   
@@ -190,7 +196,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
                   </div>
                   <Input 
                     type="file" 
-                    accept="image/png, image/jpeg" 
+                    accept="image/png, image/jpeg, image/webp" 
                     onChange={handleImageChange}
                     className="hidden"
                     ref={fileInputRef}
@@ -235,3 +241,5 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     </Dialog>
   );
 }
+
+    
