@@ -1,24 +1,170 @@
+
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/hooks/use-auth';
+import { collection } from 'firebase/firestore';
+import type { PurchaseOrder } from '@/lib/types';
+import { format } from 'date-fns';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { FileText, Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AddEditPoDialog } from '@/components/po/add-edit-po-dialog';
 
 export default function PoPage() {
+  const { firestore } = useFirebase();
+  const { user } = useAuth();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
+  
+  const poCollectionRef = useMemoFirebase(() => collection(firestore, 'purchase_orders'), [firestore]);
+  const { data: purchaseOrders, isLoading } = useCollection<PurchaseOrder>(poCollectionRef);
+
+  const filteredPos = useMemo(() => {
+    if (!purchaseOrders) return [];
+    return purchaseOrders.filter(po => 
+      po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      po.careOf.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [purchaseOrders, searchTerm]);
+
+  const handleEdit = (po: PurchaseOrder) => {
+    setPoToEdit(po);
+    setIsDialogOpen(true);
+  };
+  
+  const handleAddNew = () => {
+    setPoToEdit(null);
+    setIsDialogOpen(true);
+  };
+
+  const getStatusBadge = (status: PurchaseOrder['status']) => {
+    switch (status) {
+      case 'Pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
+      case 'Approved': return <Badge className="bg-blue-500 text-blue-50">Approved</Badge>;
+      case 'Paid': return <Badge className="bg-purple-500 text-purple-50">Paid</Badge>;
+      case 'Completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
+      case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+  
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+  };
+
+  if (user?.role !== 'admin') {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+            <h1 className="text-2xl font-bold">Access Denied</h1>
+            <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-       <div className="flex items-center gap-4">
-        <FileText className="w-8 h-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Purchase Orders</h1>
+    <>
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <FileText className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight font-headline">Purchase Orders</h1>
+        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className='w-full md:w-1/3'>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search by PO # or Care Of..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10"
+                  />
+                </div>
+              </div>
+              <Button onClick={handleAddNew}>
+                <Plus className="mr-2 h-4 w-4" /> Add New PO
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>PO #</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Care Of</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredPos.length > 0 ? (
+                  filteredPos.map((po) => (
+                    <TableRow key={po.id}>
+                      <TableCell className="font-medium">{po.poNumber}</TableCell>
+                      <TableCell>{format(po.date.toDate(), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>{po.careOf}</TableCell>
+                      <TableCell>{getStatusBadge(po.status)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(po.totalAmount)}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(po)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No purchase orders found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Purchase Order Management</CardTitle>
-          <CardDescription>
-            Create, view, and manage purchase orders.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Purchase Orders page content goes here.</p>
-        </CardContent>
-      </Card>
-    </div>
+      <AddEditPoDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        poToEdit={poToEdit}
+      />
+    </>
   );
 }

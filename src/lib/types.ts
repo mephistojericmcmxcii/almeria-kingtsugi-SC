@@ -69,6 +69,17 @@ export type Order = {
   updatedAt?: Timestamp;
 };
 
-    
+export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';
+
+export type PurchaseOrder = {
+  id: string;
+  poNumber: string;
+  date: Timestamp;
+  careOf: string;
+  totalAmount: number;
+  status: PurchaseOrderStatus;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
 
     

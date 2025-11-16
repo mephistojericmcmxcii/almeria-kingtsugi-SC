@@ -321,6 +321,37 @@
         "shippingAddress",
         "status"
       ]
+    },
+    "PurchaseOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseOrder",
+      "type": "object",
+      "description": "Represents a purchase order for acquiring inventory.",
+      "properties": {
+        "poNumber": {
+          "type": "string",
+          "description": "The unique purchase order number."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the purchase order was created."
+        },
+        "careOf": {
+          "type": "string",
+          "description": "The person or department the order is for."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the purchase order."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Approved", "Paid", "Completed", "Cancelled"],
+          "description": "The current status of the purchase order."
+        }
+      },
+      "required": ["poNumber", "date", "careOf", "totalAmount", "status"]
     }
   },
   "auth": {
@@ -470,10 +501,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/purchase_orders/{poId}",
+        "definition": {
+          "entityName": "PurchaseOrder",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseOrder"
+          },
+          "description": "Stores purchase orders. Accessible to admins.",
+          "params": [
+            {
+              "name": "poId",
+              "description": "The unique identifier for the purchase order."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore structure is designed to support a business management portal with user authentication (Guest/Admin roles), a dashboard for metrics, and an admin panel for user and settings management. The structure emphasizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs.\\n\\n**Authorization Independence:**  Authorization data is denormalized to avoid `get()` calls in security rules.  For example, admin privileges are determined by the existence of a document in `/roles_admin/{userId}`, avoiding the need to read user profile data during authorization.\\n\\n**Structural Segregation:** Data with different access requirements is stored in separate collections (e.g., public vs. private data).  System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data. Inventory data is in its own collection with specific admin/guest rules, and variants are in a subcollection with admin-only access.\\n\\n**Access Modeling:** User-owned data will be stored in `/users/{userId}/...`. Global roles are managed via existence checks in dedicated role collections (`/roles_admin/{userId}`).\\n\\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations. The segregation of data based on access levels (e.g., system settings in a separate collection) ensures that listing operations can be secured without filtering based on document content.\\n\\n**Denormalization Strategy:**  The role is denormalized to avoid reads in security rules. The dashboard metrics do not have user based authorization requirements so it will be under a main collection. The system settings require admin only access, which is achieved via role verification."
   }
 }
-
-    
