@@ -1,7 +1,7 @@
+
 'use client';
 
 import { useState } from 'react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
@@ -19,7 +19,7 @@ export type AboutPageContent = {
   p2: string;
   missionHeading: string;
   missionP: string;
-  imageId: string;
+  imageUrl: string;
 };
 
 const defaultContent: AboutPageContent = {
@@ -29,7 +29,7 @@ const defaultContent: AboutPageContent = {
     p2: 'At Kintsugi Variety Shop, we celebrate this philosophy. We believe in finding beauty in imperfection and giving new life to what was once broken. Our portal is an extension of this belief, designed to manage our craft with precision, care, and a touch of elegance.',
     missionHeading: 'Our Mission',
     missionP: 'Our mission is to provide unique, handcrafted items that tell a story. This management portal helps us streamline our operations, from inventory to customer relations, ensuring that we can focus on what truly matters: the art of kintsugi.',
-    imageId: 'kintsugi-shop'
+    imageUrl: 'https://images.unsplash.com/photo-1641816482139-cfa2066a298e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzaG9wJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzYzMDg2Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080'
 };
 
 export default function AboutPage() {
@@ -43,7 +43,6 @@ export default function AboutPage() {
     const { data: aboutContentData, isLoading } = useDoc<AboutPageContent>(aboutContentRef);
     
     const content = aboutContentData || defaultContent;
-    const aboutImage = PlaceHolderImages.find(p => p.id === content.imageId) || PlaceHolderImages.find(p => p.id === 'kintsugi-shop');
     
     return (
         <>
@@ -83,14 +82,14 @@ export default function AboutPage() {
                                 {isLoading ? (
                                     <Skeleton className="w-full aspect-video rounded-lg" />
                                 ) : (
-                                     aboutImage && (
+                                     content.imageUrl && (
                                         <Image
-                                            src={aboutImage.imageUrl}
-                                            alt={aboutImage.description}
+                                            src={content.imageUrl}
+                                            alt="About the Kintsugi Shop"
                                             width={1200}
                                             height={800}
                                             className="rounded-lg object-cover aspect-video"
-                                            data-ai-hint={aboutImage.imageHint}
+                                            data-ai-hint="shop interior"
                                         />
                                     )
                                 )}

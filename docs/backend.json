@@ -136,12 +136,13 @@
           "type": "string",
           "description": "The mission statement paragraph."
         },
-        "imageId": {
+        "imageUrl": {
           "type": "string",
-          "description": "The ID of the image from placeholder-images.json to display."
+          "format": "uri",
+          "description": "The URL of the image to display."
         }
       },
-      "required": ["title", "heading", "p1", "p2", "missionHeading", "missionP", "imageId"]
+      "required": ["title", "heading", "p1", "p2", "missionHeading", "missionP", "imageUrl"]
     },
     "InventoryItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
