@@ -315,8 +315,13 @@
             "confirmed",
             "delivering",
             "completed",
-            "cancelled"
+            "cancelled",
+            "declined"
           ]
+        },
+        "cancellationReason": {
+          "type": "string",
+          "description": "Reason for cancellation or decline, provided by an admin."
         }
       },
       "required": [

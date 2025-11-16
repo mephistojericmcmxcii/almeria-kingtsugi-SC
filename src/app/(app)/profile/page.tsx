@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -181,7 +182,7 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
                             <div className="flex flex-col text-left">
-                                <span className="font-semibold text-base font-mono">{order.id}</span>
+                                <span className="font-semibold text-base font-mono">{order.id.substring(0,8)}...</span>
                                 <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
                                 {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                             </div>
@@ -211,6 +212,14 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                                 <h4 className="font-semibold mb-1">Shipping Address</h4>
                                 <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
                             </div>
+                            
+                            {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
+                                <Alert variant="destructive">
+                                    <Info className="h-4 w-4" />
+                                    <AlertTitle>Reason for {order.status}</AlertTitle>
+                                    <AlertDescription>{order.cancellationReason}</AlertDescription>
+                                </Alert>
+                            )}
                            
                             {user?.role === 'admin' && user?.id === order.userId ? ( // Admin viewing their own order
                                 <div className="flex gap-2 justify-end pt-4">

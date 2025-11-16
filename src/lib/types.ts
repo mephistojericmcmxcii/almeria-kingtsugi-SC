@@ -69,6 +69,7 @@ export type Order = {
   paymentMethod: string;
   ref?: DocumentReference; // Available on collection group queries
   updatedAt?: Timestamp;
+  cancellationReason?: string;
 };
 
 export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';

@@ -17,21 +17,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
-const ADMIN_ORDER_ACTIONS: OrderStatus[] = ['confirmed', 'delivering', 'cancelled', 'declined'];
+
+const getStatusBadge = (status: OrderStatus) => {
+    switch (status) {
+        case 'pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
+        case 'confirmed': return <Badge className="bg-blue-500 text-blue-50">Confirmed</Badge>;
+        case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
+        case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
+        case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
+        case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined</Badge>;
+    }
+};
+
+const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+    pending: ['confirmed', 'declined'],
+    confirmed: ['delivering', 'cancelled'],
+    delivering: [],
+    completed: [],
+    cancelled: [],
+    declined: [],
+};
+
+const REQUIRES_REASON: OrderStatus[] = ['cancelled', 'declined'];
 
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
     const { firestore } = useFirebase();
     
-    const [isUpdating, setIsUpdating] = useState<string | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [cancellationReason, setCancellationReason] = useState("");
+    const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
 
     useEffect(() => {
         dismissAdminOrderBadge();
     }, [dismissAdminOrderBadge]);
+    
+    useEffect(() => {
+        if (selectedOrder) {
+            setSelectedStatus(selectedOrder.status);
+            setCancellationReason('');
+        }
+    }, [selectedOrder]);
 
     const allOrdersQuery = useMemoFirebase(() => {
         if (!firestore || user?.role !== 'admin') return null;
@@ -40,33 +71,37 @@ export default function AllOrdersPage() {
 
     const { data: orders, isLoading } = useCollection<Order>(allOrdersQuery);
 
-    const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
-        setIsUpdating(order.id);
-        const success = await updateOrderStatus(order, status);
-        if (success) {
-            setSelectedOrder(prev => prev ? { ...prev, status } : null);
+    const handleUpdateStatus = async () => {
+        if (!selectedOrder || !selectedStatus) return;
+
+        if (REQUIRES_REASON.includes(selectedStatus) && !cancellationReason.trim()) {
+            alert('A reason is required to cancel or decline an order.');
+            return;
         }
-        setIsUpdating(null);
+
+        setIsUpdating(true);
+        const success = await updateOrderStatus(selectedOrder, selectedStatus, cancellationReason || undefined);
+        if (success) {
+            setSelectedOrder(prev => prev ? { ...prev, status: selectedStatus } : null);
+        }
+        setIsUpdating(false);
     };
     
     const handleViewDetails = (order: Order) => {
         setSelectedOrder(order);
         setIsModalOpen(true);
     };
+    
+    const isStatusUpdateDisabled = (order: Order | null): boolean => {
+        if (!order) return true;
+        return ['completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
+    };
+    
+    const availableActions = selectedOrder ? STATUS_TRANSITIONS[selectedOrder.status] : [];
+    const showReasonInput = selectedStatus && REQUIRES_REASON.includes(selectedStatus);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-    };
-
-    const getStatusBadge = (status: OrderStatus) => {
-        switch (status) {
-            case 'pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
-            case 'confirmed': return <Badge className="bg-blue-500 text-blue-50">Confirmed</Badge>;
-            case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
-            case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
-            case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
-            case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined</Badge>;
-        }
     };
     
     const filteredOrders = useMemo(() => {
@@ -226,27 +261,42 @@ export default function AllOrdersPage() {
                             <span>Total Amount</span>
                             <span>{formatCurrency(selectedOrder.totalAmount)}</span>
                         </div>
+
+                        {showReasonInput && (
+                            <div className="pt-4 border-t">
+                                <h3 className="font-semibold mb-2">Reason for {selectedStatus}</h3>
+                                <Textarea 
+                                    value={cancellationReason}
+                                    onChange={(e) => setCancellationReason(e.target.value)}
+                                    placeholder={`Provide a reason for ${selectedStatus === 'cancelled' ? 'cancelling' : 'declining'} the order...`}
+                                />
+                            </div>
+                        )}
                     </div>
                     <DialogFooter className="sm:justify-between items-center">
                          <div className="font-semibold flex items-center gap-2">
                             Status: {getStatusBadge(selectedOrder.status)}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Select 
-                                value={selectedOrder.status} 
-                                onValueChange={(newStatus) => handleUpdateStatus(selectedOrder, newStatus as OrderStatus)}
-                                disabled={isUpdating === selectedOrder.id || selectedOrder.status === 'completed' || selectedOrder.status === 'cancelled'}
-                            >
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Update status..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {ADMIN_ORDER_ACTIONS.map(status => (
-                                        <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {!isStatusUpdateDisabled(selectedOrder) && (
+                            <div className="flex items-center gap-2">
+                                <Select 
+                                    onValueChange={(newStatus) => setSelectedStatus(newStatus as OrderStatus)}
+                                    disabled={isUpdating}
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Update status..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableActions.map(status => (
+                                            <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button onClick={handleUpdateStatus} disabled={!selectedStatus || isUpdating || (REQUIRES_REASON.includes(selectedStatus!) && !cancellationReason.trim())}>
+                                    {isUpdating ? "Saving..." : "Save"}
+                                </Button>
+                            </div>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

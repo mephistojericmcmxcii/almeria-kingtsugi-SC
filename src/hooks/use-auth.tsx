@@ -45,7 +45,7 @@ interface AuthContextType {
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string) => Promise<boolean>;
-  updateOrderStatus: (order: Order, newStatus: OrderStatus) => Promise<boolean>;
+  updateOrderStatus: (order: Order, newStatus: OrderStatus, reason?: string) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   showCartBadge: boolean;
   dismissCartBadge: () => void;
@@ -682,14 +682,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updateOrderStatus = async (order: Order, newStatus: OrderStatus): Promise<boolean> => {
+    const updateOrderStatus = async (order: Order, newStatus: OrderStatus, reason?: string): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
         
         try {
-            const dataToUpdate: { status: OrderStatus; updatedAt: any } = {
+            const dataToUpdate: any = {
                 status: newStatus,
                 updatedAt: serverTimestamp(),
             };
+
+            if (reason && (newStatus === 'cancelled' || newStatus === 'declined')) {
+                dataToUpdate.cancellationReason = reason;
+            }
 
             if ((newStatus === 'cancelled' || newStatus === 'declined') && order.status !== 'cancelled' && order.status !== 'declined') {
                 await runTransaction(firestore, async (transaction: Transaction) => {
