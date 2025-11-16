@@ -201,12 +201,12 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                             </CardContent>
-                            <CardFooter className="flex-col sm:flex-row gap-2 pt-4">
-                                <Button variant="outline" className="w-full" onClick={() => handleViewDetails(item)}>
-                                    <Eye className="mr-2" /> View Details
+                            <CardFooter className="flex justify-center gap-2 pt-4">
+                                <Button variant="outline" size="sm" onClick={() => handleViewDetails(item)}>
+                                    <Eye className="mr-2 h-4 w-4" /> View
                                 </Button>
-                                <Button className="w-full" onClick={() => handleAddToCart(item)} disabled={item.quantity <= 0}>
-                                    <ShoppingCart className="mr-2" /> Add to Cart
+                                <Button size="sm" onClick={() => handleAddToCart(item)} disabled={item.quantity <= 0}>
+                                    <ShoppingCart className="mr-2 h-4 w-4" /> Cart
                                 </Button>
                             </CardFooter>
                         </Card>
