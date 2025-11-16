@@ -18,7 +18,7 @@ import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert } from 'lu
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const ORDER_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'delivering', 'completed', 'cancelled', 'declined'];
+const ADMIN_ORDER_ACTIONS: OrderStatus[] = ['confirmed', 'delivering', 'cancelled', 'declined'];
 
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
@@ -229,13 +229,13 @@ export default function AllOrdersPage() {
                             <Select 
                                 value={selectedOrder.status} 
                                 onValueChange={(newStatus) => handleUpdateStatus(selectedOrder, newStatus as OrderStatus)}
-                                disabled={isUpdating === selectedOrder.id || selectedOrder.status === 'completed' || selectedOrder.status === 'cancelled' || selectedOrder.status === 'declined'}
+                                disabled={isUpdating === selectedOrder.id || selectedOrder.status === 'completed' || selectedOrder.status === 'cancelled'}
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Update status..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {ORDER_STATUSES.map(status => (
+                                    {ADMIN_ORDER_ACTIONS.map(status => (
                                         <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
                                     ))}
                                 </SelectContent>
