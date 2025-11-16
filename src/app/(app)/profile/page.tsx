@@ -182,7 +182,7 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                     <AccordionTrigger>
                         <div className="flex justify-between w-full items-center">
                             <div className="flex flex-col text-left">
-                                <span className="font-semibold text-base font-mono">{order.id.substring(0,8)}...</span>
+                                <span className="font-semibold text-sm font-mono break-all">{order.id}</span>
                                 <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
                                 {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                             </div>
