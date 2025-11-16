@@ -96,7 +96,35 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Image URL</FormLabel>
+                  <FormControl>
+                      <Input placeholder="https://example.com/image.jpg" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+
+            <div>
+              <FormLabel>Image Preview</FormLabel>
+                <div className="relative mt-2 h-48 w-full border rounded overflow-hidden">
+                  {imageUrl ? (
+                      <Image src={imageUrl} fill alt="preview" style={{ objectFit: "cover" }} onError={(e) => e.currentTarget.style.display = 'none'}/>
+                  ) : (
+                      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                      No Image URL Provided
+                      </div>
+                  )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-4">
 
                 <FormField name="title" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
@@ -119,35 +147,6 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 <FormField name="missionP" control={form.control} render={({ field }) => (
                   <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={1} {...field}/></FormControl><FormMessage/></FormItem>
                 )}/>
-                
-                <div className="md:col-span-2">
-                    <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Image URL</FormLabel>
-                        <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-
-                <div className="md:col-span-2">
-                    <FormLabel>Image Preview</FormLabel>
-                     <div className="relative mt-2 h-48 w-full border rounded overflow-hidden">
-                        {imageUrl ? (
-                            <Image src={imageUrl} fill alt="preview" style={{ objectFit: "cover" }} onError={(e) => e.currentTarget.style.display = 'none'}/>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                            No Image URL Provided
-                            </div>
-                        )}
-                        </div>
-                </div>
 
             </div>
 
