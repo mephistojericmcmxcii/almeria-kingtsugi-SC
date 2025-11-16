@@ -33,14 +33,14 @@ const getStatusBadge = (status: OrderStatus) => {
 
 const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     pending: ['confirmed', 'declined'],
-    confirmed: ['delivering', 'cancelled'],
+    confirmed: ['delivering', 'declined'], // Changed 'cancelled' to 'declined' for admin action
     delivering: [],
     completed: [],
     cancelled: [],
     declined: [],
 };
 
-const REQUIRES_REASON: OrderStatus[] = ['cancelled', 'declined'];
+const REQUIRES_REASON: OrderStatus[] = ['declined'];
 
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
@@ -59,7 +59,7 @@ export default function AllOrdersPage() {
     
     useEffect(() => {
         if (selectedOrder) {
-            setSelectedStatus(selectedOrder.status);
+            setSelectedStatus(null);
             setCancellationReason('');
         }
     }, [selectedOrder]);
@@ -75,16 +75,20 @@ export default function AllOrdersPage() {
         if (!selectedOrder || !selectedStatus) return;
 
         if (REQUIRES_REASON.includes(selectedStatus) && !cancellationReason.trim()) {
-            alert('A reason is required to cancel or decline an order.');
+            alert('A reason is required to decline an order.');
             return;
         }
 
         setIsUpdating(true);
         const success = await updateOrderStatus(selectedOrder, selectedStatus, cancellationReason || undefined);
         if (success) {
-            setSelectedOrder(prev => prev ? { ...prev, status: selectedStatus } : null);
+            setSelectedOrder(prev => prev ? { ...prev, status: selectedStatus, cancellationReason: cancellationReason || prev.cancellationReason } : null);
         }
         setIsUpdating(false);
+        // Maybe close dialog on success
+        if (success) {
+             setIsModalOpen(false);
+        }
     };
     
     const handleViewDetails = (order: Order) => {
@@ -264,11 +268,11 @@ export default function AllOrdersPage() {
 
                         {showReasonInput && (
                             <div className="pt-4 border-t">
-                                <h3 className="font-semibold mb-2">Reason for {selectedStatus}</h3>
+                                <h3 className="font-semibold mb-2">Reason for Decline/Cancellation</h3>
                                 <Textarea 
                                     value={cancellationReason}
                                     onChange={(e) => setCancellationReason(e.target.value)}
-                                    placeholder={`Provide a reason for ${selectedStatus === 'cancelled' ? 'cancelling' : 'declining'} the order...`}
+                                    placeholder={`Provide a reason for declining or cancelling the order...`}
                                 />
                             </div>
                         )}
@@ -282,6 +286,7 @@ export default function AllOrdersPage() {
                                 <Select 
                                     onValueChange={(newStatus) => setSelectedStatus(newStatus as OrderStatus)}
                                     disabled={isUpdating}
+                                    value={selectedStatus || ''}
                                 >
                                     <SelectTrigger className="w-[180px]">
                                         <SelectValue placeholder="Update status..." />
@@ -304,5 +309,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    

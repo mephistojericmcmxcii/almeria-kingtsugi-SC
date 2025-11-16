@@ -216,7 +216,7 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                             {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
                                 <Alert variant="destructive">
                                     <Info className="h-4 w-4" />
-                                    <AlertTitle>Reason for {order.status}</AlertTitle>
+                                    <AlertTitle>Reason for {order.status === 'cancelled' ? 'Cancellation' : 'Decline'}</AlertTitle>
                                     <AlertDescription>{order.cancellationReason}</AlertDescription>
                                 </Alert>
                             )}
@@ -445,5 +445,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
