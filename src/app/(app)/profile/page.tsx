@@ -26,6 +26,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
   address: z.string().optional(),
+  contactNumber: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -262,6 +263,7 @@ export default function ProfilePage() {
     defaultValues: {
       displayName: '',
       address: '',
+      contactNumber: '',
     },
   });
   
@@ -270,6 +272,7 @@ export default function ProfilePage() {
       form.reset({
         displayName: user.displayName,
         address: user.address || '',
+        contactNumber: user.contactNumber || '',
       });
     }
   }, [user, form]);
@@ -362,6 +365,19 @@ export default function ProfilePage() {
                   </div>
                   <FormField
                     control={form.control}
+                    name="contactNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Number</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="e.g., 09171234567" {...field} />
+                        </FormControl>
+                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="address"
                     render={({ field }) => (
                       <FormItem>
@@ -420,7 +436,5 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
 
     

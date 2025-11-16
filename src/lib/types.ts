@@ -8,6 +8,7 @@ export type User = {
   role: 'admin' | 'guest';
   profileImageUrl: string;
   address?: string;
+  contactNumber?: string;
   lastViewedOrdersAt?: Timestamp;
   lastViewedAllOrdersAt?: Timestamp;
 };
@@ -63,6 +64,7 @@ export type Order = {
   items: CartItem[];
   totalAmount: number;
   shippingAddress: string;
+  shippingContactNumber: string;
   status: OrderStatus;
   paymentMethod: string;
   ref?: DocumentReference; // Available on collection group queries

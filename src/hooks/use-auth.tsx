@@ -18,6 +18,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 interface ProfileUpdateData {
     displayName: string;
     address?: string;
+    contactNumber?: string;
 }
 
 type CombinedVariant = InventoryVariant & {
@@ -43,7 +44,7 @@ interface AuthContextType {
   addToCart: (variant: CombinedVariant) => Promise<void>;
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
-  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, paymentMethod: string) => Promise<boolean>;
+  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string) => Promise<boolean>;
   updateOrderStatus: (order: Order, newStatus: OrderStatus) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   showCartBadge: boolean;
@@ -116,6 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userIsAdmin ? 'admin' : 'guest',
               profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
               address: userData.address || '',
+              contactNumber: userData.contactNumber || '',
               lastViewedOrdersAt: userData.lastViewedOrdersAt,
               lastViewedAllOrdersAt: userData.lastViewedAllOrdersAt,
             };
@@ -131,6 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     role: userIsAdmin ? 'admin' : 'guest',
                     profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
                     address: '',
+                    contactNumber: fbUser.phoneNumber || '',
                 };
                 await setDoc(userDocRef, newUser, { merge: true });
                 setUser(newUser);
@@ -308,6 +311,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: 'guest',
         profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
         address: '',
+        contactNumber: '',
       };
       await setDoc(userRef, newUser);
       
@@ -371,6 +375,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 role: 'guest',
                 profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
                 address: '',
+                contactNumber: fbUser.phoneNumber || '',
             };
             await setDoc(userRef, newUser);
         }
@@ -469,6 +474,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const dataToUpdate: ProfileUpdateData & { lastViewedOrdersAt?: any } = {
             displayName: data.displayName,
             address: data.address || "",
+            contactNumber: data.contactNumber || "",
         };
         await setDoc(userRef, dataToUpdate, { merge: true });
 
@@ -617,7 +623,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string, paymentMethod: string): Promise<boolean> => {
+    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string): Promise<boolean> => {
         if (!user) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to place an order.' });
             return false;
@@ -636,6 +642,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     items: cartItems,
                     totalAmount,
                     shippingAddress,
+                    shippingContactNumber,
                     status: 'pending',
                     paymentMethod,
                     updatedAt: serverTimestamp(),
@@ -777,7 +784,5 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
 
     

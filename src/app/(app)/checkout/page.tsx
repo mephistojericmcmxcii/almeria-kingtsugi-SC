@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -13,11 +14,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, CreditCard, Home, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, CreditCard, Home, ShoppingCart, Phone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -30,6 +32,7 @@ export default function CheckoutPage() {
 
     const [shippingOption, setShippingOption] = useState<'profile' | 'custom'>('profile');
     const [customAddress, setCustomAddress] = useState('');
+    const [customContact, setCustomContact] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'instapay'>('cod');
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -53,14 +56,22 @@ export default function CheckoutPage() {
         }
         return customAddress;
     }, [shippingOption, user?.address, customAddress]);
+    
+    const finalContactNumber = useMemo(() => {
+        if (shippingOption === 'profile') {
+            return user?.contactNumber;
+        }
+        return customContact;
+    }, [shippingOption, user?.contactNumber, customContact]);
 
-    const isPlaceOrderDisabled = !finalShippingAddress || finalShippingAddress.trim() === '' || !cartItems || cartItems.length === 0 || isPlacingOrder;
+
+    const isPlaceOrderDisabled = !finalShippingAddress || finalShippingAddress.trim() === '' || !finalContactNumber || finalContactNumber.trim() === '' || !cartItems || cartItems.length === 0 || isPlacingOrder;
 
     const handlePlaceOrder = async () => {
-        if (!finalShippingAddress || !cartItems) return;
+        if (!finalShippingAddress || !finalContactNumber || !cartItems) return;
         setIsPlacingOrder(true);
 
-        const success = await placeOrder(cartItems, total, finalShippingAddress, paymentMethod);
+        const success = await placeOrder(cartItems, total, finalShippingAddress, finalContactNumber, paymentMethod);
 
         if (success) {
             toast({
@@ -133,13 +144,21 @@ export default function CheckoutPage() {
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="profile" id="profile" disabled={!user?.address} />
                                     <Label htmlFor="profile" className={!user?.address ? 'text-muted-foreground' : ''}>
-                                        Use Profile Address
+                                        Use Profile Address & Contact
                                     </Label>
                                 </div>
                                 {user?.address ? (
-                                    <div className="pl-6 text-sm text-muted-foreground border-l ml-2 py-2">
-                                        <p className='font-semibold text-foreground'>{user.displayName}</p>
-                                        <p>{user.address}</p>
+                                    <div className="pl-6 text-sm text-muted-foreground border-l ml-2 py-2 space-y-2">
+                                        <div>
+                                            <p className='font-semibold text-foreground'>{user.displayName}</p>
+                                            <p>{user.address}</p>
+                                        </div>
+                                        {user.contactNumber && (
+                                            <div className="flex items-center gap-2">
+                                                <Phone className="w-4 h-4"/>
+                                                <p>{user.contactNumber}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                      <p className="pl-6 text-sm text-muted-foreground">
@@ -149,14 +168,20 @@ export default function CheckoutPage() {
 
                                 <div className="flex items-center space-x-2 pt-2">
                                     <RadioGroupItem value="custom" id="custom" />
-                                    <Label htmlFor="custom">Use a Different Address</Label>
+                                    <Label htmlFor="custom">Use a Different Address & Contact</Label>
                                 </div>
                                 {shippingOption === 'custom' && (
-                                     <div className="pl-6 border-l ml-2 py-2 space-y-2">
+                                     <div className="pl-6 border-l ml-2 py-2 space-y-4">
                                         <Textarea 
                                             placeholder="Enter your full shipping address..."
                                             value={customAddress}
                                             onChange={(e) => setCustomAddress(e.target.value)}
+                                        />
+                                        <Input
+                                            type="tel"
+                                            placeholder="Enter contact number..."
+                                            value={customContact}
+                                            onChange={(e) => setCustomContact(e.target.value)}
                                         />
                                     </div>
                                 )}
@@ -250,7 +275,7 @@ export default function CheckoutPage() {
                     </CardContent>
                     <CardFooter>
                         <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isPlaceOrderDisabled}>
-                            {isPlacingOrder ? 'Placing Order...' : (isPlaceOrderDisabled ? 'Enter a Shipping Address' : 'Place Order')}
+                            {isPlacingOrder ? 'Placing Order...' : (isPlaceOrderDisabled ? 'Complete Shipping Info' : 'Place Order')}
                         </Button>
                     </CardFooter>
                 </Card>
@@ -258,3 +283,5 @@ export default function CheckoutPage() {
         </div>
     );
 }
+
+    

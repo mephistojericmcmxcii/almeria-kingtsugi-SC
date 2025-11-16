@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -190,6 +190,12 @@ export default function AllOrdersPage() {
                                 <h3 className="font-semibold mb-2">Customer</h3>
                                 <p>{selectedOrder.userDisplayName}</p>
                                 <p className="text-sm text-muted-foreground">{selectedOrder.userEmail}</p>
+                                {selectedOrder.shippingContactNumber && (
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2 pt-1">
+                                        <Phone className="w-3 h-3"/>
+                                        {selectedOrder.shippingContactNumber}
+                                    </p>
+                                )}
                             </div>
                              <div>
                                 <h3 className="font-semibold mb-2">Order Info</h3>
@@ -248,3 +254,5 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    
