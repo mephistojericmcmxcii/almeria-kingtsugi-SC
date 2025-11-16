@@ -40,16 +40,26 @@ const formSchema = z.object({
   p2: z.string().min(5),
   missionHeading: z.string().min(3),
   missionP: z.string().min(5),
+  imageUrl: z.string().optional(),
 });
 
-// convert URL → storage path
+
 function getPathFromUrl(url: string) {
   const base = "https://firebasestorage.googleapis.com/v0/b/";
-  if (!url.startsWith(base)) return null;
+  if (!url.startsWith(base)) {
+    console.error("URL does not seem to be a Firebase Storage URL:", url);
+    return null;
+  }
   const parts = url.split("/o/");
-  if (parts.length < 2) return null;
-  return decodeURIComponent(parts[1].split("?")[0]);
+  if (parts.length < 2) {
+    console.error("Cannot parse storage path from URL:", url);
+    return null;
+  }
+  const path = decodeURIComponent(parts[1].split("?")[0]);
+  console.log(`Extracted path: ${path} from URL: ${url}`);
+  return path;
 }
+
 
 export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boolean, onOpenChange: (open: boolean) => void, content: AboutPageContent }) {
   const { firestore, storage } = useFirebase();
@@ -95,6 +105,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("onSubmit triggered");
     if (!imageFile && !content.imageUrl) {
       toast({
         variant: "destructive",
@@ -105,55 +116,68 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
     }
 
     setIsSubmitting(true);
+    console.log("isSubmitting set to true");
+
+    let finalImageUrl = content.imageUrl;
 
     try {
-      let finalImageUrl = content.imageUrl;
+        // upload new image if one is selected
+        if (imageFile) {
+            const path = `about-images/about-${Date.now()}`;
+            console.log("Uploading to storage path:", path);
+            const imgRef = storageRef(storage, path);
+            
+            await uploadBytes(imgRef, imageFile);
+            console.log("Image uploaded successfully.");
 
-      // upload new image
-      if (imageFile) {
-        const path = `about-images/about-${Date.now()}`;
-        const imgRef = storageRef(storage, path);
+            finalImageUrl = await getDownloadURL(imgRef);
+            console.log("Got download URL:", finalImageUrl);
 
-        await uploadBytes(imgRef, imageFile);
-        finalImageUrl = await getDownloadURL(imgRef);
-
-        // delete old image if exists
-        if (content.imageUrl) {
-          const oldPath = getPathFromUrl(content.imageUrl);
-          if (oldPath) {
-            const oldRef = storageRef(storage, oldPath);
-            deleteObject(oldRef).catch(() => {});
-          }
+            // delete old image if it exists and is different
+            if (content.imageUrl && content.imageUrl !== finalImageUrl) {
+                const oldPath = getPathFromUrl(content.imageUrl);
+                console.log("Old image path to delete:", oldPath);
+                if (oldPath) {
+                    try {
+                        const oldRef = storageRef(storage, oldPath);
+                        await deleteObject(oldRef);
+                        console.log("Old image deleted successfully.");
+                    } catch (deleteError: any) {
+                        if (deleteError.code !== 'storage/object-not-found') {
+                           console.warn("Could not delete old image:", deleteError);
+                        }
+                    }
+                }
+            }
         }
-      }
 
-      // save to Firestore
-      const aboutRef = doc(firestore, "system_settings", "about_page");
+        const dataToSave = {
+            ...values,
+            imageUrl: finalImageUrl || '', // Ensure it's not undefined
+        };
+        console.log("Data to save to Firestore:", dataToSave);
+        const aboutRef = doc(firestore, "system_settings", "about_page");
+        await setDoc(aboutRef, dataToSave, { merge: true });
+        console.log("Firestore document saved.");
 
-      await setDoc(
-        aboutRef,
-        {
-          ...values,
-          imageUrl: finalImageUrl,
-        },
-        { merge: true }
-      );
+        toast({
+            title: "Success",
+            description: "About Page updated.",
+        });
 
-      toast({
-        title: "Success",
-        description: "About Page updated.",
-      });
+        onOpenChange(false);
 
-      onOpenChange(false);
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err.message,
-      });
+        console.error("An error occurred during submission:", err);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: err.message || "An unknown error occurred.",
+        });
+    } finally {
+        setIsSubmitting(false);
+        console.log("isSubmitting set to false");
     }
-
-    setIsSubmitting(false);
   };
 
   return (
@@ -167,9 +191,8 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
-            {/* IMAGE REQUIRED */}
             <FormItem>
-              <FormLabel>Page Image (Required)</FormLabel>
+              <FormLabel>Page Image</FormLabel>
               <div className="flex gap-4 items-center">
                 <div className="relative h-28 w-40 border rounded overflow-hidden">
                   {imagePreview ? (
@@ -189,13 +212,12 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                   onChange={handleImageChange}
                 />
 
-                <Button type="button" onClick={() => fileRef.current?.click()}>
+                <Button type="button" onClick={() => fileRef.current?.click()} disabled={isSubmitting}>
                   {imagePreview ? "Change Image" : "Upload Image"}
                 </Button>
               </div>
             </FormItem>
 
-            {/* FIELDS */}
             <FormField name="title" control={form.control} render={({ field }) => (
               <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
             )}/>
@@ -221,7 +243,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
             )}/>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
 
