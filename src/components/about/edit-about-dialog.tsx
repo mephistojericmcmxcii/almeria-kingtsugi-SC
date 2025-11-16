@@ -45,19 +45,19 @@ const formSchema = z.object({
 
 
 function getPathFromUrl(url: string) {
-  const base = "https://firebasestorage.googleapis.com/v0/b/";
-  if (!url.startsWith(base)) {
-    console.error("URL does not seem to be a Firebase Storage URL:", url);
-    return null;
+  try {
+      const urlObj = new URL(url);
+      const pathName = urlObj.pathname;
+      // The path will be something like /v0/b/your-bucket.appspot.com/o/path%2Fto%2Fimage.jpg
+      const parts = pathName.split('/o/');
+      if (parts.length > 1) {
+          return decodeURIComponent(parts[1]);
+      }
+      return null;
+  } catch (error) {
+      console.error("Invalid URL for getPathFromUrl:", error);
+      return null;
   }
-  const parts = url.split("/o/");
-  if (parts.length < 2) {
-    console.error("Cannot parse storage path from URL:", url);
-    return null;
-  }
-  const path = decodeURIComponent(parts[1].split("?")[0]);
-  console.log(`Extracted path: ${path} from URL: ${url}`);
-  return path;
 }
 
 
