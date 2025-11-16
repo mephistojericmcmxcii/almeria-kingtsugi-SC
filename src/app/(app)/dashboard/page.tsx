@@ -144,8 +144,8 @@ export default function DashboardPage() {
         </div>
 
         {isDataLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {Array.from({ length: 8 }).map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {Array.from({ length: 10 }).map((_, i) => (
                     <Card key={i} className="overflow-hidden">
                         <Skeleton className="h-48 w-full" />
                         <CardHeader>
@@ -163,7 +163,7 @@ export default function DashboardPage() {
                 ))}
             </div>
         ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {filteredItems.map((item) => {
                     const placeholder = getPlaceholderImage(item);
                     return (
