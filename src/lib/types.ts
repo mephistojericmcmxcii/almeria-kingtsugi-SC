@@ -27,6 +27,7 @@ export type InventoryVariant = {
   source: string;
   quantity: number;
   price: number;
+  costPrice: number;
   warningLimit: number;
   description?: string;
   imageUrl?: string;
@@ -67,5 +68,7 @@ export type Order = {
   ref?: DocumentReference; // Available on collection group queries
   updatedAt?: Timestamp;
 };
+
+    
 
     

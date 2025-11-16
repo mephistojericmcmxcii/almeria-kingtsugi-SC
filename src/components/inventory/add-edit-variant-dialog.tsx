@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase } from '@/firebase';
@@ -38,6 +39,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       source: '',
       quantity: 0,
       price: 0,
+      costPrice: 0,
       warningLimit: 10,
       description: '',
       imageUrl: '',
@@ -48,12 +50,12 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   useEffect(() => {
     if (isOpen) {
         if (variantToEdit) {
-            // Ensure all fields are defined to prevent controlled/uncontrolled input error
             setFormState({
                 brand: variantToEdit.brand || '',
                 source: variantToEdit.source || '',
                 quantity: variantToEdit.quantity || 0,
                 price: variantToEdit.price || 0,
+                costPrice: variantToEdit.costPrice || 0,
                 warningLimit: variantToEdit.warningLimit || 10,
                 description: variantToEdit.description || '',
                 imageUrl: variantToEdit.imageUrl || '',
@@ -87,6 +89,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             ...formState,
             quantity: Number(formState.quantity) || 0,
             price: Number(formState.price) || 0,
+            costPrice: Number(formState.costPrice) || 0,
             warningLimit: Number(formState.warningLimit) || 0,
             updatedAt: serverTimestamp(),
             ...(!variantToEdit && { createdAt: serverTimestamp() }),
@@ -148,10 +151,13 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label htmlFor="quantity">Quantity</Label><Input id="quantity" name="quantity" type="number" value={formState.quantity} onChange={handleInputChange} disabled={isSubmitting} /></div>
-            <div className="space-y-2"><Label htmlFor="price">Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price} onChange={handleInputChange} disabled={isSubmitting} /></div>
+             <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2"><Label htmlFor="costPrice">Cost Price (₱)</Label><Input id="costPrice" name="costPrice" type="number" step="0.01" value={formState.costPrice} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           
-          <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit} onChange={handleInputChange} disabled={isSubmitting} /></div>
           <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., G2, 0.5mm, Black Ink" value={formState.description} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
@@ -165,3 +171,5 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
+
+    
