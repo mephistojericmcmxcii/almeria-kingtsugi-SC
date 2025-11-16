@@ -206,7 +206,7 @@ export default function DashboardPage() {
                                     <Eye className="mr-2 h-4 w-4" /> View
                                 </Button>
                                 <Button size="sm" onClick={() => handleAddToCart(item)} disabled={item.quantity <= 0}>
-                                    <ShoppingCart className="mr-2 h-4 w-4" /> Cart
+                                    <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
                                 </Button>
                             </CardFooter>
                         </Card>
