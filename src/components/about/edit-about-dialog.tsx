@@ -36,7 +36,7 @@ function getPathFromUrl(url: string) {
     // We need to decode the URI component and extract the path after '/o/'.
     const parts = pathName.split('/o/');
     if (parts.length > 1) {
-      return decodeURIComponent(parts[1]);
+      return decodeURIComponent(parts[1].split("?")[0]);
     }
     return null;
   } catch (error) {
@@ -93,8 +93,10 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("onSubmit triggered");
     if (!storage || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Firebase services not available.' });
+      console.error("Firebase services not available.");
       return;
     }
     setIsSubmitting(true);
@@ -103,23 +105,37 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     try {
       // Step 1: If a new image file exists, upload it and get the URL
       if (imageFile) {
+        console.log("New image file detected, starting upload process...");
         const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
+        console.log("Storage path:", imageStoragePath);
         const imageStorageRef = storageRef(storage, imageStoragePath);
         
+        console.log("Uploading bytes...");
         await uploadBytes(imageStorageRef, imageFile);
+        console.log("Upload complete.");
+        
+        console.log("Getting download URL...");
         finalImageUrl = await getDownloadURL(imageStorageRef);
+        console.log("Download URL obtained:", finalImageUrl);
         
         // If there was an old image, delete it using the correct path
         if (content.imageUrl && content.imageUrl !== finalImageUrl) {
+            console.log("Old image URL detected:", content.imageUrl);
             try {
               const oldPath = getPathFromUrl(content.imageUrl);
               if (oldPath) {
+                  console.log("Extracted old path for deletion:", oldPath);
                   const oldImageRef = storageRef(storage, oldPath);
                   await deleteObject(oldImageRef);
+                  console.log("Old image deleted successfully.");
+              } else {
+                console.warn("Could not extract path from old image URL.");
               }
             } catch (deleteError: any) {
               if (deleteError.code !== 'storage/object-not-found') {
                 console.warn("Could not delete old image:", deleteError);
+              } else {
+                console.log("Old image not found in storage, skipping deletion.");
               }
             }
         }
@@ -130,10 +146,14 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
         ...formState,
         imageUrl: finalImageUrl,
       };
+      console.log("Data to save to Firestore:", dataToSave);
+
 
       // Step 3: Save the data to Firestore
       const aboutRef = doc(firestore, 'system_settings', 'about_page');
+      console.log("Saving document to Firestore path:", aboutRef.path);
       await setDoc(aboutRef, dataToSave, { merge: true });
+      console.log("Document saved successfully.");
 
       toast({
         title: "Success",
@@ -149,6 +169,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
         description: error.message || "Could not update the About page. Please try again.",
       });
     } finally {
+      console.log("onSubmit finished, setting isSubmitting to false.");
       setIsSubmitting(false);
     }
   };
