@@ -48,7 +48,16 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   useEffect(() => {
     if (isOpen) {
         if (variantToEdit) {
-            setFormState(variantToEdit);
+            // Ensure all fields are defined to prevent controlled/uncontrolled input error
+            setFormState({
+                brand: variantToEdit.brand || '',
+                source: variantToEdit.source || '',
+                quantity: variantToEdit.quantity || 0,
+                price: variantToEdit.price || 0,
+                warningLimit: variantToEdit.warningLimit || 10,
+                description: variantToEdit.description || '',
+                imageUrl: variantToEdit.imageUrl || '',
+            });
         } else {
             setFormState(initialFormState);
         }
@@ -143,7 +152,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           </div>
           
           <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit} onChange={handleInputChange} disabled={isSubmitting} /></div>
-          <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., G2, 0.5mm, Black Ink" value={formState.description || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., G2, 0.5mm, Black Ink" value={formState.description} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>
