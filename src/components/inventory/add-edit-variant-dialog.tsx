@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -83,9 +84,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 description: variantToEdit.description || '',
                 imageUrl: variantToEdit.imageUrl || '',
             });
-            if (variantToEdit.imageUrl) {
-                setImagePreview(variantToEdit.imageUrl);
-            }
+            setImagePreview(variantToEdit.imageUrl || null);
         } else {
             form.reset({
                 brand: '',
@@ -98,6 +97,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             });
         }
     } else {
+        // Reset everything when dialog closes
         setImagePreview(null);
         setImageFile(null);
         if (fileInputRef.current) {
@@ -111,12 +111,12 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     const file = event.target.files?.[0];
     if (!file) return;
     
-    const acceptedTypes = ['image/jpeg', 'image/png'];
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!acceptedTypes.includes(file.type)) {
         toast({
             variant: "destructive",
             title: "Invalid File Type",
-            description: "Please select a PNG or JPEG image.",
+            description: "Please select a PNG, JPEG, or WEBP image.",
         });
         return;
     }
@@ -128,7 +128,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    form.setValue('imageUrl', '');
+    form.setValue('imageUrl', ''); // Clear existing URL if image is removed
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -136,73 +136,84 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
 
   const onSubmit = async (values: AddEditVariantFormValues) => {
-    if (!item) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Parent item not found.' });
-      return;
-    }
-    if (!storage || !firestore) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Firebase services are not available.' });
-      return;
+    if (!item || !firestore || !storage) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Required services are not available.' });
+        return;
     }
 
     setIsSubmitting(true);
-    
+    let finalImageUrl = variantToEdit?.imageUrl || '';
+
     try {
-      let finalImageUrl = variantToEdit?.imageUrl || '';
+        const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+        const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
 
-      const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-      const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
+        // Step 1: Handle image upload if a new file is provided
+        if (imageFile) {
+            console.log("New image file detected. Starting upload...");
+            const imageStoragePath = `inventory-item-variant-images/${variantId}-${Date.now()}-${imageFile.name}`;
+            const imageStorageRef = storageRef(storage, imageStoragePath);
+            
+            await uploadBytes(imageStorageRef, imageFile);
+            finalImageUrl = await getDownloadURL(imageStorageRef);
+            console.log("Image uploaded successfully. URL:", finalImageUrl);
 
-      // Step 1: Upload image if a new one is provided
-      if (imageFile) {
-        const timestamp = Date.now();
-        const imageFileName = `${variantId}-${timestamp}-${imageFile.name}`;
-        const imageStoragePath = `inventory-item-variant-images/${imageFileName}`;
-        const imageStorageRef = storageRef(storage, imageStoragePath);
-        
-        // Await the upload
-        const uploadResult = await uploadBytes(imageStorageRef, imageFile);
-        // Await the URL
-        finalImageUrl = await getDownloadURL(uploadResult.ref);
-      } else if (!imagePreview && variantToEdit?.imageUrl) {
-        // If image was removed, delete old one from storage
-        try {
-          const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
-          await deleteObject(oldImageRef);
-          finalImageUrl = '';
-        } catch (deleteError) {
-          console.warn('Could not delete old image, may have already been removed:', deleteError);
-          finalImageUrl = '';
+            // If we were editing and there was an old image, delete it
+            if (variantToEdit?.imageUrl) {
+                try {
+                    const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
+                    await deleteObject(oldImageRef);
+                    console.log("Old image deleted successfully.");
+                } catch (deleteError: any) {
+                    if (deleteError.code !== 'storage/object-not-found') {
+                        console.warn("Could not delete old image:", deleteError);
+                    }
+                }
+            }
+        } else if (!imagePreview && variantToEdit?.imageUrl) {
+            // This case handles when the user clicks 'X' to remove an existing image
+             try {
+                const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
+                await deleteObject(oldImageRef);
+                finalImageUrl = ''; // Set URL to empty
+                console.log("Existing image removed successfully.");
+            } catch (deleteError: any) {
+                 if (deleteError.code !== 'storage/object-not-found') {
+                    console.warn("Could not delete old image:", deleteError);
+                }
+                finalImageUrl = '';
+            }
         }
-      }
 
-      // Step 2: Prepare data to save
-      const variantRef = doc(variantCollectionRef, variantId);
-      const dataToSave = {
-        ...values,
-        imageUrl: finalImageUrl,
-        updatedAt: serverTimestamp(),
-        ...(!variantToEdit && { createdAt: serverTimestamp() }),
-      };
+        // Step 2: Prepare data for Firestore
+        const variantRef = doc(variantCollectionRef, variantId);
+        const dataToSave = {
+            ...values,
+            imageUrl: finalImageUrl, // Use the new or existing URL
+            updatedAt: serverTimestamp(),
+            ...(!variantToEdit && { createdAt: serverTimestamp() }),
+        };
 
-      // Step 3: Save data to Firestore
-      await setDoc(variantRef, dataToSave, { merge: true });
+        // Step 3: Save data to Firestore
+        console.log("Saving data to Firestore:", dataToSave);
+        await setDoc(variantRef, dataToSave, { merge: true });
 
-      toast({
-        title: variantToEdit ? 'Variant Updated' : 'Variant Added',
-        description: `The variant has been saved to ${item.name}.`,
-      });
+        toast({
+            title: variantToEdit ? 'Variant Updated' : 'Variant Added',
+            description: `The variant has been saved to ${item.name}.`,
+        });
       
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save variant:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: error instanceof Error ? error.message : 'Could not save the variant data. Please try again.',
-      });
+        onOpenChange(false);
+
+    } catch (error: any) {
+        console.error('Failed to save variant:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Save Failed',
+            description: error.message || 'Could not save the variant data. Please try again.',
+        });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false); // ALWAYS ensure the loading state is turned off
     }
   };
   
@@ -231,7 +242,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
             <FormItem>
               <FormLabel>Variant Image</FormLabel>
               <FormControl>
@@ -239,7 +250,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   <div className="relative h-24 w-24 rounded-md border-dashed border-2 flex items-center justify-center text-muted-foreground overflow-hidden">
                     {imagePreview ? (
                       <>
-                        <Image src={imagePreview || "/placeholder.svg"} alt="Variant preview" fill style={{objectFit: "cover"}} />
+                        <Image src={imagePreview} alt="Variant preview" fill style={{objectFit: "cover"}} />
                         <Button
                           type="button"
                           variant="destructive"
@@ -257,7 +268,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                   </div>
                   <Input 
                     type="file" 
-                    accept="image/png, image/jpeg" 
+                    accept="image/png, image/jpeg, image/webp" 
                     onChange={handleImageChange}
                     className="hidden"
                     ref={fileInputRef}
@@ -363,3 +374,4 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
+
