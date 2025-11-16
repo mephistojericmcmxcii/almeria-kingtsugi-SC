@@ -32,7 +32,6 @@ import Image from 'next/image';
 
 import type { AboutPageContent } from '@/app/(app)/about/page';
 
-// --- ZOD FOR TEXT ONLY ---
 const formSchema = z.object({
   title: z.string().min(3),
   heading: z.string().min(3),
@@ -48,10 +47,9 @@ function getPathFromUrl(url: string) {
   try {
       const urlObj = new URL(url);
       const pathName = urlObj.pathname;
-      // The path will be something like /v0/b/your-bucket.appspot.com/o/path%2Fto%2Fimage.jpg
       const parts = pathName.split('/o/');
       if (parts.length > 1) {
-          return decodeURIComponent(parts[1]);
+          return decodeURIComponent(parts[1].split('?')[0]);
       }
       return null;
   } catch (error) {
@@ -76,7 +74,6 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
     defaultValues: content,
   });
 
-  // reset when dialog opens
   useEffect(() => {
     if (isOpen) {
       form.reset(content);
@@ -121,7 +118,6 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
     let finalImageUrl = content.imageUrl;
 
     try {
-        // upload new image if one is selected
         if (imageFile) {
             const path = `about-images/about-${Date.now()}`;
             console.log("Uploading to storage path:", path);
@@ -133,7 +129,6 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
             finalImageUrl = await getDownloadURL(imgRef);
             console.log("Got download URL:", finalImageUrl);
 
-            // delete old image if it exists and is different
             if (content.imageUrl && content.imageUrl !== finalImageUrl) {
                 const oldPath = getPathFromUrl(content.imageUrl);
                 console.log("Old image path to delete:", oldPath);
@@ -153,7 +148,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
         const dataToSave = {
             ...values,
-            imageUrl: finalImageUrl || '', // Ensure it's not undefined
+            imageUrl: finalImageUrl || '',
         };
         console.log("Data to save to Firestore:", dataToSave);
         const aboutRef = doc(firestore, "system_settings", "about_page");
@@ -182,7 +177,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !isSubmitting && onOpenChange(o)}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Edit About Page</DialogTitle>
           <DialogDescription>Update your About page content.</DialogDescription>
@@ -190,59 +185,68 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                    <FormItem>
+                    <FormLabel>Page Image</FormLabel>
+                    <div className="flex gap-4 items-center">
+                        <div className="relative h-28 w-40 border rounded overflow-hidden">
+                        {imagePreview ? (
+                            <Image src={imagePreview} fill alt="preview" style={{ objectFit: "cover" }} />
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                            No Image
+                            </div>
+                        )}
+                        </div>
 
-            <FormItem>
-              <FormLabel>Page Image</FormLabel>
-              <div className="flex gap-4 items-center">
-                <div className="relative h-28 w-40 border rounded overflow-hidden">
-                  {imagePreview ? (
-                    <Image src={imagePreview} fill alt="preview" style={{ objectFit: "cover" }} />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                      No Image
+                        <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={fileRef}
+                        onChange={handleImageChange}
+                        />
+
+                        <Button type="button" onClick={() => fileRef.current?.click()} disabled={isSubmitting}>
+                        {imagePreview ? "Change Image" : "Upload Image"}
+                        </Button>
                     </div>
-                  )}
+                    </FormItem>
                 </div>
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  ref={fileRef}
-                  onChange={handleImageChange}
-                />
+                <FormField name="title" control={form.control} render={({ field }) => (
+                <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                )}/>
 
-                <Button type="button" onClick={() => fileRef.current?.click()} disabled={isSubmitting}>
-                  {imagePreview ? "Change Image" : "Upload Image"}
-                </Button>
-              </div>
-            </FormItem>
+                <FormField name="heading" control={form.control} render={({ field }) => (
+                <FormItem><FormLabel>Primary Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                )}/>
+                
+                <div className="md:col-span-2">
+                    <FormField name="p1" control={form.control} render={({ field }) => (
+                    <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={3} {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                </div>
+                
+                <div className="md:col-span-2">
+                    <FormField name="p2" control={form.control} render={({ field }) => (
+                    <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={3} {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                </div>
 
-            <FormField name="title" control={form.control} render={({ field }) => (
-              <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-            )}/>
+                <FormField name="missionHeading" control={form.control} render={({ field }) => (
+                <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                )}/>
 
-            <FormField name="heading" control={form.control} render={({ field }) => (
-              <FormItem><FormLabel>Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-            )}/>
+                <div className="md:col-span-2">
+                    <FormField name="missionP" control={form.control} render={({ field }) => (
+                    <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                </div>
+            </div>
 
-            <FormField name="p1" control={form.control} render={({ field }) => (
-              <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={4} {...field}/></FormControl><FormMessage/></FormItem>
-            )}/>
-
-            <FormField name="p2" control={form.control} render={({ field }) => (
-              <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={4} {...field}/></FormControl><FormMessage/></FormItem>
-            )}/>
-
-            <FormField name="missionHeading" control={form.control} render={({ field }) => (
-              <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
-            )}/>
-
-            <FormField name="missionP" control={form.control} render={({ field }) => (
-              <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea rows={3} {...field}/></FormControl><FormMessage/></FormItem>
-            )}/>
-
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
