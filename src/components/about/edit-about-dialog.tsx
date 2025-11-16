@@ -39,7 +39,6 @@ const formSchema = z.object({
   p2: z.string().min(5),
   missionHeading: z.string().min(3),
   missionP: z.string().min(5),
-  imageUrl: z.string().optional(),
 });
 
 
@@ -223,17 +222,13 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
                 <FormItem><FormLabel>Primary Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
                 )}/>
                 
-                <div className="md:col-span-2">
-                    <FormField name="p1" control={form.control} render={({ field }) => (
-                    <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
-                    )}/>
-                </div>
-                
-                <div className="md:col-span-2">
-                    <FormField name="p2" control={form.control} render={({ field }) => (
-                    <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
-                    )}/>
-                </div>
+                <FormField name="p1" control={form.control} render={({ field }) => (
+                <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
+                )}/>
+
+                <FormField name="p2" control={form.control} render={({ field }) => (
+                <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea rows={2} {...field}/></FormControl><FormMessage/></FormItem>
+                )}/>
 
                 <FormField name="missionHeading" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
