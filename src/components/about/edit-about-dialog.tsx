@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
 import { useFirebase } from '@/firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -23,11 +22,27 @@ import { Upload } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from '../ui/label';
 
-
 interface EditAboutDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   content: AboutPageContent;
+}
+
+function getPathFromUrl(url: string) {
+  try {
+    const urlObj = new URL(url);
+    const pathName = urlObj.pathname;
+    // The path will be something like /v0/b/your-bucket.appspot.com/o/path%2Fto%2Fimage.jpg
+    // We need to decode the URI component and extract the path after '/o/'.
+    const parts = pathName.split('/o/');
+    if (parts.length > 1) {
+      return decodeURIComponent(parts[1]);
+    }
+    return null;
+  } catch (error) {
+    console.error("Invalid URL for getPathFromUrl:", error);
+    return null;
+  }
 }
 
 export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDialogProps) {
@@ -38,20 +53,24 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { control, handleSubmit, reset } = useForm<AboutPageContent>({
-    defaultValues: content,
-  });
-  
+  // State for form fields
+  const [formState, setFormState] = useState<AboutPageContent>(content);
+
   useEffect(() => {
     if (isOpen) {
-        reset(content);
-        setImagePreview(content.imageUrl);
-        setImageFile(null);
-        if(fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+      setFormState(content);
+      setImagePreview(content.imageUrl);
+      setImageFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-  }, [content, reset, isOpen]);
+  }, [content, isOpen]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormState(prevState => ({ ...prevState, [name]: value }));
+  };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -72,13 +91,14 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
   };
 
 
-  const onSubmit = async (values: AboutPageContent) => {
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!storage || !firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Firebase services not available.' });
       return;
     }
     setIsSubmitting(true);
-    let finalImageUrl = content.imageUrl || '';
+    let finalImageUrl = formState.imageUrl || '';
 
     try {
       // Step 1: If a new image file exists, upload it and get the URL
@@ -89,11 +109,14 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
         await uploadBytes(imageStorageRef, imageFile);
         finalImageUrl = await getDownloadURL(imageStorageRef);
         
-        // If there was an old image, delete it
+        // If there was an old image, delete it using the correct path
         if (content.imageUrl && content.imageUrl !== finalImageUrl) {
             try {
-              const oldImageRef = storageRef(storage, content.imageUrl);
-              await deleteObject(oldImageRef);
+              const oldPath = getPathFromUrl(content.imageUrl);
+              if (oldPath) {
+                  const oldImageRef = storageRef(storage, oldPath);
+                  await deleteObject(oldImageRef);
+              }
             } catch (deleteError: any) {
               if (deleteError.code !== 'storage/object-not-found') {
                 console.warn("Could not delete old image:", deleteError);
@@ -104,7 +127,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
 
       // Step 2: Prepare the data object for Firestore
       const dataToSave: AboutPageContent = { 
-        ...values,
+        ...formState,
         imageUrl: finalImageUrl,
       };
 
@@ -151,7 +174,7 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
           <DialogTitle>Edit About Page</DialogTitle>
           <DialogDescription>Update the content displayed on the About page.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+        <form onSubmit={onSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
           <div className="space-y-2">
             <Label>Page Image</Label>
               <div className="flex items-center gap-4">
@@ -176,12 +199,12 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
               </div>
           </div>
           
-          <Controller name="title" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Page Title</Label><Input {...field} disabled={isSubmitting} /></div> )}/>
-          <Controller name="heading" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Main Heading</Label><Input {...field} disabled={isSubmitting} /></div> )}/>
-          <Controller name="p1" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Paragraph 1</Label><Textarea {...field} rows={5} disabled={isSubmitting} /></div> )}/>
-          <Controller name="p2" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Paragraph 2</Label><Textarea {...field} rows={4} disabled={isSubmitting} /></div> )}/>
-          <Controller name="missionHeading" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Mission Heading</Label><Input {...field} disabled={isSubmitting} /></div> )}/>
-          <Controller name="missionP" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Mission Paragraph</Label><Textarea {...field} rows={3} disabled={isSubmitting} /></div> )}/>
+          <div className="space-y-2"><Label htmlFor="title">Page Title</Label><Input id="title" name="title" value={formState.title} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="heading">Main Heading</Label><Input id="heading" name="heading" value={formState.heading} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="p1">Paragraph 1</Label><Textarea id="p1" name="p1" value={formState.p1} onChange={handleInputChange} rows={5} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="p2">Paragraph 2</Label><Textarea id="p2" name="p2" value={formState.p2} onChange={handleInputChange} rows={4} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="missionHeading">Mission Heading</Label><Input id="missionHeading" name="missionHeading" value={formState.missionHeading} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="missionP">Mission Paragraph</Label><Textarea id="missionP" name="missionP" value={formState.missionP} onChange={handleInputChange} rows={3} disabled={isSubmitting} /></div>
           
             <DialogFooter className="mt-8">
             <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>

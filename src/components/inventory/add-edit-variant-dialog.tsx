@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
 import { useFirebase } from '@/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { setDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -32,6 +31,22 @@ interface AddEditVariantDialogProps {
   variantToEdit?: InventoryVariant | null;
 }
 
+function getPathFromUrl(url: string) {
+    try {
+        const urlObj = new URL(url);
+        const pathName = urlObj.pathname;
+        // The path will be something like /v0/b/your-bucket.appspot.com/o/path%2Fto%2Fimage.jpg
+        const parts = pathName.split('/o/');
+        if (parts.length > 1) {
+            return decodeURIComponent(parts[1]);
+        }
+        return null;
+    } catch (error) {
+        console.error("Invalid URL for getPathFromUrl:", error);
+        return null;
+    }
+}
+
 export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit }: AddEditVariantDialogProps) {
   const { storage, firestore } = useFirebase();
   const { toast } = useToast();
@@ -40,8 +55,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { control, handleSubmit, reset, setValue } = useForm<VariantFormData>({
-    defaultValues: {
+  const initialFormState: VariantFormData = {
       brand: '',
       source: '',
       quantity: 0,
@@ -49,24 +63,17 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       warningLimit: 10,
       description: '',
       imageUrl: '',
-    },
-  });
-  
+  };
+
+  const [formState, setFormState] = useState<VariantFormData>(initialFormState);
+
   useEffect(() => {
     if (isOpen) {
         if (variantToEdit) {
-            reset(variantToEdit);
+            setFormState(variantToEdit);
             setImagePreview(variantToEdit.imageUrl || null);
         } else {
-            reset({
-                brand: '',
-                source: '',
-                quantity: 0,
-                price: 0,
-                warningLimit: 10,
-                description: '',
-                imageUrl: '',
-            });
+            setFormState(initialFormState);
             setImagePreview(null);
         }
         setImageFile(null);
@@ -74,8 +81,12 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             fileInputRef.current.value = '';
         }
     }
-  }, [variantToEdit, reset, isOpen]);
-
+  }, [variantToEdit, isOpen]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormState(prevState => ({ ...prevState, [name]: value }));
+  };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -98,27 +109,27 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    setValue('imageUrl', ''); // Clear existing URL if image is removed
+    setFormState(prevState => ({...prevState, imageUrl: ''}));
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
     }
   };
 
 
-  const onSubmit = async (values: VariantFormData) => {
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!item || !firestore || !storage) {
         toast({ variant: 'destructive', title: 'Error', description: 'Required services are not available.' });
         return;
     }
 
     setIsSubmitting(true);
-    let finalImageUrl = variantToEdit?.imageUrl || '';
+    let finalImageUrl = formState.imageUrl || '';
 
     try {
         const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
         const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
 
-        // Step 1: Handle image upload if a new file is provided
         if (imageFile) {
             const imageStoragePath = `inventory-item-variant-images/${variantId}`;
             const imageStorageRef = storageRef(storage, imageStoragePath);
@@ -126,23 +137,27 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             await uploadBytes(imageStorageRef, imageFile);
             finalImageUrl = await getDownloadURL(imageStorageRef);
 
-            // If we were editing and there was an old image that wasn't this new one, delete it
             if (variantToEdit?.imageUrl && variantToEdit.imageUrl !== finalImageUrl) {
-                try {
-                    const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
-                    await deleteObject(oldImageRef);
+                 try {
+                    const oldPath = getPathFromUrl(variantToEdit.imageUrl);
+                    if (oldPath) {
+                        const oldImageRef = storageRef(storage, oldPath);
+                        await deleteObject(oldImageRef);
+                    }
                 } catch (deleteError: any) {
                     if (deleteError.code !== 'storage/object-not-found') {
                         console.warn("Could not delete old image:", deleteError);
                     }
                 }
             }
-        } else if (!values.imageUrl && variantToEdit?.imageUrl) {
-            // This case handles when the user clicks 'X' to remove an existing image
+        } else if (!formState.imageUrl && variantToEdit?.imageUrl) {
             try {
-                const oldImageRef = storageRef(storage, variantToEdit.imageUrl);
-                await deleteObject(oldImageRef);
-                finalImageUrl = ''; // Set URL to empty
+                const oldPath = getPathFromUrl(variantToEdit.imageUrl);
+                if(oldPath) {
+                    const oldImageRef = storageRef(storage, oldPath);
+                    await deleteObject(oldImageRef);
+                }
+                finalImageUrl = '';
             } catch (deleteError: any) {
                  if (deleteError.code !== 'storage/object-not-found') {
                     console.warn("Could not delete old image:", deleteError);
@@ -151,19 +166,17 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             }
         }
 
-        // Step 2: Prepare data for Firestore
         const variantRef = doc(variantCollectionRef, variantId);
         const dataToSave = {
-            ...values,
-            quantity: Number(values.quantity) || 0,
-            price: Number(values.price) || 0,
-            warningLimit: Number(values.warningLimit) || 0,
+            ...formState,
+            quantity: Number(formState.quantity) || 0,
+            price: Number(formState.price) || 0,
+            warningLimit: Number(formState.warningLimit) || 0,
             imageUrl: finalImageUrl,
             updatedAt: serverTimestamp(),
             ...(!variantToEdit && { createdAt: serverTimestamp() }),
         };
 
-        // Step 3: Save data to Firestore
         await setDoc(variantRef, dataToSave, { merge: true });
 
         toast({
@@ -209,7 +222,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+        <form onSubmit={onSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
           <div className="space-y-2">
             <Label>Variant Image</Label>
             <div className="flex items-center gap-4">
@@ -246,16 +259,16 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             </div>
           </div>
           
-          <Controller name="brand" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Brand</Label><Input placeholder="e.g., Pilot" {...field} disabled={isSubmitting} /></div> )}/>
-          <Controller name="source" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Source</Label><Input placeholder="e.g., National Bookstore" {...field} disabled={isSubmitting} /></div> )}/>
+            <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source} onChange={handleInputChange} disabled={isSubmitting} /></div>
           
           <div className="grid grid-cols-2 gap-4">
-            <Controller name="quantity" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Quantity</Label><Input type="number" {...field} disabled={isSubmitting} /></div> )}/>
-            <Controller name="price" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Price (₱)</Label><Input type="number" step="0.01" {...field} disabled={isSubmitting} /></div> )}/>
+            <div className="space-y-2"><Label htmlFor="quantity">Quantity</Label><Input id="quantity" name="quantity" type="number" value={formState.quantity} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="price">Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           
-          <Controller name="warningLimit" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Warning Limit</Label><Input type="number" {...field} disabled={isSubmitting} /></div> )}/>
-          <Controller name="description" control={control} render={({ field }) => ( <div className="space-y-2"><Label>Description (Optional)</Label><Textarea placeholder="e.g., G2, 0.5mm, Black Ink" {...field} disabled={isSubmitting} /></div> )}/>
+          <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., G2, 0.5mm, Black Ink" value={formState.description || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>
