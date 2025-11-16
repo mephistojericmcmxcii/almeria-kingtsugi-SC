@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useRef } from 'react';
 import type { AboutPageContent } from '@/app/(app)/about/page';
-import { Upload, X } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import Image from 'next/image';
 
 const formSchema = z.object({
@@ -67,8 +67,6 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
     if (isOpen) {
         form.reset(content);
         setImagePreview(content.imageUrl);
-    } else {
-        setImagePreview(null);
         setImageFile(null);
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -101,20 +99,24 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
       return;
     }
     setIsSubmitting(true);
+
     try {
         let finalImageUrl = values.imageUrl;
 
         if (imageFile) {
             const imageStoragePath = `about-page-images/about-us-image-${Date.now()}`;
             const imageStorageRef = storageRef(storage, imageStoragePath);
+            
             await uploadBytes(imageStorageRef, imageFile);
+            
             finalImageUrl = await getDownloadURL(imageStorageRef);
         }
 
         const aboutRef = doc(firestore, 'system_settings', 'about_page');
-        const dataToSave = { ...values, imageUrl: finalImageUrl };
+        const dataToSave: AboutPageContent = { ...values, imageUrl: finalImageUrl };
 
         await setDoc(aboutRef, dataToSave, { merge: true });
+
         toast({
             title: "Success",
             description: "The About page has been updated.",
@@ -183,22 +185,22 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: EditAboutDial
             </FormItem>
 
             <FormField control={form.control} name="title" render={({ field }) => (
-                <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Page Title</FormLabel><FormControl><Input {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="heading" render={({ field }) => (
-                <FormItem><FormLabel>Main Heading</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Main Heading</FormLabel><FormControl><Input {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
             )}/>
              <FormField control={form.control} name="p1" render={({ field }) => (
-                <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea {...field} rows={5} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Paragraph 1</FormLabel><FormControl><Textarea {...field} rows={5} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="p2" render={({ field }) => (
-                <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea {...field} rows={4} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Paragraph 2</FormLabel><FormControl><Textarea {...field} rows={4} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="missionHeading" render={({ field }) => (
-                <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Mission Heading</FormLabel><FormControl><Input {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="missionP" render={({ field }) => (
-                <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea {...field} rows={3} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Mission Paragraph</FormLabel><FormControl><Textarea {...field} rows={3} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
             )}/>
             
              <DialogFooter className="mt-8">
