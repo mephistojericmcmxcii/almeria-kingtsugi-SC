@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -103,9 +101,9 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+    let finalBackgroundUrl = values.backgroundUrl;
 
     try {
-        let finalBackgroundUrl = values.backgroundUrl;
         if (imageSource === 'upload' && fileToUpload) {
             const downloadUrl = await uploadImage(fileToUpload, 'homepage_backgrounds');
             if (downloadUrl) {
@@ -310,4 +308,3 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     </Dialog>
   );
 }
-    

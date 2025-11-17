@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -769,10 +767,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const uploadImage = async (file: File, path: string): Promise<string | null> => {
         if (!storage) {
-            const err = 'Firebase Storage is not configured.';
+            const err = 'Firebase Storage is not available. Check your Firebase provider setup.';
             console.error(err);
             toast({ variant: 'destructive', title: 'Storage Error', description: err });
-            return null;
+            return Promise.reject(new Error(err));
         }
         
         const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
@@ -784,7 +782,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
             console.error("Upload failed:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-            return null;
+            return Promise.reject(error);
         }
     };
 
