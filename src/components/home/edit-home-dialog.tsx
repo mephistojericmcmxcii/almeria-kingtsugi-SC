@@ -29,7 +29,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/use-auth';
 
 import type { HomePageSettings } from '@/app/(app)/home/page';
@@ -46,7 +45,7 @@ const formSchema = z.object({
 
 export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: boolean, onOpenChange: (open: boolean) => void, content: HomePageSettings }) {
   const { firestore } = useFirebase();
-  const { uploadImage, isUploading, uploadProgress } = useAuth();
+  const { uploadImage } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageSource, setImageSource] = useState<'url' | 'upload'>('url');
@@ -138,7 +137,7 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     }
   };
   
-  const isSaveDisabled = isSubmitting || isUploading || (imageSource === 'upload' && !fileToUpload);
+  const isSaveDisabled = isSubmitting || (imageSource === 'upload' && !fileToUpload);
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !isSubmitting && onOpenChange(o)}>
@@ -294,16 +293,14 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
                   )}
               </div>
             </div>
-            {isUploading && <Progress value={uploadProgress} />}
-
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting || isUploading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
 
               <Button type="submit" disabled={isSaveDisabled}>
-                {isSubmitting || isUploading ? "Saving..." : "Save Changes"}
+                {isSubmitting ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
 

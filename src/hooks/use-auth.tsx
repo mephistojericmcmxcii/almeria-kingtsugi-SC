@@ -8,7 +8,7 @@ import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/fir
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
@@ -49,8 +49,6 @@ interface AuthContextType {
   updateOrderStatus: (order: Order, newStatus: OrderStatus, reason?: string) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   uploadImage: (file: File, path: string) => Promise<string | null>;
-  isUploading: boolean;
-  uploadProgress: number;
   showCartBadge: boolean;
   dismissCartBadge: () => void;
   showOrderHistoryBadge: boolean;
@@ -65,8 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore, storage } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [showCartBadge, setShowCartBadge] = useState(false);
   const [showOrderHistoryBadge, setShowOrderHistoryBadge] = useState(false);
   const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
@@ -771,44 +767,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const uploadImage = (file: File, path: string): Promise<string | null> => {
-        return new Promise((resolve, reject) => {
-            if (!storage) {
-                const err = 'Firebase Storage is not configured.';
-                console.error(err);
-                toast({ variant: 'destructive', title: 'Storage Error', description: err });
-                return reject(err);
-            }
-            setIsUploading(true);
-            setUploadProgress(0);
+    const uploadImage = async (file: File, path: string): Promise<string | null> => {
+        if (!storage) {
+            const err = 'Firebase Storage is not configured.';
+            console.error(err);
+            toast({ variant: 'destructive', title: 'Storage Error', description: err });
+            return null;
+        }
+        
+        const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
 
-            const storageRef = ref(storage, `${'\'\'\''}{path}/${'\'\'\''}{Date.now()}-${'\'\'\''}{file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadProgress(progress);
-                },
-                (error) => {
-                    console.error("Upload failed:", error);
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-                    setIsUploading(false);
-                    reject(error);
-                },
-                () => {
-                    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                        setIsUploading(false);
-                        resolve(downloadURL);
-                    }).catch(error => {
-                        console.error("Failed to get download URL:", error);
-                        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not get the image URL after upload.' });
-                        setIsUploading(false);
-                        reject(error);
-                    });
-                }
-            );
-        });
+        try {
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            return downloadURL;
+        } catch (error: any) {
+            console.error("Upload failed:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+            return null;
+        }
     };
 
 
@@ -818,7 +795,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, isUploading, uploadProgress, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
 
   return (
     <AuthContext.Provider value={value}>
