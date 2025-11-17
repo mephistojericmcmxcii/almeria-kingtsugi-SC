@@ -124,12 +124,16 @@ export default function AllOrdersPage() {
         const updatedItems: CartItem[] = selectedOrder.items.map(item => ({
             ...item,
             price: itemPrices[item.id] || item.price || 0,
-            discount: itemDiscounts[item.id] || 0,
+            discount: itemDiscounts[item.id] || 0, // Discount is a percentage
         }));
         
         const subtotal = updatedItems.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-        const totalDiscount = updatedItems.reduce((acc, item) => acc + (item.discount || 0), 0);
-        const finalTotal = subtotal - totalDiscount + deliveryFee + packagingFee;
+        const totalDiscountAmount = updatedItems.reduce((acc, item) => {
+            const itemTotal = (item.price || 0) * item.quantity;
+            const discountValue = itemTotal * ((item.discount || 0) / 100);
+            return acc + discountValue;
+        }, 0);
+        const finalTotal = subtotal - totalDiscountAmount + deliveryFee + packagingFee;
 
         const success = await updateOrderStatus(
             selectedOrder, 
@@ -137,7 +141,7 @@ export default function AllOrdersPage() {
             cancellationReason || undefined,
             updatedItems,
             finalTotal,
-            totalDiscount,
+            totalDiscountAmount,
             deliveryFee,
             packagingFee
         );
@@ -149,7 +153,7 @@ export default function AllOrdersPage() {
                 cancellationReason: cancellationReason || prev.cancellationReason,
                 items: updatedItems,
                 totalAmount: finalTotal,
-                discount: totalDiscount,
+                discount: totalDiscountAmount,
                 deliveryFee,
                 packagingFee,
             } : null);
@@ -208,7 +212,13 @@ export default function AllOrdersPage() {
             return acc + (price * item.quantity);
         }, 0);
         
-        const currentTotalDiscount = Object.values(itemDiscounts).reduce((acc, discount) => acc + (discount || 0), 0);
+        const currentTotalDiscount = selectedOrder.items.reduce((acc, item) => {
+            const price = itemPrices[item.id] || item.price || 0;
+            const discountPercent = itemDiscounts[item.id] || 0;
+            const itemTotal = price * item.quantity;
+            const discountValue = itemTotal * (discountPercent / 100);
+            return acc + discountValue;
+        }, 0);
 
         const currentFinalTotal = currentSubtotal - currentTotalDiscount + deliveryFee + packagingFee;
         
@@ -339,15 +349,17 @@ export default function AllOrdersPage() {
                                         <TableHead className="w-2/5">Item</TableHead>
                                         <TableHead className="text-right">Price</TableHead>
                                         <TableHead className="text-right">Qty</TableHead>
-                                        <TableHead className="text-right">Discount (₱)</TableHead>
+                                        <TableHead className="text-right">Discount (%)</TableHead>
                                         <TableHead className="text-right">Total Price</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {selectedOrder.items.map((item) => {
                                         const price = itemPrices[item.id] || 0;
-                                        const discount = itemDiscounts[item.id] || 0;
-                                        const totalPrice = (price * item.quantity) - discount;
+                                        const discountPercent = itemDiscounts[item.id] || 0;
+                                        const itemTotal = price * item.quantity;
+                                        const discountValue = itemTotal * (discountPercent / 100);
+                                        const totalPrice = itemTotal - discountValue;
 
                                         return (
                                         <TableRow key={item.id}>
@@ -358,17 +370,17 @@ export default function AllOrdersPage() {
                                             <TableCell className="text-right">
                                                  <Input 
                                                     type="number" 
-                                                    className="h-8 w-24 ml-auto text-right"
+                                                    className="h-8 w-24 ml-auto text-right bg-muted"
                                                     value={price}
-                                                    disabled // Price is non-editable
+                                                    readOnly
                                                 />
                                             </TableCell>
                                             <TableCell className="text-right">{item.quantity}</TableCell>
                                             <TableCell className="text-right">
                                                 <Input 
                                                     type="number" 
-                                                    className="h-8 w-24 ml-auto text-right"
-                                                    value={discount}
+                                                    className="h-8 w-20 ml-auto text-right"
+                                                    value={discountPercent}
                                                     onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
                                                     disabled={isUpdating || !isPricingEditable}
                                                 />
@@ -398,7 +410,7 @@ export default function AllOrdersPage() {
                                     </div>
                                     {totalDiscount > 0 && (
                                         <div className="flex justify-between items-center text-green-600">
-                                            <p>Total Discount</p>
+                                            <p>Total Item Discounts</p>
                                             <p>- {formatCurrency(totalDiscount)}</p>
                                         </div>
                                     )}

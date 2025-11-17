@@ -160,8 +160,12 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                     {orders.map(order => {
                         const isQuoteReady = order.status === 'quote-ready';
                         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-                        const totalItemDiscounts = order.items.reduce((acc, item) => acc + (item.discount || 0), 0);
-                        const finalTotal = subtotal - totalItemDiscounts + (order.deliveryFee || 0) + (order.packagingFee || 0);
+                        const totalDiscount = order.items.reduce((acc, item) => {
+                            const itemTotal = (item.price || 0) * item.quantity;
+                            const discountValue = itemTotal * ((item.discount || 0) / 100);
+                            return acc + discountValue;
+                        }, 0);
+                        const finalTotal = subtotal - totalDiscount + (order.deliveryFee || 0) + (order.packagingFee || 0);
 
                         return (
                         <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
@@ -183,20 +187,26 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                     <div>
                                         <h4 className="font-semibold mb-2">Items</h4>
                                         <div className="space-y-2">
-                                        {order.items.map(item => (
+                                        {order.items.map(item => {
+                                            const itemTotal = (item.price || 0) * item.quantity;
+                                            const discountValue = itemTotal * ((item.discount || 0) / 100);
+                                            const finalItemPrice = itemTotal - discountValue;
+
+                                            return (
                                             <div key={item.id} className="flex justify-between items-center text-sm">
                                                 <div className="flex items-center gap-2">
                                                     <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
                                                     <div>
                                                         <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
-                                                         {isQuoteReady && item.discount && item.discount > 0 && (
-                                                            <p className="text-xs text-green-600">Discount: -{formatCurrency(item.discount)}</p>
+                                                        {isQuoteReady && (item.discount || 0) > 0 && (
+                                                            <p className="text-xs text-green-600">Discount: {item.discount}% (-{formatCurrency(discountValue)})</p>
                                                         )}
                                                     </div>
                                                 </div>
-                                                {isQuoteReady && <span>{formatCurrency((item.price || 0) * item.quantity - (item.discount || 0))}</span>}
+                                                {isQuoteReady && <span>{formatCurrency(finalItemPrice)}</span>}
                                             </div>
-                                        ))}
+                                            )
+                                        })}
                                         </div>
                                     </div>
 
@@ -206,10 +216,10 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                                 <span className="text-muted-foreground">Subtotal</span>
                                                 <span>{formatCurrency(subtotal)}</span>
                                             </div>
-                                            {(totalItemDiscounts) > 0 && (
+                                            {(totalDiscount) > 0 && (
                                                 <div className="flex justify-between text-sm text-green-600">
                                                     <span className="text-muted-foreground">Total Item Discounts</span>
-                                                    <span>- {formatCurrency(totalItemDiscounts)}</span>
+                                                    <span>- {formatCurrency(totalDiscount)}</span>
                                                 </div>
                                             )}
                                             {(order.deliveryFee || 0) > 0 && (
