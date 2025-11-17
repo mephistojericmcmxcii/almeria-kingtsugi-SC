@@ -42,6 +42,17 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     declined: [],
 };
 
+const STATUS_DISPLAY_NAMES: Record<OrderStatus, string> = {
+    'pending-quote': 'Pending Quote',
+    'quote-ready': 'Approve Quotation',
+    confirmed: 'Confirm Order',
+    delivering: 'Mark as Delivering',
+    completed: 'Mark as Completed',
+    cancelled: 'Cancel Order',
+    declined: 'Decline Order',
+};
+
+
 const REQUIRES_REASON: OrderStatus[] = ['declined'];
 
 export default function AllOrdersPage() {
@@ -295,7 +306,9 @@ export default function AllOrdersPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {availableActions.map(status => (
-                                            <SelectItem key={status} value={status} className="capitalize">{status.replace('-', ' ')}</SelectItem>
+                                            <SelectItem key={status} value={status}>
+                                                {STATUS_DISPLAY_NAMES[status] || status}
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -311,5 +324,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    
