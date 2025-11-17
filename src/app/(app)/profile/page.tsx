@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase, useFirebase } from '@/firebase';
 import { collection, collectionGroup } from 'firebase/firestore';
-import type { CartItem, Order, OrderStatus } from '@/lib/types';
+import type { CartItem, Order, OrderStatus, StatusHistory } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -162,6 +162,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                 <Accordion type="single" collapsible className="w-full space-y-4">
                     {orders.map(order => {
                         const isQuoteReady = order.status === 'quote-ready';
+                        const showPricing = order.status !== 'pending-quote';
                         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
                         const totalDiscount = order.discount || 0;
                         const finalTotal = order.totalAmount;
@@ -177,13 +178,13 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                         {user?.role === 'admin' && order.userId !== user?.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                                     </div>
                                     <div className="flex items-center gap-4">
-                                    {isQuoteReady ? <span className="font-bold text-lg text-primary">{formatCurrency(finalTotal)}</span> : null}
+                                    {showPricing ? <span className="font-bold text-lg text-primary">{formatCurrency(finalTotal)}</span> : null}
                                     {getStatusBadge(order.status)}
                                     </div>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="pt-4">
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     {order.notes && (
                                         <Alert>
                                             <Info className="h-4 w-4" />
@@ -205,20 +206,21 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                                     <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" data-ai-hint={item.imageHint} />
                                                     <div>
                                                         <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
-                                                        {isQuoteReady && (item.discount || 0) > 0 && (
+                                                        {showPricing && (item.discount || 0) > 0 && (
                                                             <p className="text-xs text-green-600">Discount: {item.discount}% (-{formatCurrency(discountValue)})</p>
                                                         )}
                                                     </div>
                                                 </div>
-                                                {isQuoteReady && <span>{formatCurrency(finalItemPrice)}</span>}
+                                                {showPricing && <span>{formatCurrency(finalItemPrice)}</span>}
                                             </div>
                                             )
                                         })}
                                         </div>
                                     </div>
 
-                                    {isQuoteReady && (
+                                    {showPricing && (
                                         <div className="space-y-2 pt-4 border-t">
+                                            <h4 className="font-semibold mb-2">Billing Summary</h4>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Subtotal</span>
                                                 <span>{formatCurrency(subtotal)}</span>
@@ -248,11 +250,34 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             </div>
                                         </div>
                                     )}
-
-                                    <div className="pt-2 border-t">
-                                        <h4 className="font-semibold mb-1">Shipping Address</h4>
-                                        <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Shipping Information</h4>
+                                            <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                                            <p className="text-sm text-muted-foreground">{order.shippingContactNumber}</p>
+                                        </div>
+                                         {order.status !== 'pending-quote' && (
+                                            <div>
+                                                <h4 className="font-semibold mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4"/>Payment Method</h4>
+                                                <p className="text-sm text-muted-foreground">{order.paymentMethod.toUpperCase()}</p>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {order.statusHistory && order.statusHistory.length > 0 && (
+                                        <div className="pt-4 border-t">
+                                            <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4"/>Status History</h4>
+                                            <ul className="space-y-1 text-sm text-muted-foreground">
+                                                {order.statusHistory.map((h: StatusHistory, index: number) => (
+                                                    <li key={index} className="flex items-center justify-between">
+                                                        <span className="font-medium capitalize">{h.status.replace('-', ' ')}</span>
+                                                        <span>{format(h.timestamp.toDate(), 'MMM d, yyyy, h:mm a')}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                     
                                     {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
                                         <Alert variant="destructive">

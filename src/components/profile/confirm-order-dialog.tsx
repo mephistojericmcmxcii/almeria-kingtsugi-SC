@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Minus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 interface ConfirmOrderDialogProps {
     isOpen: boolean;
@@ -33,12 +34,14 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
     const [items, setItems] = useState<CartItem[]>([]);
     const [shippingAddress, setShippingAddress] = useState('');
     const [contactNumber, setContactNumber] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'bank'>('cod');
 
     useEffect(() => {
         if (order) {
             setItems(order.items);
             setShippingAddress(user?.address || order.shippingAddress);
             setContactNumber(user?.contactNumber || order.shippingContactNumber);
+            setPaymentMethod(order.paymentMethod as any || 'cod');
         }
     }, [order, user]);
 
@@ -104,6 +107,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
             discount: totalDiscount,
             shippingAddress,
             shippingContactNumber: contactNumber,
+            paymentMethod,
         });
         
         if (success) {
@@ -122,7 +126,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                 <DialogHeader>
                     <DialogTitle className="font-headline text-2xl">Confirm Your Purchase</DialogTitle>
                     <DialogDescription>
-                        Review your items and confirm your delivery details. You can adjust quantities or remove items before finalizing.
+                        Review your items and confirm your delivery and payment details. You can adjust quantities or remove items before finalizing.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 py-4">
@@ -163,6 +167,24 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                              <Label htmlFor="shippingAddress">Shipping Address</Label>
                              <Textarea id="shippingAddress" value={shippingAddress} onChange={e => setShippingAddress(e.target.value)} />
                          </div>
+                    </div>
+
+                    <div className="space-y-4 border-t pt-6">
+                        <h3 className="font-semibold">Payment Method</h3>
+                        <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="flex gap-4">
+                            <Label htmlFor="cod" className="flex items-center gap-2 border p-3 rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                                <RadioGroupItem value="cod" id="cod" />
+                                Cash on Delivery (COD)
+                            </Label>
+                             <Label htmlFor="gcash" className="flex items-center gap-2 border p-3 rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all text-muted-foreground cursor-not-allowed">
+                                <RadioGroupItem value="gcash" id="gcash" disabled />
+                                Gcash (Unavailable)
+                            </Label>
+                             <Label htmlFor="bank" className="flex items-center gap-2 border p-3 rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all text-muted-foreground cursor-not-allowed">
+                                <RadioGroupItem value="bank" id="bank" disabled />
+                                Bank Transfer (Unavailable)
+                            </Label>
+                        </RadioGroup>
                     </div>
 
                     {/* Order Summary */}
@@ -207,4 +229,3 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
         </Dialog>
     );
 }
-

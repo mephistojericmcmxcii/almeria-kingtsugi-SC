@@ -58,6 +58,7 @@ interface AuthContextType {
       packagingFee?: number
       shippingAddress?: string;
       shippingContactNumber?: string;
+      paymentMethod?: string;
     }
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
@@ -188,11 +189,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const quoteReadyUpdate = order.statusHistory.find(h => h.status === 'quote-ready');
         const deliveringUpdate = order.statusHistory.find(h => h.status === 'delivering');
+        const confirmedUpdate = order.statusHistory.find(h => h.status === 'confirmed');
 
         if (quoteReadyUpdate && quoteReadyUpdate.timestamp.toMillis() > lastViewed) {
           hasNewUpdates = true;
         }
         if (deliveringUpdate && deliveringUpdate.timestamp.toMillis() > lastViewed) {
+          hasNewUpdates = true;
+        }
+        if (confirmedUpdate && confirmedUpdate.timestamp.toMillis() > lastViewed) {
           hasNewUpdates = true;
         }
       });
@@ -725,6 +730,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           packagingFee?: number,
           shippingAddress?: string;
           shippingContactNumber?: string;
+          paymentMethod?: string;
         }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
@@ -751,6 +757,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (details?.packagingFee !== undefined) dataToUpdate.packagingFee = details.packagingFee;
                 if (details?.shippingAddress !== undefined) dataToUpdate.shippingAddress = details.shippingAddress;
                 if (details?.shippingContactNumber !== undefined) dataToUpdate.shippingContactNumber = details.shippingContactNumber;
+                if (details?.paymentMethod !== undefined) dataToUpdate.paymentMethod = details.paymentMethod;
             }
 
             if ((newStatus === 'cancelled' || newStatus === 'declined') && order.status !== 'cancelled' && order.status !== 'declined') {
