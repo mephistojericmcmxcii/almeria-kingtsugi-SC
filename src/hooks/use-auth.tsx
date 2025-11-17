@@ -8,6 +8,7 @@ import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/fir
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +48,9 @@ interface AuthContextType {
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string) => Promise<boolean>;
   updateOrderStatus: (order: Order, newStatus: OrderStatus, reason?: string) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
+  uploadImage: (file: File, path: string) => Promise<string | null>;
+  isUploading: boolean;
+  uploadProgress: number;
   showCartBadge: boolean;
   dismissCartBadge: () => void;
   showOrderHistoryBadge: boolean;
@@ -58,9 +62,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore } = useFirebase();
+  const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore, storage } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [showCartBadge, setShowCartBadge] = useState(false);
   const [showOrderHistoryBadge, setShowOrderHistoryBadge] = useState(false);
   const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
@@ -244,7 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         // If we reach here, user is either an admin, or maintenance mode is off.
-        router.push('/dashboard');
+        router.push('/home');
 
     } catch (error: any) {
         console.error("Firebase login failed", error);
@@ -267,7 +273,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     role: "admin"
                 });
 
-                router.push('/dashboard');
+                router.push('/home');
              } catch (creationError: any) {
                  toast({ variant: "destructive", title: "Admin Creation Failed", description: creationError.message });
              }
@@ -319,7 +325,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Account Created!",
         description: "You have been successfully registered.",
       });
-      router.push('/dashboard');
+      router.push('/home');
 
     } catch (error: any) {
        console.error("Firebase registration failed", error);
@@ -379,7 +385,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             await setDoc(userRef, newUser);
         }
-        router.push('/dashboard');
+        router.push('/home');
 
     } catch (error: any) {
         console.error("Google Sign-In failed", error);
@@ -764,6 +770,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     };
+    
+    const uploadImage = (file: File, path: string): Promise<string | null> => {
+        return new Promise((resolve, reject) => {
+            if (!storage) {
+                toast({ variant: 'destructive', title: 'Storage Error', description: 'Firebase Storage is not configured.' });
+                reject('Storage not configured');
+                return;
+            }
+            setIsUploading(true);
+            setUploadProgress(0);
+
+            const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadProgress(progress);
+                },
+                (error) => {
+                    console.error("Upload failed:", error);
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+                    setIsUploading(false);
+                    reject(error);
+                },
+                () => {
+                    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                        setIsUploading(false);
+                        resolve(downloadURL);
+                    }).catch(error => {
+                         console.error("Failed to get download URL:", error);
+                        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not get the image URL after upload.' });
+                        setIsUploading(false);
+                        reject(error);
+                    });
+                }
+            );
+        });
+    };
 
 
   const logout = async () => {
@@ -772,7 +817,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, isUploading, uploadProgress, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
 
   return (
     <AuthContext.Provider value={value}>
@@ -788,5 +833,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

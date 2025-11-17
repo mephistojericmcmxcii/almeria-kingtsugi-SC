@@ -28,6 +28,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
+import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/hooks/use-auth';
 
 import type { HomePageSettings } from '@/app/(app)/home/page';
 
@@ -43,8 +45,12 @@ const formSchema = z.object({
 
 export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: boolean, onOpenChange: (open: boolean) => void, content: HomePageSettings }) {
   const { firestore } = useFirebase();
+  const { uploadImage, isUploading, uploadProgress } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageSource, setImageSource] = useState<'url' | 'upload'>('url');
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,15 +77,46 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
         verticalAlign: content.verticalAlign || 'center',
         titleSize: content.titleSize || 7,
       });
+      setPreviewUrl(content.backgroundUrl);
+      setImageSource('url');
+      setFileToUpload(null);
     }
   }, [isOpen, content, form]);
+  
+  useEffect(() => {
+      if (imageSource === 'url') {
+          setPreviewUrl(backgroundUrl);
+      }
+  }, [backgroundUrl, imageSource]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFileToUpload(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
 
     try {
+        let finalBackgroundUrl = values.backgroundUrl;
+        if (imageSource === 'upload' && fileToUpload) {
+            const downloadUrl = await uploadImage(fileToUpload, 'homepage_backgrounds');
+            if (downloadUrl) {
+                finalBackgroundUrl = downloadUrl;
+            } else {
+                throw new Error("File upload failed, please try again.");
+            }
+        }
+        
         const homeRef = doc(firestore, "system_settings", "home_page");
-        await setDoc(homeRef, values, { merge: true });
+        await setDoc(homeRef, { ...values, backgroundUrl: finalBackgroundUrl }, { merge: true });
 
         toast({
             title: "Success",
@@ -99,6 +136,8 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
         setIsSubmitting(false);
     }
   };
+  
+  const isSaveDisabled = isSubmitting || isUploading || (imageSource === 'upload' && !fileToUpload);
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !isSubmitting && onOpenChange(o)}>
@@ -200,42 +239,70 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
                     )}
                     />
             </div>
+            
+            <FormItem className="space-y-3">
+                <FormLabel>Background Image</FormLabel>
+                <FormControl>
+                    <RadioGroup value={imageSource} onValueChange={(v) => setImageSource(v as 'url' | 'upload')} className="flex space-x-4">
+                         <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="url" /></FormControl>
+                            <FormLabel className="font-normal">From URL</FormLabel>
+                        </FormItem>
+                         <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="upload" /></FormControl>
+                            <FormLabel className="font-normal">Upload Image</FormLabel>
+                        </FormItem>
+                    </RadioGroup>
+                </FormControl>
+            </FormItem>
 
-            <FormField
-              control={form.control}
-              name="backgroundUrl"
-              render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Background Image URL</FormLabel>
-                  <FormControl>
-                      <Input placeholder="https://images.unsplash.com/..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                  </FormItem>
-              )}
-            />
+
+            {imageSource === 'url' ? (
+                <FormField
+                control={form.control}
+                name="backgroundUrl"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Image URL</FormLabel>
+                    <FormControl>
+                        <Input placeholder="https://images.unsplash.com/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            ) : (
+                 <FormItem>
+                    <FormLabel>Upload File</FormLabel>
+                    <FormControl>
+                        <Input type="file" accept="image/*" onChange={handleFileChange} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
 
             <div>
               <FormLabel>Image Preview</FormLabel>
                 <div className="relative mt-2 h-40 w-full border rounded-lg overflow-hidden bg-muted">
-                  {backgroundUrl ? (
-                      <img src={backgroundUrl} alt="preview" className="object-cover w-full h-full" onError={(e) => (e.currentTarget.style.display = 'none')}/>
+                  {previewUrl ? (
+                      <img src={previewUrl} alt="preview" className="object-cover w-full h-full" onError={(e) => (e.currentTarget.style.display = 'none')}/>
                   ) : (
                       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                        No Image URL Provided
+                        No Image
                       </div>
                   )}
               </div>
             </div>
+            {isUploading && <Progress value={uploadProgress} />}
 
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting || isUploading}>
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
+              <Button type="submit" disabled={isSaveDisabled}>
+                {isSubmitting || isUploading ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
 
@@ -245,5 +312,4 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     </Dialog>
   );
 }
-
     
