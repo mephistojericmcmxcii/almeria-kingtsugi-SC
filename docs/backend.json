@@ -346,6 +346,18 @@
           "type": "number",
           "description": "The discount amount applied to the order."
         },
+        "deliveryFee": {
+          "type": "number",
+          "description": "Optional delivery fee for the order."
+        },
+        "packagingFee": {
+          "type": "number",
+          "description": "Optional packaging fee for the order."
+        },
+        "markupPercentage": {
+          "type": "number",
+          "description": "Optional markup percentage applied to the subtotal."
+        },
         "shippingAddress": {
           "type": "string",
           "description": "The address where the order will be shipped."

@@ -71,6 +71,9 @@ export type Order = {
   updatedAt?: Timestamp;
   cancellationReason?: string;
   discount: number;
+  deliveryFee?: number;
+  packagingFee?: number;
+  markupPercentage?: number;
 };
 
 export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';

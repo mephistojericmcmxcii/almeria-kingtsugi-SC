@@ -45,7 +45,17 @@ interface AuthContextType {
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string) => Promise<boolean>;
-  updateOrderStatus: (order: Order, newStatus: OrderStatus, reason?: string, items?: CartItem[], totalAmount?: number, discount?: number) => Promise<boolean>;
+  updateOrderStatus: (
+    order: Order, 
+    newStatus: OrderStatus, 
+    reason?: string, 
+    items?: CartItem[], 
+    totalAmount?: number, 
+    discount?: number,
+    deliveryFee?: number,
+    packagingFee?: number,
+    markupPercentage?: number
+) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   uploadImage: (file: File, path: string) => Promise<string | null>;
   showCartBadge: boolean;
@@ -685,7 +695,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updateOrderStatus = async (order: Order, newStatus: OrderStatus, reason?: string, items?: CartItem[], totalAmount?: number, discount?: number): Promise<boolean> => {
+    const updateOrderStatus = async (
+        order: Order, 
+        newStatus: OrderStatus, 
+        reason?: string, 
+        items?: CartItem[], 
+        totalAmount?: number, 
+        discount?: number,
+        deliveryFee?: number,
+        packagingFee?: number,
+        markupPercentage?: number
+    ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
         
         try {
@@ -702,6 +722,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 dataToUpdate.items = items;
                 dataToUpdate.totalAmount = totalAmount;
                 dataToUpdate.discount = discount;
+                dataToUpdate.deliveryFee = deliveryFee;
+                dataToUpdate.packagingFee = packagingFee;
+                dataToUpdate.markupPercentage = markupPercentage;
             }
 
 

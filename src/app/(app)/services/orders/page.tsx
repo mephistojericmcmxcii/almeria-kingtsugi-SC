@@ -14,11 +14,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 
 const getStatusBadge = (status: OrderStatus) => {
@@ -66,7 +67,12 @@ export default function AllOrdersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [cancellationReason, setCancellationReason] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
+    
+    // New state for detailed billing
     const [discount, setDiscount] = useState<number>(0);
+    const [deliveryFee, setDeliveryFee] = useState<number>(0);
+    const [packagingFee, setPackagingFee] = useState<number>(0);
+    const [markupPercentage, setMarkupPercentage] = useState<number>(0);
     const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
 
 
@@ -79,6 +85,9 @@ export default function AllOrdersPage() {
             setSelectedStatus(null);
             setCancellationReason('');
             setDiscount(selectedOrder.discount || 0);
+            setDeliveryFee(selectedOrder.deliveryFee || 0);
+            setPackagingFee(selectedOrder.packagingFee || 0);
+            setMarkupPercentage(selectedOrder.markupPercentage || 0);
             const initialPrices = selectedOrder.items.reduce((acc, item) => {
                 acc[item.id] = item.price || 0;
                 return acc;
@@ -113,7 +122,9 @@ export default function AllOrdersPage() {
         }));
         
         const subtotal = updatedItems.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-        const finalTotal = subtotal - discount;
+        const costWithFees = subtotal + deliveryFee + packagingFee;
+        const markedUpTotal = costWithFees * (1 + (markupPercentage / 100));
+        const finalTotal = markedUpTotal - discount;
 
         const success = await updateOrderStatus(
             selectedOrder, 
@@ -121,23 +132,28 @@ export default function AllOrdersPage() {
             cancellationReason || undefined,
             updatedItems,
             finalTotal,
-            discount
+            discount,
+            deliveryFee,
+            packagingFee,
+            markupPercentage
         );
+        
         if (success) {
-            setSelectedOrder(prev => prev ? { 
+            // Optimistically update the state for the modal
+             setSelectedOrder(prev => prev ? { 
                 ...prev, 
                 status: selectedStatus, 
                 cancellationReason: cancellationReason || prev.cancellationReason,
                 items: updatedItems,
                 totalAmount: finalTotal,
-                discount: discount
+                discount,
+                deliveryFee,
+                packagingFee,
+                markupPercentage,
             } : null);
+            setIsModalOpen(false); // Close on success
         }
         setIsUpdating(false);
-        // Maybe close dialog on success
-        if (success) {
-             setIsModalOpen(false);
-        }
     };
     
     const handleViewDetails = (order: Order) => {
@@ -182,8 +198,16 @@ export default function AllOrdersPage() {
         );
     }
 
-    const subtotal = selectedOrder ? selectedOrder.items.reduce((acc, item) => acc + (itemPrices[item.id] || 0) * item.quantity, 0) : 0;
-    const finalTotal = subtotal - discount;
+    const subtotal = selectedOrder ? Object.keys(itemPrices).reduce((acc, itemId) => {
+        const item = selectedOrder.items.find(i => i.id === itemId);
+        return acc + (itemPrices[itemId] || 0) * (item?.quantity || 0);
+    }, 0) : 0;
+    
+    const costWithFees = subtotal + deliveryFee + packagingFee;
+    const markedUpTotal = costWithFees * (1 + markupPercentage / 100);
+    const finalTotal = markedUpTotal - discount;
+    const isPricingEditable = selectedOrder?.status === 'pending-quote';
+
 
     return (
         <>
@@ -268,7 +292,7 @@ export default function AllOrdersPage() {
 
         {selectedOrder && (
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-2xl">
+                <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">Order Details</DialogTitle>
                         <DialogDescription>
@@ -314,7 +338,7 @@ export default function AllOrdersPage() {
                                             className="h-8 w-24"
                                             value={itemPrices[item.id] || 0}
                                             onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
-                                            disabled={isUpdating || selectedOrder.status !== 'pending-quote'}
+                                            disabled={isUpdating || !isPricingEditable}
                                         />
                                     </div>
                                 </div>
@@ -322,18 +346,28 @@ export default function AllOrdersPage() {
                             </div>
                         </div>
                         
-                         <div className="space-y-2 pt-4 border-t">
-                            <div className="flex justify-between items-center">
-                                <Label htmlFor="discount">Discount (₱)</Label>
-                                <Input 
-                                    id="discount"
-                                    type="number"
-                                    className="h-8 w-24"
-                                    value={discount}
-                                    onChange={(e) => setDiscount(Number(e.target.value))}
-                                    disabled={isUpdating || selectedOrder.status !== 'pending-quote'}
-                                />
+                         <div className="space-y-4 pt-4 border-t">
+                            <div className="flex justify-end text-sm">
+                                <div className="w-1/2 space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="deliveryFee">Delivery Fee</Label>
+                                        <Input id="deliveryFee" type="number" className="h-8 w-24" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                    </div>
+                                     <div className="flex justify-between items-center">
+                                        <Label htmlFor="packagingFee">Packaging Fee</Label>
+                                        <Input id="packagingFee" type="number" className="h-8 w-24" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="markupPercentage">Markup (%)</Label>
+                                        <Input id="markupPercentage" type="number" className="h-8 w-24" value={markupPercentage} onChange={(e) => setMarkupPercentage(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="discount">Discount (₱)</Label>
+                                        <Input id="discount" type="number" className="h-8 w-24" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                    </div>
+                                </div>
                             </div>
+                            <Separator />
                             <div className="flex justify-between font-bold text-lg">
                                 <span>Total Amount</span>
                                 <span>{formatCurrency(finalTotal)}</span>

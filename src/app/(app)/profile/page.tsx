@@ -160,8 +160,10 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                     {orders.map(order => {
                         const isQuoteReady = order.status === 'quote-ready';
                         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-                        const finalTotal = order.totalAmount;
-                        
+                        const costWithFees = subtotal + (order.deliveryFee || 0) + (order.packagingFee || 0);
+                        const markedUpTotal = costWithFees * (1 + (order.markupPercentage || 0) / 100);
+                        const finalTotal = markedUpTotal - (order.discount || 0);
+
                         return (
                         <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
                             <AccordionTrigger>
@@ -200,7 +202,25 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                                 <span className="text-muted-foreground">Subtotal</span>
                                                 <span>{formatCurrency(subtotal)}</span>
                                             </div>
-                                            {order.discount > 0 && (
+                                            {(order.deliveryFee || 0) > 0 && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">Delivery Fee</span>
+                                                    <span>{formatCurrency(order.deliveryFee!)}</span>
+                                                </div>
+                                            )}
+                                            {(order.packagingFee || 0) > 0 && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">Packaging Fee</span>
+                                                    <span>{formatCurrency(order.packagingFee!)}</span>
+                                                </div>
+                                            )}
+                                            {(order.markupPercentage || 0) > 0 && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">Markup ({order.markupPercentage}%)</span>
+                                                    <span>{formatCurrency(costWithFees * (order.markupPercentage! / 100))}</span>
+                                                </div>
+                                            )}
+                                            {(order.discount || 0) > 0 && (
                                                 <div className="flex justify-between text-sm text-green-600">
                                                     <span className="text-muted-foreground">Discount</span>
                                                     <span>- {formatCurrency(order.discount)}</span>
