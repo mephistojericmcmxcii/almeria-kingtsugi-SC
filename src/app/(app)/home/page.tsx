@@ -121,6 +121,12 @@ export default function HomePage() {
             </Button>
           </div>
         )}
+         {/* Footer */}
+        <footer className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-black/15 backdrop-blur-sm">
+            <p className="text-center text-xs text-white/60">
+                © {new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.
+            </p>
+        </footer>
       </div>
 
       {user?.role === 'admin' && (
