@@ -144,6 +144,27 @@
       },
       "required": ["title", "heading", "body", "missionHeading", "missionP", "imageUrl"]
     },
+    "HomePageSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HomePageSettings",
+      "type": "object",
+      "description": "Stores the editable content for the Home page, like the background image.",
+      "properties": {
+        "backgroundUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL of the background image to display on the home page."
+        },
+        "welcomeTitle": {
+          "type": "string",
+          "description": "The main title on the home page."
+        }
+      },
+      "required": [
+        "backgroundUrl",
+        "welcomeTitle"
+      ]
+    },
     "InventoryItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "InventoryItem",
@@ -475,7 +496,7 @@
           "params": [
             {
               "name": "settingId",
-              "description": "The unique identifier for the system setting. This can be a specific ID like 'about_page' or 'maintenance_mode'."
+              "description": "The unique identifier for the system setting. This can be a specific ID like 'about_page' or 'maintenance_mode' or 'home_page'."
             }
           ]
         }
