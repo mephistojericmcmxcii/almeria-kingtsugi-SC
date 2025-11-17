@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -185,26 +184,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (user && orders) {
         const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+        
         let hasNewQuoteReady = false;
         let hasNewPurchaseUpdates = false;
-        let hasNewHistoryUpdates = false;
 
         orders.forEach(order => {
-            if (order.userId !== user.id || !order.statusHistory) return;
+            if (order.userId !== user.id) return;
+            const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
+            if (updatedAt <= lastViewed) return;
 
-            const latestUpdate = order.statusHistory[order.statusHistory.length - 1];
-            if (!latestUpdate || latestUpdate.timestamp.toMillis() <= lastViewed) return;
+            const isNew = order.orderDate.toMillis() > lastViewed;
 
-            const newStatus = latestUpdate.status;
-
-            if (newStatus === 'quote-ready') {
+            if (order.status === 'quote-ready') {
                 hasNewQuoteReady = true;
             }
-            if (newStatus === 'confirmed' || newStatus === 'delivering') {
+            if (order.status === 'confirmed' && isNew) {
                 hasNewPurchaseUpdates = true;
             }
-            if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'declined') {
-                hasNewHistoryUpdates = true;
+            if (order.status === 'delivering') {
+                hasNewPurchaseUpdates = true;
+            }
+            if (['completed', 'cancelled', 'declined'].includes(order.status)) {
+                 // Trigger for Order History tab
+                 setShowOrderHistoryBadge(true);
             }
         });
         
@@ -212,10 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setShowQuoteReadyBadge(true);
         }
         if (hasNewPurchaseUpdates) {
-             setShowOrderHistoryBadge(true);
-        }
-        if (hasNewHistoryUpdates) {
-            setShowOrderHistoryBadge(true);
+             setShowOrderHistoryBadge(true); // My Purchases and Order History use the same badge
         }
 
         if (user.role === 'admin') {
