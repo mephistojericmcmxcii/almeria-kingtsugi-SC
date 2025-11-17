@@ -60,14 +60,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div className={cn(
-          "absolute inset-0 flex flex-col overflow-hidden",
-          {
-            'justify-start pt-24': verticalAlign === 'top',
-            'justify-center': verticalAlign === 'center',
-            'justify-end pb-24': verticalAlign === 'bottom',
-          }
-        )}>
+      <div className="relative flex-1 flex flex-col h-full">
         {/* Background Image */}
         {isLoading ? (
           <Skeleton className="absolute inset-0 w-full h-full" />
@@ -82,55 +75,65 @@ export default function HomePage() {
         {/* Overlay */}
         <div className="absolute inset-0 w-full h-full bg-black/50" />
 
-        {/* Content */}
+        {/* Content Area */}
         <div className={cn(
-          "relative z-10 p-8 w-full flex",
-          {
-            'items-start': textAlign === 'left',
-            'items-center justify-center text-center': textAlign === 'center',
-            'items-end justify-end text-right': textAlign === 'right',
-          }
+            "relative z-10 flex-1 flex flex-col p-8",
+            {
+              'justify-start pt-8': verticalAlign === 'top',
+              'justify-center': verticalAlign === 'center',
+              'justify-end pb-8': verticalAlign === 'bottom',
+            }
           )}>
-          <div className="space-y-4 max-w-4xl">
-            {isLoading ? (
-                <Skeleton className="h-16 w-96" />
-            ) : (
-                displayContent.welcomeTitle && (
-                    <h1 className={cn(
-                        "font-bold tracking-tight font-headline text-white drop-shadow-lg",
-                        titleSizeClasses[titleSize] || 'text-7xl'
-                        )}>
-                        {displayContent.welcomeTitle}
-                    </h1>
-                )
-            )}
-            {isLoading ? (
-                <Skeleton className="h-6 w-80" />
-            ) : (
-                displayContent.welcomeSubtitle && (
-                    <p className="text-lg md:text-xl text-white/90 drop-shadow-md">
-                        {displayContent.welcomeSubtitle}
-                    </p>
-                )
-            )}
+          <div className={cn(
+            "w-full flex",
+            {
+              'items-start': textAlign === 'left',
+              'items-center justify-center text-center': textAlign === 'center',
+              'items-end justify-end text-right': textAlign === 'right',
+            }
+            )}>
+            <div className="space-y-4 max-w-4xl">
+              {isLoading ? (
+                  <Skeleton className="h-16 w-96" />
+              ) : (
+                  displayContent.welcomeTitle && (
+                      <h1 className={cn(
+                          "font-bold tracking-tight font-headline text-white drop-shadow-lg",
+                          titleSizeClasses[titleSize] || 'text-7xl'
+                          )}>
+                          {displayContent.welcomeTitle}
+                      </h1>
+                  )
+              )}
+              {isLoading ? (
+                  <Skeleton className="h-6 w-80" />
+              ) : (
+                  displayContent.welcomeSubtitle && (
+                      <p className="text-lg md:text-xl text-white/90 drop-shadow-md">
+                          {displayContent.welcomeSubtitle}
+                      </p>
+                  )
+              )}
+            </div>
           </div>
         </div>
 
         {/* Admin Edit Button */}
         {user?.role === 'admin' && (
-          <div className="absolute top-24 right-8 z-20">
+          <div className="absolute top-4 right-4 z-20">
             <Button variant="secondary" size="icon" onClick={() => setIsEditDialogOpen(true)}>
               <ImageIcon className="h-4 w-4" />
               <span className="sr-only">Edit Home Page</span>
             </Button>
           </div>
         )}
+
          {/* Footer */}
-        <footer className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-black/15 backdrop-blur-sm">
+        <footer className="relative z-10 p-4 bg-black/15 backdrop-blur-sm mt-auto">
             <div className="container mx-auto flex justify-between items-center text-xs text-white/60">
-                <div className="text-left">{displayContent.footerTextLeft}</div>
-                <div className="text-center">{displayContent.footerTextCenter}</div>
-                <div className="text-right">{displayContent.footerTextRight}</div>
+                <div className="text-left flex-1">{displayContent.footerTextLeft}</div>
+                <div className="text-center flex-1">{displayContent.footerTextCenter}</div>
+                <div className="text-right flex-1">{displayContent.footerTextRight}</div>
             </div>
         </footer>
       </div>
@@ -145,5 +148,3 @@ export default function HomePage() {
     </>
   );
 }
-    
-    

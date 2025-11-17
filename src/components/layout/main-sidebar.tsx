@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -47,6 +46,8 @@ const MainSidebar = () => {
   React.useEffect(() => {
     if (pathname.startsWith('/services')) {
       setServicesOpen(true);
+    } else {
+      setServicesOpen(false);
     }
   }, [pathname]);
 
@@ -156,9 +157,6 @@ const MainSidebar = () => {
         
       </SidebarMenu>
       <SidebarFooter>
-        <div className="md:hidden">
-            <UserNav />
-        </div>
         <SidebarMenuButton onClick={logout}>
             <LogOut />
             <span>Logout</span>

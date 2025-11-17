@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import MainSidebar from '@/components/layout/main-sidebar';
 import Header from '@/components/layout/header';
 import { cn } from '@/lib/utils';
@@ -49,15 +49,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <MainSidebar />
-      <SidebarInset>
+      <div className="flex flex-col w-full">
         <Header />
         <main className={cn(
           "flex-1 overflow-y-auto bg-background",
-          isHomePage ? "p-0" : "p-4 pt-20 md:p-8 md:pt-24"
+          isHomePage ? "p-0" : "p-4 md:p-8"
         )}>
             {children}
         </main>
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }

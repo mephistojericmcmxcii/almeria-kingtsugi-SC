@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -15,18 +16,17 @@ const Header = () => {
   };
   
   return (
-    <header className="fixed top-0 left-0 md:left-auto right-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 w-full md:w-[calc(100%_-_var(--sidebar-width))] peer-data-[state=collapsed]:md:w-[calc(100%_-_var(--sidebar-width-icon))] transition-[width] duration-200 ease-linear">
-      <div className="md:hidden">
-        <SidebarTrigger />
-      </div>
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 w-full">
+      <SidebarTrigger className="hidden md:flex" />
       <div className="flex-1">
-        <h1 className="text-lg font-semibold">
+        <h1 className="text-lg font-semibold md:hidden">
             {getGreeting()}, {user?.displayName?.split(' ')[0]}!
         </h1>
       </div>
-      <div className="hidden md:block">
-        <UserNav />
+      <div className="md:hidden">
+         <SidebarTrigger />
       </div>
+      <UserNav />
     </header>
   );
 };
