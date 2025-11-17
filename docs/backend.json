@@ -414,9 +414,9 @@
           "type": "string",
           "description": "The person or department the order is for."
         },
-        "totalAmount": {
-          "type": "number",
-          "description": "The total amount of the purchase order."
+        "source": {
+          "type": "string",
+          "description": "The supplier or source of the purchase order."
         },
         "status": {
           "type": "string",
@@ -424,7 +424,7 @@
           "description": "The current status of the purchase order."
         }
       },
-      "required": ["poNumber", "date", "careOf", "totalAmount", "status"]
+      "required": ["poNumber", "date", "careOf", "status", "source"]
     },
      "PurchaseOrderItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",

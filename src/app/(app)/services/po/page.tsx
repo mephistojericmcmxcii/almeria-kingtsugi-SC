@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, deleteDoc, doc } from 'firebase/firestore';
-import type { PurchaseOrder } from '@/lib/types';
+import { collection, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,15 +31,45 @@ export default function PoPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
+  const [totalAmounts, setTotalAmounts] = useState<Record<string, number | null>>({});
+  const [areTotalsLoading, setAreTotalsLoading] = useState(true);
+
   
   const poCollectionRef = useMemoFirebase(() => collection(firestore, 'purchase_orders'), [firestore]);
-  const { data: purchaseOrders, isLoading } = useCollection<PurchaseOrder>(poCollectionRef);
+  const { data: purchaseOrders, isLoading: arePOsLoading } = useCollection<PurchaseOrder>(poCollectionRef);
+
+  useEffect(() => {
+    if (!purchaseOrders) {
+      setAreTotalsLoading(false);
+      return;
+    }
+    
+    const fetchTotals = async () => {
+      setAreTotalsLoading(true);
+      const totals: Record<string, number> = {};
+      for (const po of purchaseOrders) {
+        const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
+        const itemsSnapshot = await getDocs(itemsCollectionRef);
+        const total = itemsSnapshot.docs.reduce((sum, doc) => {
+          const item = doc.data() as PurchaseOrderItem;
+          return sum + (item.amount || 0);
+        }, 0);
+        totals[po.id] = total;
+      }
+      setTotalAmounts(totals);
+      setAreTotalsLoading(false);
+    };
+
+    fetchTotals();
+  }, [purchaseOrders, firestore]);
+
 
   const filteredPos = useMemo(() => {
     if (!purchaseOrders) return [];
     return purchaseOrders.filter(po => 
       po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.careOf.toLowerCase().includes(searchTerm.toLowerCase())
+      po.careOf.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      po.source.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [purchaseOrders, searchTerm]);
 
@@ -108,7 +138,7 @@ export default function PoPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input 
-                    placeholder="Search by PO # or Care Of..."
+                    placeholder="Search by PO #, Care Of, Source..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10"
@@ -127,17 +157,19 @@ export default function PoPage() {
                   <TableHead>PO #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Care Of</TableHead>
+                  <TableHead>Source / Supplier</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total Amount</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {arePOsLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
@@ -150,8 +182,11 @@ export default function PoPage() {
                       <TableCell className="font-medium">{po.poNumber}</TableCell>
                       <TableCell>{format(po.date.toDate(), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{po.careOf}</TableCell>
+                      <TableCell>{po.source}</TableCell>
                       <TableCell>{getStatusBadge(po.status)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(po.totalAmount)}</TableCell>
+                      <TableCell className="text-right">
+                        {areTotalsLoading || totalAmounts[po.id] === undefined ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id]!)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -175,7 +210,7 @@ export default function PoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No purchase orders found.
                     </TableCell>
                   </TableRow>

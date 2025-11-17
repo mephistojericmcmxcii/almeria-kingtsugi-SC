@@ -101,7 +101,7 @@ export type PurchaseOrder = {
   poNumber: string;
   date: Timestamp;
   careOf: string;
-  totalAmount: number;
+  source: string;
   status: PurchaseOrderStatus;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;

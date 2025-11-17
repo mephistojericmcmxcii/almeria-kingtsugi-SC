@@ -27,10 +27,7 @@ const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
-  totalAmount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().positive('Amount must be positive.')
-  ),
+  source: z.string().min(2, 'Source/Supplier is required.'),
   status: z.enum(PO_STATUSES),
 });
 
@@ -52,7 +49,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
     defaultValues: {
       poNumber: '',
       careOf: '',
-      totalAmount: 0,
+      source: '',
       status: 'Approved',
     },
   });
@@ -64,7 +61,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           poNumber: poToEdit.poNumber,
           date: poToEdit.date.toDate(),
           careOf: poToEdit.careOf,
-          totalAmount: poToEdit.totalAmount,
+          source: poToEdit.source,
           status: poToEdit.status,
         });
       } else {
@@ -72,7 +69,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           poNumber: '',
           date: new Date(),
           careOf: '',
-          totalAmount: 0,
+          source: '',
           status: 'Approved',
         });
       }
@@ -163,10 +160,10 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="totalAmount" render={({ field }) => (
+             <FormField control={form.control} name="source" render={({ field }) => (
               <FormItem>
-                <FormLabel>Total Amount</FormLabel>
-                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                <FormLabel>Source / Supplier</FormLabel>
+                <FormControl><Input placeholder="e.g., National Bookstore" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
