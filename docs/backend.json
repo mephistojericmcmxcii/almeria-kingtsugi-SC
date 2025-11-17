@@ -440,6 +440,14 @@
           "type": "string",
           "description": "The unit of measurement (e.g., 'pcs', 'box', 'ream')."
         },
+        "brand": {
+            "type": "string",
+            "description": "The brand of the item (optional)."
+        },
+        "model": {
+            "type": "string",
+            "description": "The model of the item (optional)."
+        },
         "quantity": {
           "type": "number",
           "description": "The quantity of the item being ordered."

@@ -1,5 +1,4 @@
 
-
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type User = {
@@ -90,6 +89,8 @@ export type PurchaseOrderStatus = 'Approved' | 'Completed' | 'Cancelled';
 export type PurchaseOrderItem = {
   id: string;
   name: string;
+  brand?: string;
+  model?: string;
   unit: string;
   quantity: number;
   amount: number;

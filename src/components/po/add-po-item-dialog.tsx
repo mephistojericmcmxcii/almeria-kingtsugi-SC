@@ -16,6 +16,8 @@ import { Plus, Trash2 } from 'lucide-react';
 
 const poItemSchema = z.object({
   name: z.string().min(1, 'Item name is required.'),
+  brand: z.string().optional(),
+  model: z.string().optional(),
   unit: z.string().min(1, 'Unit is required.'),
   quantity: z.preprocess(
     (a) => parseInt(z.string().parse(a), 10),
@@ -47,7 +49,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ name: '', unit: '', quantity: 1, amount: 0 }],
+      items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }],
     },
   });
 
@@ -58,7 +60,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
 
   useEffect(() => {
     if (!isOpen) {
-      form.reset({ items: [{ name: '', unit: '', quantity: 1, amount: 0 }] });
+      form.reset({ items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }] });
     }
   }, [isOpen, form]);
 
@@ -93,7 +95,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-6xl">
         <DialogHeader>
           <DialogTitle>Add Items to Purchase Order</DialogTitle>
           <DialogDescription>Add one or more line items to this PO.</DialogDescription>
@@ -111,6 +113,32 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                         {index === 0 && <label className="text-sm font-medium">Item Name</label>}
                         <FormControl>
                           <Input placeholder="e.g., Bond Paper" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name={`items.${index}.brand`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        {index === 0 && <label className="text-sm font-medium">Brand (Optional)</label>}
+                        <FormControl>
+                          <Input placeholder="e.g., Pilot" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name={`items.${index}.model`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        {index === 0 && <label className="text-sm font-medium">Model (Optional)</label>}
+                        <FormControl>
+                          <Input placeholder="e.g., G2" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -173,7 +201,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ name: '', unit: '', quantity: 1, amount: 0 })}
+              onClick={() => append({ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 })}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Another Item
