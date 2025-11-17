@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -179,20 +180,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const hasNewUpdates = orders.some(order => {
             if (order.userId !== user.id) return false;
-
-            const orderUpdateTime = order.updatedAt?.toMillis() || 0;
             
-            // Notification for quote ready
-            if (order.status === 'quote-ready' && order.updatedAt && order.updatedAt.toMillis() > lastViewed) {
-                return true;
-            }
-
-            // Notification for delivering
-            if (order.status === 'delivering' && order.updatedAt && order.updatedAt.toMillis() > lastViewed) {
-                return true;
-            }
-
-            return false;
+            const isRelevantStatusChange = order.status === 'quote-ready' || order.status === 'delivering';
+            const isNewUpdate = order.updatedAt && order.updatedAt.toMillis() > lastViewed;
+            
+            return isRelevantStatusChange && isNewUpdate;
         });
 
         if (hasNewUpdates) {
@@ -673,7 +665,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     notes,
                     updatedAt: serverTimestamp(),
                     discount: 0,
-                    statusHistory: [{ status: 'pending-quote', timestamp: serverTimestamp() }],
+                    statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
                 };
                 transaction.set(newOrderRef, newOrder);
 
@@ -867,5 +859,7 @@ export const useAuth = () => {
     
 
 
+
+    
 
     
