@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { LogOut, User as UserIcon } from "lucide-react";
 
 export function UserNav() {
-  const { user, cart, logout, showCartBadge, showOrderHistoryBadge } = useAuth();
+  const { user, cart, logout, showCartBadge, showQuoteReadyBadge, showOrderHistoryBadge } = useAuth();
 
   if (!user) {
     return null;
@@ -34,8 +34,9 @@ export function UserNav() {
   
   const cartItemCount = cart?.length || 0;
   const hasCartNotif = showCartBadge && cartItemCount > 0;
+  const hasQuoteReadyNotif = showQuoteReadyBadge;
   const hasOrderNotif = showOrderHistoryBadge;
-  const hasNotification = hasCartNotif || hasOrderNotif;
+  const hasNotification = hasCartNotif || hasOrderNotif || hasQuoteReadyNotif;
 
   return (
     <DropdownMenu>
@@ -49,7 +50,7 @@ export function UserNav() {
                 <span className="absolute top-0 right-0 flex h-4 w-4">
                   <span className="relative inline-flex rounded-full h-4 w-4 bg-destructive text-destructive-foreground text-xs font-bold items-center justify-center">
                     {hasCartNotif ? cartItemCount : ''}
-                    {hasOrderNotif && !hasCartNotif && (
+                    {(hasOrderNotif || hasQuoteReadyNotif) && !hasCartNotif && (
                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
                     )}
                   </span>

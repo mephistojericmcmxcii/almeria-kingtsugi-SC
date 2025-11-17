@@ -345,7 +345,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
 
 
 export default function ProfilePage() {
-  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge } = useAuth();
+  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showOrderHistoryBadge, dismissUserNotifications } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -382,11 +382,8 @@ export default function ProfilePage() {
   }, [orders]);
   
   const handleTabChange = (value: string) => {
-    if (value === 'quotation') {
-      dismissCartBadge();
-    }
-    if (value === 'purchases' || value === 'orders') {
-        dismissOrderHistoryBadge();
+    if (value === 'quotation' || value === 'purchases' || value === 'orders') {
+        dismissUserNotifications();
     }
   };
 
@@ -425,10 +422,12 @@ export default function ProfilePage() {
            <TabsTrigger value="quotation" className="relative">
             <FileQuestion className="mr-2" />
             My Quotation
-            {showCartBadge && cartItemCount > 0 && (
+            {showCartBadge && cartItemCount > 0 ? (
               <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
                 {cartItemCount}
               </span>
+            ) : showQuoteReadyBadge && (
+               <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
             )}
           </TabsTrigger>
            <TabsTrigger value="purchases" className="relative">
@@ -441,6 +440,9 @@ export default function ProfilePage() {
           <TabsTrigger value="orders">
             <History className="mr-2" />
             Order History
+             {showOrderHistoryBadge && (
+                <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
+             )}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">

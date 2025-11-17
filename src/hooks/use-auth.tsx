@@ -64,9 +64,9 @@ interface AuthContextType {
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   uploadImage: (file: File, path: string) => Promise<string | null>;
   showCartBadge: boolean;
-  dismissCartBadge: () => void;
+  showQuoteReadyBadge: boolean;
   showOrderHistoryBadge: boolean;
-  dismissOrderHistoryBadge: () => void;
+  dismissUserNotifications: () => void;
   showAdminOrderBadge: boolean;
   dismissAdminOrderBadge: () => void;
 }
@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCartBadge, setShowCartBadge] = useState(false);
+  const [showQuoteReadyBadge, setShowQuoteReadyBadge] = useState(false);
   const [showOrderHistoryBadge, setShowOrderHistoryBadge] = useState(false);
   const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
 
@@ -176,70 +177,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
     if (cart && cart.length > 0) {
       setShowCartBadge(true);
+    } else {
+      setShowCartBadge(false);
     }
   }, [cart]);
   
   useEffect(() => {
     if (user && orders) {
-      const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
-      let hasNewPurchaseUpdates = false;
-      let hasNewHistoryUpdates = false;
+        const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+        let hasNewQuoteReady = false;
+        let hasNewPurchaseUpdates = false;
+        let hasNewHistoryUpdates = false;
 
-      orders.forEach(order => {
-        if (order.userId !== user.id || !order.statusHistory) return;
+        orders.forEach(order => {
+            if (order.userId !== user.id || !order.statusHistory) return;
+
+            const latestUpdate = order.statusHistory[order.statusHistory.length - 1];
+            if (!latestUpdate || latestUpdate.timestamp.toMillis() <= lastViewed) return;
+
+            const newStatus = latestUpdate.status;
+
+            if (newStatus === 'quote-ready') {
+                hasNewQuoteReady = true;
+            }
+            if (newStatus === 'confirmed' || newStatus === 'delivering') {
+                hasNewPurchaseUpdates = true;
+            }
+            if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'declined') {
+                hasNewHistoryUpdates = true;
+            }
+        });
         
-        const latestUpdate = order.statusHistory[order.statusHistory.length - 1];
-        if (!latestUpdate || latestUpdate.timestamp.toMillis() <= lastViewed) return;
-
-        const newStatus = latestUpdate.status;
-
-        // "My Purchases" tab notifications
-        if (newStatus === 'confirmed' || newStatus === 'delivering') {
-            hasNewPurchaseUpdates = true;
+        if (hasNewQuoteReady) {
+            setShowQuoteReadyBadge(true);
         }
-        
-        // "Order History" tab notifications
-        if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'declined') {
-            hasNewHistoryUpdates = true;
+        if (hasNewPurchaseUpdates || hasNewHistoryUpdates) {
+            setShowOrderHistoryBadge(true);
         }
 
-        // The "My Quotation" tab handles its own alerts for "quote-ready" implicitly
-      });
-
-      if (hasNewPurchaseUpdates) {
-        setShowOrderHistoryBadge(true);
-      }
-      if (hasNewHistoryUpdates) {
-        setShowOrderHistoryBadge(true); // This single state can control the badge for both tabs if they share one
-      }
-
-
-      // For admin order management badge
-      if (user.role === 'admin') {
-          const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
-          const hasNewAdminUpdates = orders.some(order => 
-              (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
-          );
-          if (hasNewAdminUpdates) {
-              setShowAdminOrderBadge(true);
-          }
-      }
+        if (user.role === 'admin') {
+            const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
+            const hasNewAdminUpdates = orders.some(order => 
+                (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
+            );
+            if (hasNewAdminUpdates) {
+                setShowAdminOrderBadge(true);
+            }
+        }
     }
-  }, [user, orders]);
+}, [user, orders]);
 
 
-  const dismissCartBadge = () => {
-    setShowCartBadge(false);
-  };
-  
-  const dismissOrderHistoryBadge = async () => {
+  const dismissUserNotifications = async () => {
     if (!user) return;
+    setShowQuoteReadyBadge(false);
     setShowOrderHistoryBadge(false);
     try {
         const userRef = doc(firestore, "users", user.id);
         const newTimestamp = serverTimestamp();
         await updateDoc(userRef, { lastViewedOrdersAt: newTimestamp });
-        // Optimistically update local user state
         setUser(prev => prev ? {...prev, lastViewedOrdersAt: Timestamp.now()} : null);
     } catch (error) {
         console.error("Error updating lastViewedOrdersAt:", error);
@@ -883,7 +879,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge, showAdminOrderBadge, dismissAdminOrderBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showOrderHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge };
 
   return (
     <AuthContext.Provider value={value}>
