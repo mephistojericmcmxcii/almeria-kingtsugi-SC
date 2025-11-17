@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collectionGroup } from 'firebase/firestore';
-import type { Order, OrderStatus } from '@/lib/types';
+import type { Order, OrderStatus, CartItem } from '@/lib/types';
 import { format } from 'date-fns';
 
 import { Badge } from '@/components/ui/badge';
@@ -68,12 +68,11 @@ export default function AllOrdersPage() {
     const [cancellationReason, setCancellationReason] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
     
-    // New state for detailed billing
-    const [discount, setDiscount] = useState<number>(0);
+    // State for detailed billing
     const [deliveryFee, setDeliveryFee] = useState<number>(0);
     const [packagingFee, setPackagingFee] = useState<number>(0);
-    const [markupPercentage, setMarkupPercentage] = useState<number>(0);
     const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
+    const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
 
 
     useEffect(() => {
@@ -84,15 +83,20 @@ export default function AllOrdersPage() {
         if (selectedOrder) {
             setSelectedStatus(null);
             setCancellationReason('');
-            setDiscount(selectedOrder.discount || 0);
             setDeliveryFee(selectedOrder.deliveryFee || 0);
             setPackagingFee(selectedOrder.packagingFee || 0);
-            setMarkupPercentage(selectedOrder.markupPercentage || 0);
+
             const initialPrices = selectedOrder.items.reduce((acc, item) => {
                 acc[item.id] = item.price || 0;
                 return acc;
             }, {} as Record<string, number>);
             setItemPrices(initialPrices);
+            
+            const initialDiscounts = selectedOrder.items.reduce((acc, item) => {
+                acc[item.id] = item.discount || 0;
+                return acc;
+            }, {} as Record<string, number>);
+            setItemDiscounts(initialDiscounts);
         }
     }, [selectedOrder]);
 
@@ -103,8 +107,8 @@ export default function AllOrdersPage() {
 
     const { data: orders, isLoading } = useCollection<Order>(allOrdersQuery);
     
-    const handleItemPriceChange = (itemId: string, price: number) => {
-        setItemPrices(prev => ({ ...prev, [itemId]: price }));
+    const handleItemDiscountChange = (itemId: string, discount: number) => {
+        setItemDiscounts(prev => ({ ...prev, [itemId]: discount }));
     };
 
     const handleUpdateStatus = async () => {
@@ -116,15 +120,16 @@ export default function AllOrdersPage() {
         }
 
         setIsUpdating(true);
-        const updatedItems = selectedOrder.items.map(item => ({
+
+        const updatedItems: CartItem[] = selectedOrder.items.map(item => ({
             ...item,
             price: itemPrices[item.id] || item.price || 0,
+            discount: itemDiscounts[item.id] || 0,
         }));
         
         const subtotal = updatedItems.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-        const costWithFees = subtotal + deliveryFee + packagingFee;
-        const markedUpTotal = costWithFees * (1 + (markupPercentage / 100));
-        const finalTotal = markedUpTotal - discount;
+        const totalDiscount = updatedItems.reduce((acc, item) => acc + (item.discount || 0), 0);
+        const finalTotal = subtotal - totalDiscount + deliveryFee + packagingFee;
 
         const success = await updateOrderStatus(
             selectedOrder, 
@@ -132,26 +137,23 @@ export default function AllOrdersPage() {
             cancellationReason || undefined,
             updatedItems,
             finalTotal,
-            discount,
+            totalDiscount,
             deliveryFee,
-            packagingFee,
-            markupPercentage
+            packagingFee
         );
         
         if (success) {
-            // Optimistically update the state for the modal
              setSelectedOrder(prev => prev ? { 
                 ...prev, 
                 status: selectedStatus, 
                 cancellationReason: cancellationReason || prev.cancellationReason,
                 items: updatedItems,
                 totalAmount: finalTotal,
-                discount,
+                discount: totalDiscount,
                 deliveryFee,
                 packagingFee,
-                markupPercentage,
             } : null);
-            setIsModalOpen(false); // Close on success
+            setIsModalOpen(false);
         }
         setIsUpdating(false);
     };
@@ -197,15 +199,22 @@ export default function AllOrdersPage() {
             </div>
         );
     }
-
-    const subtotal = selectedOrder ? Object.keys(itemPrices).reduce((acc, itemId) => {
-        const item = selectedOrder.items.find(i => i.id === itemId);
-        return acc + (itemPrices[itemId] || 0) * (item?.quantity || 0);
-    }, 0) : 0;
     
-    const costWithFees = subtotal + deliveryFee + packagingFee;
-    const markedUpTotal = costWithFees * (1 + markupPercentage / 100);
-    const finalTotal = markedUpTotal - discount;
+    const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
+        if (!selectedOrder) return { subtotal: 0, totalDiscount: 0, finalTotal: 0 };
+        
+        const currentSubtotal = selectedOrder.items.reduce((acc, item) => {
+            const price = itemPrices[item.id] || item.price || 0;
+            return acc + (price * item.quantity);
+        }, 0);
+        
+        const currentTotalDiscount = Object.values(itemDiscounts).reduce((acc, discount) => acc + (discount || 0), 0);
+
+        const currentFinalTotal = currentSubtotal - currentTotalDiscount + deliveryFee + packagingFee;
+        
+        return { subtotal: currentSubtotal, totalDiscount: currentTotalDiscount, finalTotal: currentFinalTotal };
+    }, [selectedOrder, itemPrices, itemDiscounts, deliveryFee, packagingFee]);
+
     const isPricingEditable = selectedOrder?.status === 'pending-quote';
 
 
@@ -292,7 +301,7 @@ export default function AllOrdersPage() {
 
         {selectedOrder && (
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-3xl">
+                <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">Order Details</DialogTitle>
                         <DialogDescription>
@@ -324,47 +333,75 @@ export default function AllOrdersPage() {
                         </div>
                         <div>
                             <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
-                            <div className="space-y-2 rounded-md border p-2">
-                            {selectedOrder.items.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center text-sm">
-                                    <div>
-                                        <p className="font-medium">{item.parentName} ({item.brand})</p>
-                                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs text-muted-foreground">Price: </span>
-                                        <Input 
-                                            type="number" 
-                                            className="h-8 w-24"
-                                            value={itemPrices[item.id] || 0}
-                                            onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
-                                            disabled={isUpdating || !isPricingEditable}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                            </div>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-2/5">Item</TableHead>
+                                        <TableHead className="text-right">Price</TableHead>
+                                        <TableHead className="text-right">Qty</TableHead>
+                                        <TableHead className="text-right">Discount (₱)</TableHead>
+                                        <TableHead className="text-right">Total Price</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {selectedOrder.items.map((item) => {
+                                        const price = itemPrices[item.id] || 0;
+                                        const discount = itemDiscounts[item.id] || 0;
+                                        const totalPrice = (price * item.quantity) - discount;
+
+                                        return (
+                                        <TableRow key={item.id}>
+                                            <TableCell>
+                                                <p className="font-medium">{item.parentName}</p>
+                                                <p className="text-xs text-muted-foreground">{item.brand}</p>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                 <Input 
+                                                    type="number" 
+                                                    className="h-8 w-24 ml-auto text-right"
+                                                    value={price}
+                                                    disabled // Price is non-editable
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-right">{item.quantity}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Input 
+                                                    type="number" 
+                                                    className="h-8 w-24 ml-auto text-right"
+                                                    value={discount}
+                                                    onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
+                                                    disabled={isUpdating || !isPricingEditable}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium">{formatCurrency(totalPrice)}</TableCell>
+                                        </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
                         </div>
                         
                          <div className="space-y-4 pt-4 border-t">
                             <div className="flex justify-end text-sm">
                                 <div className="w-1/2 space-y-2">
-                                    <div className="flex justify-between items-center">
+                                     <div className="flex justify-between items-center">
                                         <Label htmlFor="deliveryFee">Delivery Fee</Label>
-                                        <Input id="deliveryFee" type="number" className="h-8 w-24" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                        <Input id="deliveryFee" type="number" className="h-8 w-24 text-right" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
                                     </div>
                                      <div className="flex justify-between items-center">
                                         <Label htmlFor="packagingFee">Packaging Fee</Label>
-                                        <Input id="packagingFee" type="number" className="h-8 w-24" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                        <Input id="packagingFee" type="number" className="h-8 w-24 text-right" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <Label htmlFor="markupPercentage">Markup (%)</Label>
-                                        <Input id="markupPercentage" type="number" className="h-8 w-24" value={markupPercentage} onChange={(e) => setMarkupPercentage(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                     <div className="flex justify-between items-center font-medium">
+                                        <p>Subtotal</p>
+                                        <p>{formatCurrency(subtotal)}</p>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <Label htmlFor="discount">Discount (₱)</Label>
-                                        <Input id="discount" type="number" className="h-8 w-24" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
-                                    </div>
+                                    {totalDiscount > 0 && (
+                                        <div className="flex justify-between items-center text-green-600">
+                                            <p>Total Discount</p>
+                                            <p>- {formatCurrency(totalDiscount)}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <Separator />

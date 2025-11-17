@@ -53,8 +53,7 @@ interface AuthContextType {
     totalAmount?: number, 
     discount?: number,
     deliveryFee?: number,
-    packagingFee?: number,
-    markupPercentage?: number
+    packagingFee?: number
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   uploadImage: (file: File, path: string) => Promise<string | null>;
@@ -703,8 +702,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         totalAmount?: number, 
         discount?: number,
         deliveryFee?: number,
-        packagingFee?: number,
-        markupPercentage?: number
+        packagingFee?: number
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
         
@@ -724,7 +722,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 dataToUpdate.discount = discount;
                 dataToUpdate.deliveryFee = deliveryFee;
                 dataToUpdate.packagingFee = packagingFee;
-                dataToUpdate.markupPercentage = markupPercentage;
             }
 
 

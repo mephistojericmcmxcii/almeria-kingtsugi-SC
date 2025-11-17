@@ -160,9 +160,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                     {orders.map(order => {
                         const isQuoteReady = order.status === 'quote-ready';
                         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-                        const costWithFees = subtotal + (order.deliveryFee || 0) + (order.packagingFee || 0);
-                        const markedUpTotal = costWithFees * (1 + (order.markupPercentage || 0) / 100);
-                        const finalTotal = markedUpTotal - (order.discount || 0);
+                        const totalItemDiscounts = order.items.reduce((acc, item) => acc + (item.discount || 0), 0);
+                        const finalTotal = subtotal - totalItemDiscounts + (order.deliveryFee || 0) + (order.packagingFee || 0);
 
                         return (
                         <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
@@ -188,9 +187,14 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             <div key={item.id} className="flex justify-between items-center text-sm">
                                                 <div className="flex items-center gap-2">
                                                     <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
-                                                    <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
+                                                    <div>
+                                                        <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
+                                                         {isQuoteReady && item.discount && item.discount > 0 && (
+                                                            <p className="text-xs text-green-600">Discount: -{formatCurrency(item.discount)}</p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {isQuoteReady && <span>{formatCurrency((item.price || 0) * item.quantity)}</span>}
+                                                {isQuoteReady && <span>{formatCurrency((item.price || 0) * item.quantity - (item.discount || 0))}</span>}
                                             </div>
                                         ))}
                                         </div>
@@ -202,6 +206,12 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                                 <span className="text-muted-foreground">Subtotal</span>
                                                 <span>{formatCurrency(subtotal)}</span>
                                             </div>
+                                            {(totalItemDiscounts) > 0 && (
+                                                <div className="flex justify-between text-sm text-green-600">
+                                                    <span className="text-muted-foreground">Total Item Discounts</span>
+                                                    <span>- {formatCurrency(totalItemDiscounts)}</span>
+                                                </div>
+                                            )}
                                             {(order.deliveryFee || 0) > 0 && (
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-muted-foreground">Delivery Fee</span>
@@ -212,18 +222,6 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-muted-foreground">Packaging Fee</span>
                                                     <span>{formatCurrency(order.packagingFee!)}</span>
-                                                </div>
-                                            )}
-                                            {(order.markupPercentage || 0) > 0 && (
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-muted-foreground">Markup ({order.markupPercentage}%)</span>
-                                                    <span>{formatCurrency(costWithFees * (order.markupPercentage! / 100))}</span>
-                                                </div>
-                                            )}
-                                            {(order.discount || 0) > 0 && (
-                                                <div className="flex justify-between text-sm text-green-600">
-                                                    <span className="text-muted-foreground">Discount</span>
-                                                    <span>- {formatCurrency(order.discount)}</span>
                                                 </div>
                                             )}
                                             <Separator />

@@ -51,6 +51,7 @@ export type CartItem = {
   imageUrl?: string;
   imageHint?: string;
   stock?: number;
+  discount?: number; // Per-item discount
 };
 
 export type OrderStatus = 'pending-quote' | 'quote-ready' | 'confirmed' | 'delivering' | 'completed' | 'cancelled' | 'declined';
@@ -70,10 +71,9 @@ export type Order = {
   ref?: DocumentReference; // Available on collection group queries
   updatedAt?: Timestamp;
   cancellationReason?: string;
-  discount: number;
+  discount: number; // Overall order discount, can be sum of item discounts
   deliveryFee?: number;
   packagingFee?: number;
-  markupPercentage?: number;
 };
 
 export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';
