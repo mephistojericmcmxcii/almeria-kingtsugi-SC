@@ -18,6 +18,8 @@ export type HomePageSettings = {
   textAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'center' | 'bottom';
   titleSize?: number;
+  footerText?: string;
+  footerTextAlign?: 'left' | 'center' | 'right';
 };
 
 const defaultContent: HomePageSettings = {
@@ -26,7 +28,9 @@ const defaultContent: HomePageSettings = {
     backgroundUrl: 'https://images.unsplash.com/photo-1549492423-400259a5e5a4?q=80&w=2574&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     textAlign: 'center',
     verticalAlign: 'center',
-    titleSize: 7
+    titleSize: 7,
+    footerText: `© ${new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.`,
+    footerTextAlign: 'center',
 };
 
 const titleSizeClasses: {[key: number]: string} = {
@@ -53,6 +57,8 @@ export default function HomePage() {
   const textAlign = displayContent.textAlign || 'center';
   const verticalAlign = displayContent.verticalAlign || 'center';
   const titleSize = displayContent.titleSize || 7;
+  const footerText = displayContent.footerText ?? defaultContent.footerText;
+  const footerTextAlign = displayContent.footerTextAlign || 'center';
 
   return (
     <>
@@ -123,8 +129,15 @@ export default function HomePage() {
         )}
          {/* Footer */}
         <footer className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-black/15 backdrop-blur-sm">
-            <p className="text-center text-xs text-white/60">
-                © {new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.
+            <p className={cn(
+                "text-xs text-white/60",
+                {
+                    'text-left': footerTextAlign === 'left',
+                    'text-center': footerTextAlign === 'center',
+                    'text-right': footerTextAlign === 'right',
+                }
+            )}>
+                {footerText}
             </p>
         </footer>
       </div>

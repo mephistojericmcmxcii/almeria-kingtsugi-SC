@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -28,6 +29,7 @@ import { useState, useEffect } from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { useAuth } from '@/hooks/use-auth';
+import { Separator } from '../ui/separator';
 
 import type { HomePageSettings } from '@/app/(app)/home/page';
 
@@ -38,6 +40,8 @@ const formSchema = z.object({
   textAlign: z.enum(['left', 'center', 'right']).optional(),
   verticalAlign: z.enum(['top', 'center', 'bottom']).optional(),
   titleSize: z.number().min(4).max(9).optional(),
+  footerText: z.string().optional(),
+  footerTextAlign: z.enum(['left', 'center', 'right']).optional(),
 });
 
 
@@ -59,6 +63,8 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
       textAlign: content.textAlign || 'center',
       verticalAlign: content.verticalAlign || 'center',
       titleSize: content.titleSize || 7,
+      footerText: content.footerText || '',
+      footerTextAlign: content.footerTextAlign || 'center',
     },
   });
   
@@ -74,6 +80,8 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
         textAlign: content.textAlign || 'center',
         verticalAlign: content.verticalAlign || 'center',
         titleSize: content.titleSize || 7,
+        footerText: content.footerText || `© ${new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.`,
+        footerTextAlign: content.footerTextAlign || 'center',
       });
       setPreviewUrl(content.backgroundUrl);
       setImageSource('url');
@@ -142,7 +150,7 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Edit Home Page</DialogTitle>
-          <DialogDescription>Update your home page background and welcome text.</DialogDescription>
+          <DialogDescription>Update your home page background, text, and footer.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -291,6 +299,50 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
                   )}
               </div>
             </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Footer Settings</h3>
+                <FormField name="footerText" control={form.control} render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Footer Text (Optional)</FormLabel>
+                        <FormControl><Input placeholder="e.g. © 2024 My Company" {...field}/></FormControl>
+                        <FormMessage/>
+                    </FormItem>
+                )}/>
+                 <FormField
+                    control={form.control}
+                    name="footerTextAlign"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Footer Text Align</FormLabel>
+                            <FormControl>
+                                <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="flex space-x-2"
+                                >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="left" /></FormControl>
+                                    <FormLabel className="font-normal">Left</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="center" /></FormControl>
+                                    <FormLabel className="font-normal">Center</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="right" /></FormControl>
+                                    <FormLabel className="font-normal">Right</FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+            </div>
+
 
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
