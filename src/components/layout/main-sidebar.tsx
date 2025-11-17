@@ -71,12 +71,6 @@ const MainSidebar = () => {
       adminOnly: false,
     },
     {
-      href: "/profile",
-      label: "Profile",
-      icon: User,
-      adminOnly: false,
-    },
-    {
       href: "/admin",
       label: "Admin",
       icon: Settings,
