@@ -26,14 +26,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Slider } from '@/components/ui/slider';
 
 import type { HomePageSettings } from '@/app/(app)/home/page';
-
 
 const formSchema = z.object({
   welcomeTitle: z.string().optional(),
   welcomeSubtitle: z.string().optional(),
   backgroundUrl: z.string().url({ message: "Please enter a valid URL." }),
+  textAlign: z.enum(['left', 'center', 'right']).optional(),
+  verticalAlign: z.enum(['top', 'center', 'bottom']).optional(),
+  titleSize: z.number().min(4).max(9).optional(),
 });
 
 
@@ -48,10 +52,14 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
       welcomeTitle: content.welcomeTitle || '',
       welcomeSubtitle: content.welcomeSubtitle || '',
       backgroundUrl: content.backgroundUrl || '',
+      textAlign: content.textAlign || 'center',
+      verticalAlign: content.verticalAlign || 'center',
+      titleSize: content.titleSize || 7,
     },
   });
   
   const backgroundUrl = form.watch('backgroundUrl');
+  const titleSize = form.watch('titleSize');
 
   useEffect(() => {
     if (isOpen) {
@@ -59,6 +67,9 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
         welcomeTitle: content.welcomeTitle || '',
         welcomeSubtitle: content.welcomeSubtitle || '',
         backgroundUrl: content.backgroundUrl || '',
+        textAlign: content.textAlign || 'center',
+        verticalAlign: content.verticalAlign || 'center',
+        titleSize: content.titleSize || 7,
       });
     }
   }, [isOpen, content, form]);
@@ -98,7 +109,7 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
             
             <FormField name="welcomeTitle" control={form.control} render={({ field }) => (
             <FormItem><FormLabel>Welcome Title (Optional)</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
@@ -107,6 +118,88 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
             <FormField name="welcomeSubtitle" control={form.control} render={({ field }) => (
             <FormItem><FormLabel>Welcome Subtitle (Optional)</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
             )}/>
+
+             <FormField
+                control={form.control}
+                name="titleSize"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Title Size: {titleSize}</FormLabel>
+                        <FormControl>
+                            <Slider
+                                min={4}
+                                max={9}
+                                step={1}
+                                value={[field.value || 7]}
+                                onValueChange={(vals) => field.onChange(vals[0])}
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+
+            <div className="grid grid-cols-2 gap-6">
+                 <FormField
+                    control={form.control}
+                    name="textAlign"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Horizontal Align</FormLabel>
+                            <FormControl>
+                                <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="flex space-x-2"
+                                >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="left" /></FormControl>
+                                    <FormLabel className="font-normal">Left</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="center" /></FormControl>
+                                    <FormLabel className="font-normal">Center</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="right" /></FormControl>
+                                    <FormLabel className="font-normal">Right</FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                 <FormField
+                    control={form.control}
+                    name="verticalAlign"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Vertical Align</FormLabel>
+                            <FormControl>
+                                <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="flex space-x-2"
+                                >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="top" /></FormControl>
+                                    <FormLabel className="font-normal">Top</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="center" /></FormControl>
+                                    <FormLabel className="font-normal">Center</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="bottom" /></FormControl>
+                                    <FormLabel className="font-normal">Bottom</FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+            </div>
 
             <FormField
               control={form.control}
@@ -152,3 +245,5 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     </Dialog>
   );
 }
+
+    
