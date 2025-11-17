@@ -70,6 +70,7 @@ export type Order = {
   ref?: DocumentReference; // Available on collection group queries
   updatedAt?: Timestamp;
   cancellationReason?: string;
+  discount: number;
 };
 
 export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';

@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -37,7 +38,7 @@ const getInitials = (name?: string) => {
   if (!name) return '';
   const names = name.split(' ');
   if (names.length > 1) {
-    return `${'\'\'\''}{names[0][0]}${'\'\'\''}{names[1][0]}`;
+    return `${names[0][0]}${names[1][0]}`;
   }
   return name.substring(0, 2);
 };
@@ -156,7 +157,12 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
             </CardHeader>
             <CardContent>
                 <Accordion type="single" collapsible className="w-full space-y-4">
-                    {orders.map(order => (
+                    {orders.map(order => {
+                        const isQuoteReady = order.status === 'quote-ready';
+                        const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
+                        const finalTotal = order.totalAmount;
+                        
+                        return (
                         <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
                             <AccordionTrigger>
                                 <div className="flex justify-between w-full items-center">
@@ -166,6 +172,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                         {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                                     </div>
                                     <div className="flex items-center gap-4">
+                                    {isQuoteReady ? <span className="font-bold text-lg text-primary">{formatCurrency(finalTotal)}</span> : null}
                                     {getStatusBadge(order.status)}
                                     </div>
                                 </div>
@@ -181,10 +188,32 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                                     <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
                                                     <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
                                                 </div>
+                                                {isQuoteReady && <span>{formatCurrency((item.price || 0) * item.quantity)}</span>}
                                             </div>
                                         ))}
                                         </div>
                                     </div>
+
+                                    {isQuoteReady && (
+                                        <div className="space-y-2 pt-4 border-t">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Subtotal</span>
+                                                <span>{formatCurrency(subtotal)}</span>
+                                            </div>
+                                            {order.discount > 0 && (
+                                                <div className="flex justify-between text-sm text-green-600">
+                                                    <span className="text-muted-foreground">Discount</span>
+                                                    <span>- {formatCurrency(order.discount)}</span>
+                                                </div>
+                                            )}
+                                            <Separator />
+                                            <div className="flex justify-between font-bold">
+                                                <span>Total</span>
+                                                <span>{formatCurrency(finalTotal)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="pt-2 border-t">
                                         <h4 className="font-semibold mb-1">Shipping Address</h4>
                                         <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
@@ -198,41 +227,31 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                         </Alert>
                                     )}
                                 
-                                    {user?.role === 'admin' && user?.id === order.userId ? ( // Admin viewing their own order
-                                        <div className="flex gap-2 justify-end pt-4">
-                                            {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
-                                                <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                                    <XCircle className="mr-2 h-4 w-4"/>
-                                                    {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
-                                                </Button>
-                                            )}
-                                            {order.status === 'delivering' && (
-                                                <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
-                                                    <CheckCircle className="mr-2 h-4 w-4"/>
-                                                    {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ) : user?.role !== 'admin' ? ( // Non-admin user
-                                        <div className="flex gap-2 justify-end pt-4">
-                                            {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
-                                                <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                                    <XCircle className="mr-2 h-4 w-4"/>
-                                                    {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
-                                                </Button>
-                                            )}
-                                            {order.status === 'delivering' && (
-                                                <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
-                                                    <CheckCircle className="mr-2 h-4 w-4"/>
-                                                    {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ) : null }
+                                    {/* User action buttons */}
+                                    <div className="flex gap-2 justify-end pt-4">
+                                        {isQuoteReady && (
+                                            <Button size="sm" onClick={() => handleUpdateStatus(order, 'confirmed')} disabled={isUpdating === order.id}>
+                                                <CheckCircle className="mr-2 h-4 w-4"/>
+                                                {isUpdating === order.id ? 'Confirming...' : 'Confirm Order'}
+                                            </Button>
+                                        )}
+                                        {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
+                                            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                                <XCircle className="mr-2 h-4 w-4"/>
+                                                {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
+                                            </Button>
+                                        )}
+                                        {order.status === 'delivering' && (
+                                            <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                                                <CheckCircle className="mr-2 h-4 w-4"/>
+                                                {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
-                    ))}
+                    )})}
                 </Accordion>
             </CardContent>
         </Card>
@@ -453,3 +472,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

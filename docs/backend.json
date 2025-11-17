@@ -342,6 +342,10 @@
           "type": "number",
           "description": "The total cost of the order."
         },
+        "discount": {
+          "type": "number",
+          "description": "The discount amount applied to the order."
+        },
         "shippingAddress": {
           "type": "string",
           "description": "The address where the order will be shipped."

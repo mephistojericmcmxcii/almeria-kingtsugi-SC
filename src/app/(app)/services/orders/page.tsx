@@ -18,6 +18,7 @@ import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone } f
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 
 const getStatusBadge = (status: OrderStatus) => {
@@ -65,6 +66,9 @@ export default function AllOrdersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [cancellationReason, setCancellationReason] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
+    const [discount, setDiscount] = useState<number>(0);
+    const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
+
 
     useEffect(() => {
         dismissAdminOrderBadge();
@@ -74,6 +78,12 @@ export default function AllOrdersPage() {
         if (selectedOrder) {
             setSelectedStatus(null);
             setCancellationReason('');
+            setDiscount(selectedOrder.discount || 0);
+            const initialPrices = selectedOrder.items.reduce((acc, item) => {
+                acc[item.id] = item.price || 0;
+                return acc;
+            }, {} as Record<string, number>);
+            setItemPrices(initialPrices);
         }
     }, [selectedOrder]);
 
@@ -83,6 +93,10 @@ export default function AllOrdersPage() {
     }, [firestore, user?.role]);
 
     const { data: orders, isLoading } = useCollection<Order>(allOrdersQuery);
+    
+    const handleItemPriceChange = (itemId: string, price: number) => {
+        setItemPrices(prev => ({ ...prev, [itemId]: price }));
+    };
 
     const handleUpdateStatus = async () => {
         if (!selectedOrder || !selectedStatus) return;
@@ -93,9 +107,31 @@ export default function AllOrdersPage() {
         }
 
         setIsUpdating(true);
-        const success = await updateOrderStatus(selectedOrder, selectedStatus, cancellationReason || undefined);
+        const updatedItems = selectedOrder.items.map(item => ({
+            ...item,
+            price: itemPrices[item.id] || item.price || 0,
+        }));
+        
+        const subtotal = updatedItems.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
+        const finalTotal = subtotal - discount;
+
+        const success = await updateOrderStatus(
+            selectedOrder, 
+            selectedStatus, 
+            cancellationReason || undefined,
+            updatedItems,
+            finalTotal,
+            discount
+        );
         if (success) {
-            setSelectedOrder(prev => prev ? { ...prev, status: selectedStatus, cancellationReason: cancellationReason || prev.cancellationReason } : null);
+            setSelectedOrder(prev => prev ? { 
+                ...prev, 
+                status: selectedStatus, 
+                cancellationReason: cancellationReason || prev.cancellationReason,
+                items: updatedItems,
+                totalAmount: finalTotal,
+                discount: discount
+            } : null);
         }
         setIsUpdating(false);
         // Maybe close dialog on success
@@ -145,6 +181,9 @@ export default function AllOrdersPage() {
             </div>
         );
     }
+
+    const subtotal = selectedOrder ? selectedOrder.items.reduce((acc, item) => acc + (itemPrices[item.id] || 0) * item.quantity, 0) : 0;
+    const finalTotal = subtotal - discount;
 
     return (
         <>
@@ -236,7 +275,7 @@ export default function AllOrdersPage() {
                             Order ID: <span className="font-mono">{selectedOrder.id}</span>
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-4">
+                    <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-2 gap-4">
                              <div>
                                 <h3 className="font-semibold mb-2">Customer</h3>
@@ -261,23 +300,46 @@ export default function AllOrdersPage() {
                         </div>
                         <div>
                             <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
-                            <div className="space-y-2 rounded-md border p-2 max-h-48 overflow-y-auto">
+                            <div className="space-y-2 rounded-md border p-2">
                             {selectedOrder.items.map((item, index) => (
                                 <div key={index} className="flex justify-between items-center text-sm">
                                     <div>
                                         <p className="font-medium">{item.parentName} ({item.brand})</p>
                                         <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                                     </div>
-                                    <span>{formatCurrency((item.price || 0) * item.quantity)}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground">Price: </span>
+                                        <Input 
+                                            type="number" 
+                                            className="h-8 w-24"
+                                            value={itemPrices[item.id] || 0}
+                                            onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
+                                            disabled={isUpdating || selectedOrder.status !== 'pending-quote'}
+                                        />
+                                    </div>
                                 </div>
                             ))}
                             </div>
                         </div>
-
-                         <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
-                            <span>Total Amount</span>
-                            <span>{formatCurrency(selectedOrder.totalAmount)}</span>
+                        
+                         <div className="space-y-2 pt-4 border-t">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="discount">Discount (₱)</Label>
+                                <Input 
+                                    id="discount"
+                                    type="number"
+                                    className="h-8 w-24"
+                                    value={discount}
+                                    onChange={(e) => setDiscount(Number(e.target.value))}
+                                    disabled={isUpdating || selectedOrder.status !== 'pending-quote'}
+                                />
+                            </div>
+                            <div className="flex justify-between font-bold text-lg">
+                                <span>Total Amount</span>
+                                <span>{formatCurrency(finalTotal)}</span>
+                            </div>
                         </div>
+
 
                         {showReasonInput && (
                             <div className="pt-4 border-t">
@@ -324,3 +386,5 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    
