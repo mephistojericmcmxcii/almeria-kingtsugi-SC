@@ -425,6 +425,31 @@
         }
       },
       "required": ["poNumber", "date", "careOf", "totalAmount", "status"]
+    },
+     "PurchaseOrderItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseOrderItem",
+      "type": "object",
+      "description": "Represents a line item within a purchase order.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name or description of the item."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of measurement (e.g., 'pcs', 'box', 'ream')."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the item being ordered."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The total cost for this line item."
+        }
+      },
+      "required": ["name", "unit", "quantity", "amount"]
     }
   },
   "auth": {
@@ -587,6 +612,26 @@
             {
               "name": "poId",
               "description": "The unique identifier for the purchase order."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/purchase_orders/{poId}/items/{itemId}",
+        "definition": {
+          "entityName": "PurchaseOrderItem",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseOrderItem"
+          },
+          "description": "Stores line items for a specific purchase order. Accessible to admins.",
+          "params": [
+            {
+              "name": "poId",
+              "description": "The ID of the parent purchase order."
+            },
+            {
+              "name": "itemId",
+              "description": "The unique ID for the purchase order item."
             }
           ]
         }

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
@@ -19,18 +20,16 @@ import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2 } from "lucide-reac
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AddEditPoDialog } from '@/components/po/add-edit-po-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ViewPoDialog } from '@/components/po/view-po-dialog';
 
 export default function PoPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
-  const [poToView, setPoToView] = useState<PurchaseOrder | null>(null);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
   
   const poCollectionRef = useMemoFirebase(() => collection(firestore, 'purchase_orders'), [firestore]);
@@ -45,8 +44,7 @@ export default function PoPage() {
   }, [purchaseOrders, searchTerm]);
 
   const handleView = (po: PurchaseOrder) => {
-    setPoToView(po);
-    setIsViewDialogOpen(true);
+    router.push(`/services/po/${po.id}`);
   };
   
   const handleAddNew = () => {
@@ -76,9 +74,7 @@ export default function PoPage() {
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
-      case 'Pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
       case 'Approved': return <Badge className="bg-blue-500 text-blue-50">Approved</Badge>;
-      case 'Paid': return <Badge className="bg-purple-500 text-purple-50">Paid</Badge>;
       case 'Completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
       case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
@@ -166,7 +162,7 @@ export default function PoPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                              <DropdownMenuItem onSelect={() => handleView(po)}>
-                              <Eye className="mr-2 h-4 w-4" /> View
+                              <Eye className="mr-2 h-4 w-4" /> View/Add Items
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => setPoToDelete(po)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
@@ -194,14 +190,7 @@ export default function PoPage() {
         onOpenChange={setIsAddDialogOpen}
         poToEdit={poToEdit}
       />
-      {poToView && (
-        <ViewPoDialog 
-            isOpen={isViewDialogOpen}
-            onOpenChange={setIsViewDialogOpen}
-            po={poToView}
-        />
-      )}
-
+     
        <AlertDialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
