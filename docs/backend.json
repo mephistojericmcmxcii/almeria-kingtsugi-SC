@@ -420,7 +420,7 @@
         },
         "status": {
           "type": "string",
-          "enum": ["Pending", "Approved", "Paid", "Completed", "Cancelled"],
+          "enum": ["Approved", "Completed", "Cancelled"],
           "description": "The current status of the purchase order."
         }
       },

@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const PO_STATUSES: PurchaseOrderStatus[] = ['Pending', 'Approved', 'Paid', 'Completed', 'Cancelled'];
+const PO_STATUSES: PurchaseOrderStatus[] = ['Approved', 'Completed', 'Cancelled'];
 
 const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
@@ -53,7 +53,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
       poNumber: '',
       careOf: '',
       totalAmount: 0,
-      status: 'Pending',
+      status: 'Approved',
     },
   });
 
@@ -73,7 +73,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           date: new Date(),
           careOf: '',
           totalAmount: 0,
-          status: 'Pending',
+          status: 'Approved',
         });
       }
     }

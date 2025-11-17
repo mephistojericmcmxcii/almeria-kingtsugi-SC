@@ -84,7 +84,7 @@ export type Order = {
   statusHistory?: StatusHistory[];
 };
 
-export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';
+export type PurchaseOrderStatus = 'Approved' | 'Completed' | 'Cancelled' | 'Pending' | 'Paid';
 
 export type PurchaseOrder = {
   id: string;
