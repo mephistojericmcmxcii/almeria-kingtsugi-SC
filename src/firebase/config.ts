@@ -1,10 +1,10 @@
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyD4JgXXSI2RfjnQ2oasyf9xsDgE6oW8aLU",
-  authDomain: "almeriasdb.firebaseapp.com",
-  projectId: "almeriasdb",
-  storageBucket: "almeriasdb.appspot.com",
-  messagingSenderId: "927407881844",
-  appId: "1:927407881844:web:2912e3362b8c004ba29b21",
-  measurementId: "G-Z7S88MJK95"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
