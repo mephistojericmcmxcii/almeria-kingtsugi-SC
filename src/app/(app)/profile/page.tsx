@@ -265,18 +265,23 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                     {/* User action buttons */}
                                     <div className="flex gap-2 justify-end pt-4">
                                         {order.status === 'quote-ready' && (
-                                            <Button size="sm" onClick={() => setOrderToConfirm(order)} disabled={isUpdating === order.id}>
-                                                <CheckCircle className="mr-2 h-4 w-4"/>
-                                                Confirm Order & Purchase
-                                            </Button>
+                                            <>
+                                                <Button variant="outline" size="sm" onClick={() => { /* Does nothing but close parent */ }}>
+                                                    Close
+                                                </Button>
+                                                <Button size="sm" onClick={() => setOrderToConfirm(order)} disabled={isUpdating === order.id}>
+                                                    <CheckCircle className="mr-2 h-4 w-4"/>
+                                                    Confirm Order & Purchase
+                                                </Button>
+                                            </>
                                         )}
-                                        {(order.status === 'pending-quote') && (
+                                        {order.status === 'pending-quote' && user?.id === order.userId && (
                                             <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
                                                 <XCircle className="mr-2 h-4 w-4"/>
                                                 {isUpdating === order.id ? 'Cancelling...' : 'Cancel Request'}
                                             </Button>
                                         )}
-                                        {order.status === 'delivering' && (
+                                        {order.status === 'delivering' && user?.id === order.userId && (
                                             <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
                                                 <CheckCircle className="mr-2 h-4 w-4"/>
                                                 {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
@@ -515,3 +520,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
