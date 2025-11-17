@@ -56,7 +56,14 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="relative min-h-[calc(100vh-theme(spacing.24))] -m-8 -mt-24 flex items-center justify-center text-center overflow-hidden">
+      <div className={cn(
+          "relative min-h-[calc(100vh-theme(spacing.24))] -m-8 -mt-24 flex flex-col text-center overflow-hidden",
+          {
+            'justify-start pt-24': verticalAlign === 'top',
+            'justify-center': verticalAlign === 'center',
+            'justify-end pb-24': verticalAlign === 'bottom',
+          }
+        )}>
         {/* Background Image */}
         {isLoading ? (
           <Skeleton className="absolute inset-0 w-full h-full" />
@@ -73,14 +80,11 @@ export default function HomePage() {
 
         {/* Content */}
         <div className={cn(
-          "relative z-10 p-8 w-full h-full flex flex-col",
+          "relative z-10 p-8 w-full flex",
           {
-            'justify-start pt-24': verticalAlign === 'top',
-            'justify-center': verticalAlign === 'center',
-            'justify-end pb-24': verticalAlign === 'bottom',
-            'items-start text-left': textAlign === 'left',
-            'items-center text-center': textAlign === 'center',
-            'items-end text-right': textAlign === 'right',
+            'items-start': textAlign === 'left',
+            'items-center justify-center text-center': textAlign === 'center',
+            'items-end justify-end text-right': textAlign === 'right',
           }
           )}>
           <div className="space-y-4 max-w-4xl">
