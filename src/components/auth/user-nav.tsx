@@ -34,9 +34,8 @@ export function UserNav() {
   
   const cartItemCount = cart?.length || 0;
   const hasCartNotif = showCartBadge && cartItemCount > 0;
-  const hasQuoteReadyNotif = showQuoteReadyBadge;
-  const hasOrderNotif = showOrderHistoryBadge;
-  const hasNotification = hasCartNotif || hasOrderNotif || hasQuoteReadyNotif;
+  const hasProfileNotif = showQuoteReadyBadge || showOrderHistoryBadge;
+  const hasNotification = hasCartNotif || hasProfileNotif;
 
   return (
     <DropdownMenu>
@@ -47,13 +46,13 @@ export function UserNav() {
             <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
           </Avatar>
            {hasNotification && (
-                <span className="absolute top-0 right-0 flex h-4 w-4">
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-destructive text-destructive-foreground text-xs font-bold items-center justify-center">
+                <span className="absolute top-0 right-0 flex h-3 w-3">
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive text-destructive-foreground text-xs font-bold items-center justify-center">
                     {hasCartNotif ? cartItemCount : ''}
-                    {(hasOrderNotif || hasQuoteReadyNotif) && !hasCartNotif && (
+                  </span>
+                   {hasProfileNotif && (
                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
                     )}
-                  </span>
                 </span>
            )}
         </Button>
@@ -70,9 +69,15 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/profile">
+            <Link href="/profile" className="relative">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile</span>
+              {hasProfileNotif && (
+                 <span className="absolute right-2 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                 </span>
+              )}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -85,3 +90,5 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+
+    

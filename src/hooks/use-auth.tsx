@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
@@ -72,6 +72,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const usePrevious = <T>(value: T): T | undefined => {
+    const ref = useRef<T>();
+    useEffect(() => {
+        ref.current = value;
+    });
+    return ref.current;
+}
+
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore, storage } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
@@ -113,6 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return collection(firestore, 'users', user.id, 'orders');
   }, [firestore, user]);
   const { data: orders } = useCollection<Order>(ordersQueryRef);
+  const prevOrders = usePrevious(orders);
 
 
   useEffect(() => {
@@ -182,52 +192,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [cart]);
   
   useEffect(() => {
-    if (user && orders) {
-        const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+    if (!orders || !prevOrders || !user) return;
+
+    const prevOrdersMap = new Map(prevOrders.map(o => [o.id, o]));
+
+    let newQuoteReady = false;
+    let newPurchaseOrDelivery = false;
+    let newHistoryItem = false;
+    let newAdminUpdate = false;
+    
+    const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+    const lastViewedAdmin = user.lastViewedAllOrdersAt?.toMillis() || 0;
+
+    for (const order of orders) {
+        // Skip notifications for orders not belonging to the user unless they are admin
+        const isOwnOrder = order.userId === user.id;
+        if (!isOwnOrder && user.role !== 'admin') continue;
+
+        const prevOrder = prevOrdersMap.get(order.id);
+        const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
         
-        let hasNewQuoteReady = false;
-        let hasNewPurchaseUpdates = false;
-
-        orders.forEach(order => {
-            if (order.userId !== user.id) return;
-            const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-            if (updatedAt <= lastViewed) return;
-
-            const isNew = order.orderDate.toMillis() > lastViewed;
-
-            if (order.status === 'quote-ready') {
-                hasNewQuoteReady = true;
-            }
-            if (order.status === 'confirmed' && isNew) {
-                hasNewPurchaseUpdates = true;
-            }
-            if (order.status === 'delivering') {
-                hasNewPurchaseUpdates = true;
-            }
-            if (['completed', 'cancelled', 'declined'].includes(order.status)) {
-                 // Trigger for Order History tab
-                 setShowOrderHistoryBadge(true);
-            }
-        });
-        
-        if (hasNewQuoteReady) {
-            setShowQuoteReadyBadge(true);
-        }
-        if (hasNewPurchaseUpdates) {
-             setShowOrderHistoryBadge(true); // My Purchases and Order History use the same badge
+        // Admin Notifications
+        if (user.role === 'admin' && updatedAt > lastViewedAdmin) {
+            newAdminUpdate = true;
         }
 
-        if (user.role === 'admin') {
-            const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
-            const hasNewAdminUpdates = orders.some(order => 
-                (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
-            );
-            if (hasNewAdminUpdates) {
-                setShowAdminOrderBadge(true);
+        // User specific notifications
+        if (isOwnOrder) {
+            if (prevOrder) {
+                // Status changed on an existing order
+                if (order.status !== prevOrder.status) {
+                    if (order.status === 'quote-ready') newQuoteReady = true;
+                    if (order.status === 'confirmed' || order.status === 'delivering') newPurchaseOrDelivery = true;
+                    if (['completed', 'cancelled', 'declined'].includes(order.status)) newHistoryItem = true;
+                }
+            } else {
+                // New order added since last render
+                if (updatedAt > lastViewed) {
+                     if (order.status === 'pending-quote') {
+                        // This is a new quote request by user, do nothing yet.
+                     } else {
+                        // This case is unlikely but handles if an order appears out of nowhere
+                        if (order.status === 'quote-ready') newQuoteReady = true;
+                        if (order.status === 'confirmed' || order.status === 'delivering') newPurchaseOrDelivery = true;
+                        if (['completed', 'cancelled', 'declined'].includes(order.status)) newHistoryItem = true;
+                     }
+                }
             }
         }
     }
-}, [user, orders]);
+    
+    if (newQuoteReady) setShowQuoteReadyBadge(true);
+    if (newPurchaseOrDelivery || newHistoryItem) setShowOrderHistoryBadge(true);
+    if (newAdminUpdate) setShowAdminOrderBadge(true);
+
+}, [orders, prevOrders, user]);
 
 
   const dismissUserNotifications = async () => {
@@ -897,3 +916,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
