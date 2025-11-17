@@ -39,7 +39,7 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     'pending-quote': ['quote-ready', 'declined'],
     'quote-ready': ['confirmed', 'declined'],
     confirmed: ['delivering', 'declined'],
-    delivering: [],
+    delivering: ['completed'],
     completed: [],
     cancelled: [],
     declined: [],
@@ -56,7 +56,7 @@ const STATUS_DISPLAY_NAMES: Record<OrderStatus, string> = {
 };
 
 
-const REQUIRES_REASON: OrderStatus[] = ['declined'];
+const REQUIRES_REASON: OrderStatus[] = ['declined', 'cancelled'];
 
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
@@ -116,7 +116,7 @@ export default function AllOrdersPage() {
         if (!selectedOrder || !selectedStatus) return;
 
         if (REQUIRES_REASON.includes(selectedStatus) && !cancellationReason.trim()) {
-            alert('A reason is required to decline an order.');
+            alert('A reason is required to decline or cancel an order.');
             return;
         }
 
@@ -139,12 +139,14 @@ export default function AllOrdersPage() {
         const success = await updateOrderStatus(
             selectedOrder, 
             selectedStatus, 
-            cancellationReason || undefined,
-            updatedItems,
-            finalTotal,
-            totalDiscountAmount,
-            deliveryFee,
-            packagingFee
+            {
+              reason: cancellationReason || undefined,
+              items: updatedItems,
+              totalAmount: finalTotal,
+              discount: totalDiscountAmount,
+              deliveryFee,
+              packagingFee
+            }
         );
         
         if (success) {
@@ -423,8 +425,8 @@ export default function AllOrdersPage() {
                                     </div>
                                     {totalDiscount > 0 && (
                                         <div className="flex justify-between items-center text-green-600">
-                                            <p>Total Item Discounts</p>
-                                            <p>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</p>
+                                            <span>Total Item Discounts</span>
+                                            <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
                                         </div>
                                     )}
                                 </div>
@@ -482,7 +484,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    
-
-    
