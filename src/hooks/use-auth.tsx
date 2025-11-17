@@ -175,25 +175,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   useEffect(() => {
     if (user && orders) {
-      // For personal order history badge
-      const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
-      const hasNewUpdates = orders.some(order => 
-          order.userId === user.id && (order.updatedAt?.toMillis() || 0) > lastViewed
-      );
-      if (hasNewUpdates) {
-        setShowOrderHistoryBadge(true);
-      }
+        const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+        
+        const hasNewUpdates = orders.some(order => {
+            if (order.userId !== user.id) return false;
 
-      // For admin order management badge
-      if (user.role === 'admin') {
-          const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
-          const hasNewAdminUpdates = orders.some(order => 
-              (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
-          );
-          if (hasNewAdminUpdates) {
-              setShowAdminOrderBadge(true);
-          }
-      }
+            const orderUpdateTime = order.updatedAt?.toMillis() || 0;
+            
+            // Notification for quote ready
+            const wasPending = order.statusHistory?.find(h => h.status === 'pending-quote');
+            const isNowReady = order.status === 'quote-ready';
+            if (wasPending && isNowReady && orderUpdateTime > lastViewed) {
+                return true;
+            }
+
+            // Notification for delivering
+            const wasConfirmed = order.statusHistory?.find(h => h.status === 'confirmed');
+            const isNowDelivering = order.status === 'delivering';
+            if (wasConfirmed && isNowDelivering && orderUpdateTime > lastViewed) {
+                return true;
+            }
+
+            return false;
+        });
+
+        if (hasNewUpdates) {
+            setShowOrderHistoryBadge(true);
+        }
+
+        // For admin order management badge
+        if (user.role === 'admin') {
+            const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
+            const hasNewAdminUpdates = orders.some(order => 
+                (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
+            );
+            if (hasNewAdminUpdates) {
+                setShowAdminOrderBadge(true);
+            }
+        }
     }
   }, [user, orders]);
 
@@ -658,6 +677,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     notes,
                     updatedAt: serverTimestamp(),
                     discount: 0,
+                    statusHistory: [{ status: 'pending-quote', timestamp: serverTimestamp() }],
                 };
                 transaction.set(newOrderRef, newOrder);
 
@@ -711,6 +731,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const dataToUpdate: any = {
                 status: newStatus,
                 updatedAt: serverTimestamp(),
+                statusHistory: [
+                    ...(order.statusHistory || []),
+                    { status: newStatus, timestamp: serverTimestamp() }
+                ]
             };
 
             if (reason && (newStatus === 'cancelled' || newStatus === 'declined')) {
@@ -845,3 +869,4 @@ export const useAuth = () => {
 };
 
     
+

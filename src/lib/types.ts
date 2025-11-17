@@ -56,6 +56,12 @@ export type CartItem = {
 
 export type OrderStatus = 'pending-quote' | 'quote-ready' | 'confirmed' | 'delivering' | 'completed' | 'cancelled' | 'declined';
 
+export type StatusHistory = {
+  status: OrderStatus;
+  timestamp: Timestamp | any; // 'any' for serverTimestamp
+};
+
+
 export type Order = {
   id: string;
   userId: string;
@@ -75,6 +81,7 @@ export type Order = {
   deliveryFee?: number;
   packagingFee?: number;
   notes?: string;
+  statusHistory?: StatusHistory[];
 };
 
 export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';
@@ -91,3 +98,4 @@ export type PurchaseOrder = {
 };
 
     
+
