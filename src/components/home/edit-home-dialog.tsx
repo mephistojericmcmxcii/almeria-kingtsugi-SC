@@ -44,14 +44,22 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: content,
+    defaultValues: {
+      welcomeTitle: content.welcomeTitle || '',
+      welcomeSubtitle: content.welcomeSubtitle || '',
+      backgroundUrl: content.backgroundUrl || '',
+    },
   });
   
   const backgroundUrl = form.watch('backgroundUrl');
 
   useEffect(() => {
     if (isOpen) {
-      form.reset(content);
+      form.reset({
+        welcomeTitle: content.welcomeTitle || '',
+        welcomeSubtitle: content.welcomeSubtitle || '',
+        backgroundUrl: content.backgroundUrl || '',
+      });
     }
   }, [isOpen, content, form]);
 
