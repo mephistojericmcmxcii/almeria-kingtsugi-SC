@@ -18,8 +18,9 @@ export type HomePageSettings = {
   textAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'center' | 'bottom';
   titleSize?: number;
-  footerText?: string;
-  footerTextAlign?: 'left' | 'center' | 'right';
+  footerTextLeft?: string;
+  footerTextCenter?: string;
+  footerTextRight?: string;
 };
 
 const defaultContent: HomePageSettings = {
@@ -29,8 +30,7 @@ const defaultContent: HomePageSettings = {
     textAlign: 'center',
     verticalAlign: 'center',
     titleSize: 7,
-    footerText: `© ${new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.`,
-    footerTextAlign: 'center',
+    footerTextCenter: `© ${new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.`,
 };
 
 const titleSizeClasses: {[key: number]: string} = {
@@ -57,8 +57,6 @@ export default function HomePage() {
   const textAlign = displayContent.textAlign || 'center';
   const verticalAlign = displayContent.verticalAlign || 'center';
   const titleSize = displayContent.titleSize || 7;
-  const footerText = displayContent.footerText ?? defaultContent.footerText;
-  const footerTextAlign = displayContent.footerTextAlign || 'center';
 
   return (
     <>
@@ -129,16 +127,11 @@ export default function HomePage() {
         )}
          {/* Footer */}
         <footer className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-black/15 backdrop-blur-sm">
-            <p className={cn(
-                "text-xs text-white/60",
-                {
-                    'text-left': footerTextAlign === 'left',
-                    'text-center': footerTextAlign === 'center',
-                    'text-right': footerTextAlign === 'right',
-                }
-            )}>
-                {footerText}
-            </p>
+            <div className="container mx-auto flex justify-between items-center text-xs text-white/60">
+                <div className="text-left">{displayContent.footerTextLeft}</div>
+                <div className="text-center">{displayContent.footerTextCenter}</div>
+                <div className="text-right">{displayContent.footerTextRight}</div>
+            </div>
         </footer>
       </div>
 
@@ -152,4 +145,5 @@ export default function HomePage() {
     </>
   );
 }
+    
     

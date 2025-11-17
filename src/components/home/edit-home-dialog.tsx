@@ -40,8 +40,9 @@ const formSchema = z.object({
   textAlign: z.enum(['left', 'center', 'right']).optional(),
   verticalAlign: z.enum(['top', 'center', 'bottom']).optional(),
   titleSize: z.number().min(4).max(9).optional(),
-  footerText: z.string().optional(),
-  footerTextAlign: z.enum(['left', 'center', 'right']).optional(),
+  footerTextLeft: z.string().optional(),
+  footerTextCenter: z.string().optional(),
+  footerTextRight: z.string().optional(),
 });
 
 
@@ -63,8 +64,9 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
       textAlign: content.textAlign || 'center',
       verticalAlign: content.verticalAlign || 'center',
       titleSize: content.titleSize || 7,
-      footerText: content.footerText || '',
-      footerTextAlign: content.footerTextAlign || 'center',
+      footerTextLeft: content.footerTextLeft || '',
+      footerTextCenter: content.footerTextCenter || '',
+      footerTextRight: content.footerTextRight || '',
     },
   });
   
@@ -80,8 +82,9 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
         textAlign: content.textAlign || 'center',
         verticalAlign: content.verticalAlign || 'center',
         titleSize: content.titleSize || 7,
-        footerText: content.footerText || `© ${new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.`,
-        footerTextAlign: content.footerTextAlign || 'center',
+        footerTextLeft: content.footerTextLeft || '',
+        footerTextCenter: content.footerTextCenter || `© ${new Date().getFullYear()} Kintsugi Variety Shop. All Rights Reserved.`,
+        footerTextRight: content.footerTextRight || '',
       });
       setPreviewUrl(content.backgroundUrl);
       setImageSource('url');
@@ -304,43 +307,27 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
             
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Footer Settings</h3>
-                <FormField name="footerText" control={form.control} render={({ field }) => (
+                <FormField name="footerTextLeft" control={form.control} render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Footer Text (Optional)</FormLabel>
-                        <FormControl><Input placeholder="e.g. © 2024 My Company" {...field}/></FormControl>
+                        <FormLabel>Footer Left Text (Optional)</FormLabel>
+                        <FormControl><Input placeholder="e.g. About Us" {...field}/></FormControl>
                         <FormMessage/>
                     </FormItem>
                 )}/>
-                 <FormField
-                    control={form.control}
-                    name="footerTextAlign"
-                    render={({ field }) => (
-                        <FormItem className="space-y-3">
-                            <FormLabel>Footer Text Align</FormLabel>
-                            <FormControl>
-                                <RadioGroup
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                className="flex space-x-2"
-                                >
-                                <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl><RadioGroupItem value="left" /></FormControl>
-                                    <FormLabel className="font-normal">Left</FormLabel>
-                                </FormItem>
-                                <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl><RadioGroupItem value="center" /></FormControl>
-                                    <FormLabel className="font-normal">Center</FormLabel>
-                                </FormItem>
-                                <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl><RadioGroupItem value="right" /></FormControl>
-                                    <FormLabel className="font-normal">Right</FormLabel>
-                                </FormItem>
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                <FormField name="footerTextCenter" control={form.control} render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Footer Center Text (Optional)</FormLabel>
+                        <FormControl><Input placeholder="e.g. © 2024 Kintsugi" {...field}/></FormControl>
+                        <FormMessage/>
+                    </FormItem>
+                )}/>
+                <FormField name="footerTextRight" control={form.control} render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Footer Right Text (Optional)</FormLabel>
+                        <FormControl><Input placeholder="e.g. Contact" {...field}/></FormControl>
+                        <FormMessage/>
+                    </FormItem>
+                )}/>
             </div>
 
 
@@ -360,3 +347,5 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     </Dialog>
   );
 }
+
+    
