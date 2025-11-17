@@ -4,15 +4,34 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import MainSidebar from '@/components/layout/main-sidebar';
 import Header from '@/components/layout/header';
 import { cn } from '@/lib/utils';
 
+function AppContent({ children }: { children: React.ReactNode }) {
+  const { setOpen } = useSidebar();
+  const pathname = usePathname();
+  const isHomePage = pathname === '/home';
+
+  return (
+    <div className="flex flex-col w-full">
+      <Header />
+      <main 
+        onClick={() => setOpen(false)}
+        className={cn(
+        "flex-1 overflow-y-auto bg-background",
+        isHomePage ? "p-0" : "p-4 md:p-8"
+      )}>
+          {children}
+      </main>
+    </div>
+  )
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     // If the authentication check is complete and there's still no user,
@@ -44,20 +63,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return null;
   }
   
-  const isHomePage = pathname === '/home';
-
   return (
     <SidebarProvider>
       <MainSidebar />
-      <div className="flex flex-col w-full">
-        <Header />
-        <main className={cn(
-          "flex-1 overflow-y-auto bg-background",
-          isHomePage ? "p-0" : "p-4 md:p-8"
-        )}>
-            {children}
-        </main>
-      </div>
+      <AppContent>
+        {children}
+      </AppContent>
     </SidebarProvider>
   );
 }
