@@ -49,12 +49,16 @@ interface AuthContextType {
   updateOrderStatus: (
     order: Order, 
     newStatus: OrderStatus, 
-    reason?: string, 
-    items?: CartItem[], 
-    totalAmount?: number, 
-    discount?: number,
-    deliveryFee?: number,
-    packagingFee?: number
+    details?: {
+      reason?: string,
+      items?: CartItem[], 
+      totalAmount?: number, 
+      discount?: number,
+      deliveryFee?: number,
+      packagingFee?: number
+      shippingAddress?: string;
+      shippingContactNumber?: string;
+    }
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
   uploadImage: (file: File, path: string) => Promise<string | null>;
@@ -176,31 +180,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   useEffect(() => {
     if (user && orders) {
-        const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
-        
-        const hasNewUpdates = orders.some(order => {
-            if (order.userId !== user.id) return false;
-            
-            const isRelevantStatusChange = order.status === 'quote-ready' || order.status === 'delivering';
-            const isNewUpdate = order.updatedAt && order.updatedAt.toMillis() > lastViewed;
-            
-            return isRelevantStatusChange && isNewUpdate;
-        });
+      const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
+      let hasNewUpdates = false;
 
-        if (hasNewUpdates) {
-            setShowOrderHistoryBadge(true);
-        }
+      orders.forEach(order => {
+        if (order.userId !== user.id || !order.statusHistory) return;
 
-        // For admin order management badge
-        if (user.role === 'admin') {
-            const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
-            const hasNewAdminUpdates = orders.some(order => 
-                (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
-            );
-            if (hasNewAdminUpdates) {
-                setShowAdminOrderBadge(true);
-            }
+        const quoteReadyUpdate = order.statusHistory.find(h => h.status === 'quote-ready');
+        const deliveringUpdate = order.statusHistory.find(h => h.status === 'delivering');
+
+        if (quoteReadyUpdate && quoteReadyUpdate.timestamp.toMillis() > lastViewed) {
+          hasNewUpdates = true;
         }
+        if (deliveringUpdate && deliveringUpdate.timestamp.toMillis() > lastViewed) {
+          hasNewUpdates = true;
+        }
+      });
+
+      if (hasNewUpdates) {
+        setShowOrderHistoryBadge(true);
+      }
+
+      // For admin order management badge
+      if (user.role === 'admin') {
+          const lastViewedAll = user.lastViewedAllOrdersAt?.toMillis() || 0;
+          const hasNewAdminUpdates = orders.some(order => 
+              (order.updatedAt?.toMillis() || order.orderDate.toMillis()) > lastViewedAll
+          );
+          if (hasNewAdminUpdates) {
+              setShowAdminOrderBadge(true);
+          }
+      }
     }
   }, [user, orders]);
 
@@ -706,12 +716,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const updateOrderStatus = async (
         order: Order, 
         newStatus: OrderStatus, 
-        reason?: string, 
-        items?: CartItem[], 
-        totalAmount?: number, 
-        discount?: number,
-        deliveryFee?: number,
-        packagingFee?: number
+        details?: {
+          reason?: string,
+          items?: CartItem[], 
+          totalAmount?: number, 
+          discount?: number,
+          deliveryFee?: number,
+          packagingFee?: number,
+          shippingAddress?: string;
+          shippingContactNumber?: string;
+        }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
         
@@ -725,18 +739,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 ]
             };
 
-            if (reason && (newStatus === 'cancelled' || newStatus === 'declined')) {
-                dataToUpdate.cancellationReason = reason;
+            if (details?.reason && (newStatus === 'cancelled' || newStatus === 'declined')) {
+                dataToUpdate.cancellationReason = details.reason;
             }
             
-            if (newStatus === 'quote-ready') {
-                dataToUpdate.items = items;
-                dataToUpdate.totalAmount = totalAmount;
-                dataToUpdate.discount = discount;
-                dataToUpdate.deliveryFee = deliveryFee;
-                dataToUpdate.packagingFee = packagingFee;
+            if (newStatus === 'quote-ready' || newStatus === 'confirmed') {
+                if (details?.items !== undefined) dataToUpdate.items = details.items;
+                if (details?.totalAmount !== undefined) dataToUpdate.totalAmount = details.totalAmount;
+                if (details?.discount !== undefined) dataToUpdate.discount = details.discount;
+                if (details?.deliveryFee !== undefined) dataToUpdate.deliveryFee = details.deliveryFee;
+                if (details?.packagingFee !== undefined) dataToUpdate.packagingFee = details.packagingFee;
+                if (details?.shippingAddress !== undefined) dataToUpdate.shippingAddress = details.shippingAddress;
+                if (details?.shippingContactNumber !== undefined) dataToUpdate.shippingContactNumber = details.shippingContactNumber;
             }
-
 
             if ((newStatus === 'cancelled' || newStatus === 'declined') && order.status !== 'cancelled' && order.status !== 'declined') {
                 await runTransaction(firestore, async (transaction: Transaction) => {
@@ -752,13 +767,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         }
                     }
                 });
+            } else if (newStatus === 'confirmed') {
+                await runTransaction(firestore, async (transaction: Transaction) => {
+                    transaction.update(orderRef, dataToUpdate);
+
+                    // Deduct stock for confirmed items
+                    if (details?.items) {
+                        for (const item of details.items) {
+                            const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                            transaction.update(variantRef, {
+                                quantity: increment(-item.quantity)
+                            });
+                        }
+                    }
+                });
             } else {
                 await updateDoc(orderRef, dataToUpdate);
             }
 
             toast({
                 title: "Order Updated",
-                description: `Order #${'\'\'\''}{order.id.substring(0,8)}... has been marked as ${'\'\'\''}{newStatus}.`,
+                description: `Order #${'\'\'\''}{order.id.substring(0,8)}... has been updated to ${'\'\'\''}{newStatus}.`,
             });
             return true;
         } catch (error: any) {
@@ -855,11 +884,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
-
-
-
-    
-
-    

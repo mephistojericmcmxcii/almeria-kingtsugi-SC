@@ -96,6 +96,3 @@ export type PurchaseOrder = {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
-
-    
-

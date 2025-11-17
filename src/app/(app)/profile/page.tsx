@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { ConfirmOrderDialog } from '@/components/profile/confirm-order-dialog';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -115,6 +116,7 @@ function CartList() {
 function OrderList({ orders, title, description, emptyMessage }: { orders: Order[], title: string, description: string, emptyMessage: React.ReactNode }) {
     const { user, updateOrderStatus } = useAuth();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
+    const [orderToConfirm, setOrderToConfirm] = useState<Order | null>(null);
 
     const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
         setIsUpdating(order.id);
@@ -150,6 +152,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
     }
 
     return (
+        <>
         <Card>
             <CardHeader>
                 <CardTitle>{title}</CardTitle>
@@ -171,7 +174,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                     <div className="flex flex-col text-left">
                                         <span className="font-semibold text-sm font-mono break-all">{order.id}</span>
                                         <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
-                                        {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
+                                        {user?.role === 'admin' && order.userId !== user?.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                                     </div>
                                     <div className="flex items-center gap-4">
                                     {isQuoteReady ? <span className="font-bold text-lg text-primary">{formatCurrency(finalTotal)}</span> : null}
@@ -222,7 +225,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             </div>
                                             {(totalDiscount) > 0 && (
                                                 <div className="flex justify-between text-sm text-green-600">
-                                                    <span className="text-muted-foreground">Total Item Discounts</span>
+                                                    <span>Total Item Discounts</span>
                                                     <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
                                                 </div>
                                             )}
@@ -261,17 +264,11 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                 
                                     {/* User action buttons */}
                                     <div className="flex gap-2 justify-end pt-4">
-                                        {isQuoteReady && (
-                                            <>
-                                            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                                <XCircle className="mr-2 h-4 w-4"/>
-                                                {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
-                                            </Button>
-                                            <Button size="sm" onClick={() => handleUpdateStatus(order, 'confirmed')} disabled={isUpdating === order.id}>
+                                        {order.status === 'quote-ready' && (
+                                            <Button size="sm" onClick={() => setOrderToConfirm(order)} disabled={isUpdating === order.id}>
                                                 <CheckCircle className="mr-2 h-4 w-4"/>
-                                                {isUpdating === order.id ? 'Confirming...' : 'Confirm Order & Purchase'}
+                                                Confirm Order & Purchase
                                             </Button>
-                                            </>
                                         )}
                                         {(order.status === 'pending-quote') && (
                                             <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
@@ -293,6 +290,14 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                 </Accordion>
             </CardContent>
         </Card>
+        {orderToConfirm && (
+            <ConfirmOrderDialog
+                isOpen={!!orderToConfirm}
+                onOpenChange={() => setOrderToConfirm(null)}
+                order={orderToConfirm}
+            />
+        )}
+        </>
     );
 }
 
@@ -510,8 +515,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
-
-    
-
