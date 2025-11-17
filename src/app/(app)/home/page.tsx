@@ -74,12 +74,14 @@ export default function HomePage() {
         {/* Content */}
         <div className={cn(
           "relative z-10 p-8 w-full h-full flex flex-col",
-          verticalAlign === 'top' && 'justify-start pt-24',
-          verticalAlign === 'center' && 'justify-center',
-          verticalAlign === 'bottom' && 'justify-end pb-24',
-          textAlign === 'left' && 'items-start text-left',
-          textAlign === 'center' && 'items-center text-center',
-          textAlign === 'right' && 'items-end text-right',
+          {
+            'justify-start pt-24': verticalAlign === 'top',
+            'justify-center': verticalAlign === 'center',
+            'justify-end pb-24': verticalAlign === 'bottom',
+            'items-start text-left': textAlign === 'left',
+            'items-center text-center': textAlign === 'center',
+            'items-end text-right': textAlign === 'right',
+          }
           )}>
           <div className="space-y-4 max-w-4xl">
             {isLoading ? (
