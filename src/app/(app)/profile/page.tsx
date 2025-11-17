@@ -346,7 +346,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
 
 
 export default function ProfilePage() {
-  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showOrderHistoryBadge, dismissUserNotifications } = useAuth();
+  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -434,14 +434,14 @@ export default function ProfilePage() {
            <TabsTrigger value="purchases" className="relative">
             <Truck className="mr-2" />
             My Purchases
-             {showOrderHistoryBadge && (
+             {showNewPurchaseBadge && (
                 <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
              )}
           </TabsTrigger>
-          <TabsTrigger value="orders">
+          <TabsTrigger value="orders" className="relative">
             <History className="mr-2" />
             Order History
-             {showOrderHistoryBadge && (
+             {showNewHistoryBadge && (
                 <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
              )}
           </TabsTrigger>
@@ -560,13 +560,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
-
-
-    

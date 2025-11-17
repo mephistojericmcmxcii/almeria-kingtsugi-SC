@@ -64,7 +64,8 @@ interface AuthContextType {
   uploadImage: (file: File, path: string) => Promise<string | null>;
   showCartBadge: boolean;
   showQuoteReadyBadge: boolean;
-  showOrderHistoryBadge: boolean;
+  showNewPurchaseBadge: boolean;
+  showNewHistoryBadge: boolean;
   dismissUserNotifications: () => void;
   showAdminOrderBadge: boolean;
   dismissAdminOrderBadge: () => void;
@@ -87,7 +88,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showCartBadge, setShowCartBadge] = useState(false);
   const [showQuoteReadyBadge, setShowQuoteReadyBadge] = useState(false);
-  const [showOrderHistoryBadge, setShowOrderHistoryBadge] = useState(false);
+  const [showNewPurchaseBadge, setShowNewPurchaseBadge] = useState(false);
+  const [showNewHistoryBadge, setShowNewHistoryBadge] = useState(false);
   const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
 
   const router = useRouter();
@@ -195,55 +197,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!orders || !prevOrders || !user) return;
 
     const prevOrdersMap = new Map(prevOrders.map(o => [o.id, o]));
-
-    let newQuoteReady = false;
-    let newPurchaseOrDelivery = false;
-    let newHistoryItem = false;
     let newAdminUpdate = false;
     
-    const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
     const lastViewedAdmin = user.lastViewedAllOrdersAt?.toMillis() || 0;
 
     for (const order of orders) {
-        // Skip notifications for orders not belonging to the user unless they are admin
-        const isOwnOrder = order.userId === user.id;
-        if (!isOwnOrder && user.role !== 'admin') continue;
-
-        const prevOrder = prevOrdersMap.get(order.id);
-        const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-        
         // Admin Notifications
-        if (user.role === 'admin' && updatedAt > lastViewedAdmin) {
-            newAdminUpdate = true;
+        if (user.role === 'admin') {
+            const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
+            if (updatedAt > lastViewedAdmin) {
+                newAdminUpdate = true;
+            }
         }
-
+        
         // User specific notifications
-        if (isOwnOrder) {
-            if (prevOrder) {
-                // Status changed on an existing order
-                if (order.status !== prevOrder.status) {
-                    if (order.status === 'quote-ready') newQuoteReady = true;
-                    if (order.status === 'confirmed' || order.status === 'delivering') newPurchaseOrDelivery = true;
-                    if (['completed', 'cancelled', 'declined'].includes(order.status)) newHistoryItem = true;
-                }
-            } else {
-                // New order added since last render
-                if (updatedAt > lastViewed) {
-                     if (order.status === 'pending-quote') {
-                        // This is a new quote request by user, do nothing yet.
-                     } else {
-                        // This case is unlikely but handles if an order appears out of nowhere
-                        if (order.status === 'quote-ready') newQuoteReady = true;
-                        if (order.status === 'confirmed' || order.status === 'delivering') newPurchaseOrDelivery = true;
-                        if (['completed', 'cancelled', 'declined'].includes(order.status)) newHistoryItem = true;
-                     }
-                }
+        if (order.userId === user.id) {
+            const prevOrder = prevOrdersMap.get(order.id);
+            if (prevOrder && order.status !== prevOrder.status) {
+                 // Status changed on an existing order for the current user
+                 if(order.status === 'quote-ready') {
+                    setShowQuoteReadyBadge(true);
+                 }
+                 if(order.status === 'confirmed' || order.status === 'delivering') {
+                    setShowNewPurchaseBadge(true);
+                 }
+                 if(['completed', 'cancelled', 'declined'].includes(order.status)) {
+                    setShowNewHistoryBadge(true);
+                 }
+            } else if (!prevOrder) {
+                // New order appeared for the current user. Only alert for updates from seller.
+                 if(order.status === 'quote-ready') {
+                    setShowQuoteReadyBadge(true);
+                 }
             }
         }
     }
     
-    if (newQuoteReady) setShowQuoteReadyBadge(true);
-    if (newPurchaseOrDelivery || newHistoryItem) setShowOrderHistoryBadge(true);
     if (newAdminUpdate) setShowAdminOrderBadge(true);
 
 }, [orders, prevOrders, user]);
@@ -252,7 +241,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const dismissUserNotifications = async () => {
     if (!user) return;
     setShowQuoteReadyBadge(false);
-    setShowOrderHistoryBadge(false);
+    setShowNewPurchaseBadge(false);
+    setShowNewHistoryBadge(false);
+    
     try {
         const userRef = doc(firestore, "users", user.id);
         const newTimestamp = serverTimestamp();
@@ -900,7 +891,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showOrderHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge };
 
   return (
     <AuthContext.Provider value={value}>
@@ -916,5 +907,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { LogOut, User as UserIcon } from "lucide-react";
 
 export function UserNav() {
-  const { user, cart, logout, showCartBadge, showQuoteReadyBadge, showOrderHistoryBadge } = useAuth();
+  const { user, cart, logout, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge } = useAuth();
 
   if (!user) {
     return null;
@@ -34,7 +34,7 @@ export function UserNav() {
   
   const cartItemCount = cart?.length || 0;
   const hasCartNotif = showCartBadge && cartItemCount > 0;
-  const hasProfileNotif = showQuoteReadyBadge || showOrderHistoryBadge;
+  const hasProfileNotif = showQuoteReadyBadge || showNewPurchaseBadge || showNewHistoryBadge;
   const hasNotification = hasCartNotif || hasProfileNotif;
 
   return (
@@ -90,5 +90,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-
-    
