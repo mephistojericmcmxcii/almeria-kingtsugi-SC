@@ -31,7 +31,8 @@ import type { HomePageSettings } from '@/app/(app)/home/page';
 
 
 const formSchema = z.object({
-  welcomeTitle: z.string().min(3, 'Title must be at least 3 characters.'),
+  welcomeTitle: z.string().optional(),
+  welcomeSubtitle: z.string().optional(),
   backgroundUrl: z.string().url({ message: "Please enter a valid URL." }),
 });
 
@@ -85,14 +86,18 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Edit Home Page</DialogTitle>
-          <DialogDescription>Update your home page background and welcome title.</DialogDescription>
+          <DialogDescription>Update your home page background and welcome text.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             
             <FormField name="welcomeTitle" control={form.control} render={({ field }) => (
-            <FormItem><FormLabel>Welcome Title</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+            <FormItem><FormLabel>Welcome Title (Optional)</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+            )}/>
+            
+            <FormField name="welcomeSubtitle" control={form.control} render={({ field }) => (
+            <FormItem><FormLabel>Welcome Subtitle (Optional)</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
             )}/>
 
             <FormField
@@ -139,5 +144,3 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     </Dialog>
   );
 }
-
-    
