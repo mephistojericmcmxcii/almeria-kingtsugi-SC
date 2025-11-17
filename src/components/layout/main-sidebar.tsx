@@ -30,6 +30,8 @@ import {
   UserCog,
   UserPlus,
   User,
+  Home,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
@@ -50,9 +52,15 @@ const MainSidebar = () => {
 
   const menuItems = [
     {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
+      href: "/home",
+      label: "Home",
+      icon: Home,
+      adminOnly: false,
+    },
+    {
+      href: "/products",
+      label: "Products",
+      icon: Package,
       adminOnly: false,
     },
      {
@@ -161,5 +169,3 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
-
-    

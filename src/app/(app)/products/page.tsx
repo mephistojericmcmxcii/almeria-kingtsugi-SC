@@ -34,7 +34,7 @@ type CombinedVariant = InventoryVariant & {
 };
 
 
-export default function DashboardPage() {
+export default function ProductsPage() {
   const { firestore } = useFirebase();
   const { addToCart } = useAuth();
   const { toast } = useToast();

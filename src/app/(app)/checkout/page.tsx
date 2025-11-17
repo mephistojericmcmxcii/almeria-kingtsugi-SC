@@ -110,7 +110,7 @@ export default function CheckoutPage() {
                     Looks like you haven't added anything to your cart yet.
                 </p>
                 <Button asChild className="mt-6">
-                    <Link href="/dashboard">Continue Shopping</Link>
+                    <Link href="/products">Continue Shopping</Link>
                 </Button>
             </div>
         )
@@ -283,5 +283,3 @@ export default function CheckoutPage() {
         </div>
     );
 }
-
-    
