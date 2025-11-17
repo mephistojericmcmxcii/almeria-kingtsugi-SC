@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               displayName: userData.displayName,
               email: userData.email,
               role: userIsAdmin ? 'admin' : 'guest',
-              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
               address: userData.address || '',
               contactNumber: userData.contactNumber || '',
               lastViewedOrdersAt: userData.lastViewedOrdersAt,
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     displayName: fbUser.displayName,
                     email: fbUser.email!,
                     role: userIsAdmin ? 'admin' : 'guest',
-                    profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+                    profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
                     address: '',
                     contactNumber: fbUser.phoneNumber || '',
                 };
@@ -315,7 +315,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         displayName: displayName,
         email: fbUser.email!,
         role: 'guest',
-        profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+        profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
         address: '',
         contactNumber: '',
       };
@@ -379,7 +379,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 displayName: fbUser.displayName || 'New User',
                 email: fbUser.email!,
                 role: 'guest',
-                profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+                profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
                 address: '',
                 contactNumber: fbUser.phoneNumber || '',
             };
@@ -417,7 +417,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             displayName: displayName,
             email: email,
             role: "admin",
-            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
+            profileImageUrl: `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
             address: "",
         };
         await setDoc(userRef, adminData);
@@ -427,7 +427,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         toast({
             title: "Admin User Created",
-            description: `${displayName} has been added as an admin.`,
+            description: `${'\'\'\''}{displayName} has been added as an admin.`,
         });
         return true;
     } catch (error: any) {
@@ -455,7 +455,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         toast({
             title: "User Role Updated",
-            description: `The user's role has been changed to ${newRole}. The user must log out and log back in for this change to take effect.`,
+            description: `The user's role has been changed to ${'\'\'\''}{newRole}. The user must log out and log back in for this change to take effect.`,
         });
         return true;
     } catch (error: any) {
@@ -533,7 +533,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const currentQuantityInCart = cartItemDoc.exists() ? cartItemDoc.data().quantity : 0;
                 
                 if (currentQuantityInCart >= variant.quantity) {
-                    toast({ variant: 'destructive', title: 'Stock Limit Reached', description: `You cannot add more of ${variant.parentName} - ${variant.brand}.` });
+                    toast({ variant: 'destructive', title: 'Stock Limit Reached', description: `You cannot add more of ${'\'\'\''}{variant.parentName} - ${'\'\'\''}{variant.brand}.` });
                     return;
                 }
 
@@ -562,7 +562,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             toast({
                 title: "Item Added to Cart",
-                description: `${variant.parentName} - ${variant.brand} has been added to your cart.`,
+                description: `${'\'\'\''}{variant.parentName} - ${'\'\'\''}{variant.brand} has been added to your cart.`,
             });
         } catch (error: any) {
             if (error.message.includes('Stock Limit Reached')) {
@@ -571,7 +571,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             console.error("Error adding to cart:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${user.id}/cart/${variant.id}`,
+                path: `users/${'\'\'\''}{user.id}/cart/${'\'\'\''}{variant.id}`,
                 operation: 'write',
                 requestResourceData: { variantId: variant.id },
             });
@@ -590,7 +590,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             toast({
                 variant: 'destructive',
                 title: 'Stock Limit Reached',
-                description: `Only ${cartItem.stock} units available for ${cartItem.parentName}.`,
+                description: `Only ${'\'\'\''}{cartItem.stock} units available for ${'\'\'\''}{cartItem.parentName}.`,
             });
             return;
         }
@@ -602,7 +602,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
              console.error("Error updating cart quantity:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${user.id}/cart/${cartItem.id}`,
+                path: `users/${'\'\'\''}{user.id}/cart/${'\'\'\''}{cartItem.id}`,
                 operation: 'update',
                 requestResourceData: { quantity: newQuantity },
             });
@@ -622,7 +622,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
             console.error("Error removing cart item:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${user.id}/cart/${cartItemId}`,
+                path: `users/${'\'\'\''}{user.id}/cart/${'\'\'\''}{cartItemId}`,
                 operation: 'delete',
             });
             errorEmitter.emit('permission-error', permissionError);
@@ -678,7 +678,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             if (error.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
-                    path: `users/${user.id}/orders`,
+                    path: `users/${'\'\'\''}{user.id}/orders`,
                     operation: 'write',
                     requestResourceData: { note: "Order placement transaction" }
                 });
@@ -718,7 +718,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             toast({
                 title: "Order Updated",
-                description: `Order #${order.id.substring(0,8)}... has been marked as ${newStatus}.`,
+                description: `Order #${'\'\'\''}{order.id.substring(0,8)}... has been marked as ${'\'\'\''}{newStatus}.`,
             });
             return true;
         } catch (error: any) {
@@ -749,7 +749,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             toast({
                 title: 'PO Status Updated',
-                description: `The purchase order has been marked as ${newStatus}.`,
+                description: `The purchase order has been marked as ${'\'\'\''}{newStatus}.`,
             });
             return true;
         } catch (error: any) {
@@ -774,14 +774,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const uploadImage = (file: File, path: string): Promise<string | null> => {
         return new Promise((resolve, reject) => {
             if (!storage) {
-                toast({ variant: 'destructive', title: 'Storage Error', description: 'Firebase Storage is not configured.' });
-                reject('Storage not configured');
-                return;
+                const err = 'Firebase Storage is not configured.';
+                console.error(err);
+                toast({ variant: 'destructive', title: 'Storage Error', description: err });
+                return reject(err);
             }
             setIsUploading(true);
             setUploadProgress(0);
 
-            const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
+            const storageRef = ref(storage, `${'\'\'\''}{path}/${'\'\'\''}{Date.now()}-${'\'\'\''}{file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
 
             uploadTask.on('state_changed',
@@ -800,7 +801,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         setIsUploading(false);
                         resolve(downloadURL);
                     }).catch(error => {
-                         console.error("Failed to get download URL:", error);
+                        console.error("Failed to get download URL:", error);
                         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not get the image URL after upload.' });
                         setIsUploading(false);
                         reject(error);
