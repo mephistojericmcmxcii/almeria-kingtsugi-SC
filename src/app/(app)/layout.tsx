@@ -2,15 +2,17 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MainSidebar from '@/components/layout/main-sidebar';
 import Header from '@/components/layout/header';
+import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     // If the authentication check is complete and there's still no user,
@@ -41,13 +43,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) {
       return null;
   }
+  
+  const isHomePage = pathname === '/home';
 
   return (
     <SidebarProvider>
       <MainSidebar />
       <SidebarInset>
         <Header />
-        <main className="flex-1 overflow-y-auto bg-background p-4 pt-20 md:p-8 md:pt-24">
+        <main className={cn(
+          "flex-1 overflow-y-auto bg-background",
+          isHomePage ? "p-0" : "p-4 pt-20 md:p-8 md:pt-24"
+        )}>
             {children}
         </main>
       </SidebarInset>

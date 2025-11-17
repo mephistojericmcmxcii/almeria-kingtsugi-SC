@@ -57,7 +57,7 @@ export default function HomePage() {
   return (
     <>
       <div className={cn(
-          "relative min-h-[calc(100vh-theme(spacing.24))] -m-8 -mt-24 flex flex-col text-center overflow-hidden",
+          "absolute inset-0 flex flex-col overflow-hidden",
           {
             'justify-start pt-24': verticalAlign === 'top',
             'justify-center': verticalAlign === 'center',
