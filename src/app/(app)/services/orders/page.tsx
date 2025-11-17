@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -85,8 +86,8 @@ export default function AllOrdersPage() {
         if (!firestore || user?.role !== 'admin') {
             setIsLoading(false);
             return;
-        };
-        setIsLoading(true);
+        }
+        // No need to set isLoading(true) here as it's set initially.
         try {
             const allOrdersQuery = collectionGroup(firestore, 'orders');
             const snapshot = await getDocs(allOrdersQuery);
@@ -103,9 +104,14 @@ export default function AllOrdersPage() {
             setIsLoading(false);
         }
       }
-      fetchOrders();
-      dismissAdminOrderBadge();
-    }, [firestore, user?.role, toast, dismissAdminOrderBadge]);
+
+      if (user) { // Only fetch orders once the user object is available
+        fetchOrders();
+        dismissAdminOrderBadge();
+      } else if (user === null) { // User is loaded but not an admin or not logged in
+        setIsLoading(false);
+      }
+    }, [firestore, user, toast, dismissAdminOrderBadge]);
 
     
     useEffect(() => {
@@ -220,7 +226,7 @@ export default function AllOrdersPage() {
     }, [orders, searchTerm]);
 
 
-    if (user?.role !== 'admin') {
+    if (user?.role !== 'admin' && !isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center">
                  <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
@@ -283,7 +289,7 @@ export default function AllOrdersPage() {
                                 />
                             </div>
                         </div>
-                         <CardDescription>{filteredOrders.length} order(s) found.</CardDescription>
+                         <CardDescription>{isLoading ? "Loading orders..." : `${filteredOrders.length} order(s) found.`}</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent>
