@@ -211,7 +211,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (hasNewQuoteReady) {
             setShowQuoteReadyBadge(true);
         }
-        if (hasNewPurchaseUpdates || hasNewHistoryUpdates) {
+        if (hasNewPurchaseUpdates) {
+             setShowOrderHistoryBadge(true);
+        }
+        if (hasNewHistoryUpdates) {
             setShowOrderHistoryBadge(true);
         }
 
