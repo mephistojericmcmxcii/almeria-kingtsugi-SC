@@ -10,7 +10,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -182,29 +182,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (user && orders) {
       const lastViewed = user.lastViewedOrdersAt?.toMillis() || 0;
-      let hasNewUpdates = false;
+      let hasNewPurchaseUpdates = false;
+      let hasNewHistoryUpdates = false;
 
       orders.forEach(order => {
         if (order.userId !== user.id || !order.statusHistory) return;
+        
+        const latestUpdate = order.statusHistory[order.statusHistory.length - 1];
+        if (!latestUpdate || latestUpdate.timestamp.toMillis() <= lastViewed) return;
 
-        const quoteReadyUpdate = order.statusHistory.find(h => h.status === 'quote-ready');
-        const deliveringUpdate = order.statusHistory.find(h => h.status === 'delivering');
-        const confirmedUpdate = order.statusHistory.find(h => h.status === 'confirmed');
+        const newStatus = latestUpdate.status;
 
-        if (quoteReadyUpdate && quoteReadyUpdate.timestamp.toMillis() > lastViewed) {
-          hasNewUpdates = true;
+        // "My Purchases" tab notifications
+        if (newStatus === 'confirmed' || newStatus === 'delivering') {
+            hasNewPurchaseUpdates = true;
         }
-        if (deliveringUpdate && deliveringUpdate.timestamp.toMillis() > lastViewed) {
-          hasNewUpdates = true;
+        
+        // "Order History" tab notifications
+        if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'declined') {
+            hasNewHistoryUpdates = true;
         }
-        if (confirmedUpdate && confirmedUpdate.timestamp.toMillis() > lastViewed) {
-          hasNewUpdates = true;
-        }
+
+        // The "My Quotation" tab handles its own alerts for "quote-ready" implicitly
       });
 
-      if (hasNewUpdates) {
+      if (hasNewPurchaseUpdates) {
         setShowOrderHistoryBadge(true);
       }
+      if (hasNewHistoryUpdates) {
+        setShowOrderHistoryBadge(true); // This single state can control the badge for both tabs if they share one
+      }
+
 
       // For admin order management badge
       if (user.role === 'admin') {
