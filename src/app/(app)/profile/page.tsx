@@ -55,11 +55,6 @@ function CartList() {
         return <div className="text-center py-12 text-muted-foreground">Loading your quotation...</div>;
     }
     
-    const totalCartPrice = useMemo(() => {
-        if (!cartItems) return 0;
-        return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
-    }, [cartItems]);
-
     if (!cartItems || cartItems.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">
@@ -92,8 +87,6 @@ function CartList() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="font-semibold">{formatCurrency((item.price || 0) * item.quantity)}</p>
-                            <p className="text-sm text-muted-foreground">({formatCurrency(item.price || 0)} each)</p>
                              <Button size="icon" variant="ghost" className="h-8 w-8 mt-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeCartItem(item.id)}>
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -102,10 +95,12 @@ function CartList() {
                     )
                 })}
             </div>
-             <div className="flex justify-end items-center pt-4 font-semibold text-lg border-t">
-                <span>Total:</span>
-                <span className="ml-4">{formatCurrency(totalCartPrice)}</span>
-            </div>
+             <Alert>
+                <AlertTitle className="font-semibold">Price on Request</AlertTitle>
+                <AlertDescription>
+                    Prices will be provided in the official quotation sent to your email.
+                </AlertDescription>
+            </Alert>
              <CardFooter className="flex justify-end p-0 pt-6">
                 <Button onClick={() => router.push('/checkout')} disabled={!cartItems || cartItems.length === 0}>Request Quotation</Button>
             </CardFooter>
@@ -187,7 +182,6 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                                 {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
                             </div>
                             <div className="flex items-center gap-4">
-                               <span className="font-semibold text-lg">{formatCurrency(order.totalAmount)}</span>
                                {getStatusBadge(order.status)}
                             </div>
                         </div>
@@ -203,7 +197,6 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                                             <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
                                             <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
                                         </div>
-                                        <span>{formatCurrency((item.price || 0) * item.quantity)}</span>
                                     </div>
                                 ))}
                                 </div>
@@ -434,7 +427,7 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>My Quotation</CardTitle>
-              <CardDescription>Items you have added to your quotation list.</CardDescription>
+              <CardDescription>Items you have added for quotation.</CardDescription>
             </CardHeader>
             <CardContent>
                <CartList />
