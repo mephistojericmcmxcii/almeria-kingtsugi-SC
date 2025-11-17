@@ -87,7 +87,7 @@ const MainSidebar = () => {
     { href: '/services/inventory', label: 'Inventory', icon: Boxes, notification: false },
     { href: '/services/orders', label: 'Orders', icon: ShoppingCart, notification: showAdminOrderBadge },
     { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, notification: false },
-    { href: '/services/po', label: 'PO', icon: FileText, notification: false },
+    { href: '/services/po', label: 'Purchase Order', icon: FileText, notification: false },
   ];
 
   const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
