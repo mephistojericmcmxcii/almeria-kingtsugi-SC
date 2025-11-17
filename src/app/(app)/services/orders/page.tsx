@@ -129,6 +129,10 @@ export default function AllOrdersPage() {
         }
     }, [selectedOrder]);
 
+    const handleItemPriceChange = (itemId: string, price: number) => {
+        setItemPrices(prev => ({ ...prev, [itemId]: price }));
+    };
+
     const handleItemDiscountChange = (itemId: string, discount: number) => {
         setItemDiscounts(prev => ({ ...prev, [itemId]: discount }));
     };
@@ -404,9 +408,12 @@ export default function AllOrdersPage() {
                                             <TableCell className="text-right">
                                                  <Input 
                                                     type="number" 
-                                                    className="h-8 w-24 ml-auto text-right bg-muted"
+                                                    className="h-8 w-24 ml-auto text-right"
                                                     value={price}
-                                                    readOnly
+                                                    onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
+                                                    onWheel={handleNumberInputOnWheel}
+                                                    onFocus={(e) => e.target.select()}
+                                                    disabled={isUpdating || !isPricingEditable}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-right">{item.quantity}</TableCell>
@@ -505,5 +512,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    

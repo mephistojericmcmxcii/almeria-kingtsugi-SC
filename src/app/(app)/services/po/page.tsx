@@ -57,7 +57,7 @@ export default function PoPage() {
   }, [firestore, toast]);
   
   useEffect(() => {
-    if (!purchaseOrders) {
+    if (!purchaseOrders || purchaseOrders.length === 0) {
       setAreTotalsLoading(false);
       return;
     }
@@ -264,5 +264,3 @@ export default function PoPage() {
     </>
   );
 }
-
-    
