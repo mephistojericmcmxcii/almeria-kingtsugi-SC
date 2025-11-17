@@ -183,16 +183,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const orderUpdateTime = order.updatedAt?.toMillis() || 0;
             
             // Notification for quote ready
-            const wasPending = order.statusHistory?.find(h => h.status === 'pending-quote');
-            const isNowReady = order.status === 'quote-ready';
-            if (wasPending && isNowReady && orderUpdateTime > lastViewed) {
+            if (order.status === 'quote-ready' && order.updatedAt && order.updatedAt.toMillis() > lastViewed) {
                 return true;
             }
 
             // Notification for delivering
-            const wasConfirmed = order.statusHistory?.find(h => h.status === 'confirmed');
-            const isNowDelivering = order.status === 'delivering';
-            if (wasConfirmed && isNowDelivering && orderUpdateTime > lastViewed) {
+            if (order.status === 'delivering' && order.updatedAt && order.updatedAt.toMillis() > lastViewed) {
                 return true;
             }
 
@@ -733,7 +729,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 updatedAt: serverTimestamp(),
                 statusHistory: [
                     ...(order.statusHistory || []),
-                    { status: newStatus, timestamp: serverTimestamp() }
+                    { status: newStatus, timestamp: Timestamp.now() }
                 ]
             };
 
@@ -870,3 +866,6 @@ export const useAuth = () => {
 
     
 
+
+
+    
