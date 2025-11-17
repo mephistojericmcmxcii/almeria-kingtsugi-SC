@@ -229,48 +229,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [cart]);
   
   useEffect(() => {
-    if (!orders || !prevOrders || !user) return;
+    if (!orders || !user) return;
 
-    const prevOrdersMap = new Map(prevOrders.map(o => [o.id, o]));
-    let newAdminUpdate = false;
-    
+    let hasNewQuoteReady = false;
+    let hasNewPurchase = false;
+    let hasNewHistory = false;
+    let hasNewAdminUpdate = false;
+
+    const lastViewedUser = user.lastViewedOrdersAt?.toMillis() || 0;
     const lastViewedAdmin = user.lastViewedAllOrdersAt?.toMillis() || 0;
 
     for (const order of orders) {
-        // Admin Notifications
-        if (user.role === 'admin') {
-            const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-            if (updatedAt > lastViewedAdmin) {
-                newAdminUpdate = true;
-            }
+      const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
+      
+      // Admin Notifications
+      if (user.role === 'admin' && updatedAt > lastViewedAdmin) {
+        hasNewAdminUpdate = true;
+      }
+      
+      // User-specific notifications
+      if (order.userId === user.id && updatedAt > lastViewedUser) {
+        if (order.status === 'quote-ready') {
+          hasNewQuoteReady = true;
+        } else if (['confirmed', 'delivering'].includes(order.status)) {
+          hasNewPurchase = true;
+        } else if (['completed', 'cancelled', 'declined'].includes(order.status)) {
+          hasNewHistory = true;
         }
-        
-        // User specific notifications
-        if (order.userId === user.id) {
-            const prevOrder = prevOrdersMap.get(order.id);
-            if (prevOrder && order.status !== prevOrder.status) {
-                 // Status changed on an existing order for the current user
-                 if(order.status === 'quote-ready') {
-                    setShowQuoteReadyBadge(true);
-                 }
-                 if(order.status === 'confirmed' || order.status === 'delivering') {
-                    setShowNewPurchaseBadge(true);
-                 }
-                 if(['completed', 'cancelled', 'declined'].includes(order.status)) {
-                    setShowNewHistoryBadge(true);
-                 }
-            } else if (!prevOrder) {
-                // New order appeared for the current user. Only alert for updates from seller.
-                 if(order.status === 'quote-ready') {
-                    setShowQuoteReadyBadge(true);
-                 }
-            }
-        }
+      }
     }
     
-    if (newAdminUpdate) setShowAdminOrderBadge(true);
+    setShowQuoteReadyBadge(hasNewQuoteReady);
+    setShowNewPurchaseBadge(hasNewPurchase);
+    setShowNewHistoryBadge(hasNewHistory);
+    setShowAdminOrderBadge(hasNewAdminUpdate);
 
-}, [orders, prevOrders, user]);
+  }, [orders, user]);
 
 
   const dismissUserNotifications = async () => {
@@ -953,3 +947,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
