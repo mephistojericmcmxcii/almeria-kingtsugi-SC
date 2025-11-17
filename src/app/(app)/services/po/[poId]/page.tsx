@@ -93,7 +93,8 @@ export default function PoDetailsPage() {
                                 <TableHead>Model</TableHead>
                                 <TableHead>Unit</TableHead>
                                 <TableHead className="text-right">Quantity</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
+                                <TableHead className="text-right">Amount (per Unit)</TableHead>
+                                <TableHead className="text-right">Total Amount</TableHead>
                                 {user?.role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
@@ -107,6 +108,7 @@ export default function PoDetailsPage() {
                                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                                         {user?.role === 'admin' && <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>}
                                     </TableRow>
                                 ))
@@ -118,7 +120,8 @@ export default function PoDetailsPage() {
                                         <TableCell className="text-muted-foreground">{item.model || 'N/A'}</TableCell>
                                         <TableCell><Badge variant="secondary">{item.unit}</Badge></TableCell>
                                         <TableCell className="text-right">{item.quantity}</TableCell>
-                                        <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
+                                        <TableCell className="text-right font-medium">{formatCurrency(item.amount * item.quantity)}</TableCell>
                                         {user?.role === 'admin' && (
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setItemToDelete(item)}>
@@ -131,7 +134,7 @@ export default function PoDetailsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">
+                                    <TableCell colSpan={8} className="h-24 text-center">
                                         No items have been added to this purchase order yet.
                                     </TableCell>
                                 </TableRow>
@@ -166,3 +169,5 @@ export default function PoDetailsPage() {
         </div>
     );
 }
+
+    

@@ -52,7 +52,7 @@ export default function PoPage() {
         const itemsSnapshot = await getDocs(itemsCollectionRef);
         const total = itemsSnapshot.docs.reduce((sum, doc) => {
           const item = doc.data() as PurchaseOrderItem;
-          return sum + (item.amount || 0);
+          return sum + ((item.amount || 0) * (item.quantity || 0));
         }, 0);
         totals[po.id] = total;
       }
@@ -245,3 +245,5 @@ export default function PoPage() {
     </>
   );
 }
+
+    

@@ -93,7 +93,7 @@ export type PurchaseOrderItem = {
   model?: string;
   unit: string;
   quantity: number;
-  amount: number;
+  amount: number; // This is the amount per unit
 }
 
 export type PurchaseOrder = {
@@ -106,3 +106,5 @@ export type PurchaseOrder = {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
+
+    

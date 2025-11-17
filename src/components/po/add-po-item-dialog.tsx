@@ -175,7 +175,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                     name={`items.${index}.amount`}
                     render={({ field }) => (
                       <FormItem className="w-28">
-                        {index === 0 && <label className="text-sm font-medium">Amount</label>}
+                        {index === 0 && <label className="text-sm font-medium">Amount (per unit)</label>}
                         <FormControl>
                           <Input type="number" step="0.01" {...field} />
                         </FormControl>
@@ -220,3 +220,5 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
     </Dialog>
   );
 }
+
+    
