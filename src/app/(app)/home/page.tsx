@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, Pencil } from 'lucide-react';
 import { EditHomeDialog } from '@/components/home/edit-home-dialog';
@@ -43,14 +43,33 @@ const titleSizeClasses: {[key: number]: string} = {
 }
 
 export default function HomePage() {
-  const { user, firestore } = useAuth();
+  const { user } = useAuth();
+  const { firestore } = useFirebase();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [content, setContent] = useState<HomePageSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const homeContentRef = useMemoFirebase(
-      () => (firestore ? doc(firestore, 'system_settings', 'home_page') : null),
-      [firestore]
-  );
-  const { data: content, isLoading } = useDoc<HomePageSettings>(homeContentRef);
+  useEffect(() => {
+      const fetchContent = async () => {
+          if (!firestore) return;
+          setIsLoading(true);
+          try {
+              const homeContentRef = doc(firestore, 'system_settings', 'home_page');
+              const docSnap = await getDoc(homeContentRef);
+              if (docSnap.exists()) {
+                  setContent(docSnap.data() as HomePageSettings);
+              } else {
+                  setContent(defaultContent);
+              }
+          } catch (error) {
+              console.error("Error fetching home page settings:", error);
+              setContent(defaultContent);
+          } finally {
+              setIsLoading(false);
+          }
+      };
+      fetchContent();
+  }, [firestore]);
   
   const displayContent = content || defaultContent;
   
@@ -138,11 +157,11 @@ export default function HomePage() {
         </footer>
       </div>
 
-      {user?.role === 'admin' && (
+      {user?.role === 'admin' && content && (
           <EditHomeDialog 
               isOpen={isEditDialogOpen}
               onOpenChange={setIsEditDialogOpen}
-              content={displayContent}
+              content={content}
           />
       )}
     </>

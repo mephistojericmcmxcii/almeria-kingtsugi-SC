@@ -3,17 +3,16 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useCollection, useMemoFirebase, errorEmitter } from '@/firebase';
+import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useDoc } from '@/firebase/firestore/use-doc';
 
 interface ProfileUpdateData {
     displayName: string;
@@ -69,6 +68,7 @@ interface AuthContextType {
   dismissUserNotifications: () => void;
   showAdminOrderBadge: boolean;
   dismissAdminOrderBadge: () => void;
+  fetchOrders: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,6 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore, storage } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [cart, setCart] = useState<CartItem[] | null>(null);
+  const [orders, setOrders] = useState<Order[] | null>(null);
   const [showCartBadge, setShowCartBadge] = useState(false);
   const [showQuoteReadyBadge, setShowQuoteReadyBadge] = useState(false);
   const [showNewPurchaseBadge, setShowNewPurchaseBadge] = useState(false);
@@ -95,37 +97,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
-  const maintenanceRef = useMemoFirebase(() => doc(firestore, 'system_settings', 'maintenance_mode'), [firestore]);
-  const { data: maintenanceSetting } = useDoc<{enabled: boolean}>(maintenanceRef);
+  const maintenanceRef = useMemo(() => doc(firestore, 'system_settings', 'maintenance_mode'), [firestore]);
+  
+  useEffect(() => {
+    const unsub = onSnapshot(maintenanceRef, (snap) => {
+        const maintenanceSetting = snap.data() as { enabled: boolean };
+        if (maintenanceSetting?.enabled && user?.role !== 'admin') {
+            logout();
+            toast({
+                variant: "destructive",
+                title: "Under Maintenance",
+                description: "The portal is currently under maintenance. You have been logged out.",
+            });
+        }
+    });
+    return () => unsub();
+  }, [maintenanceRef, user]);
+
 
   useEffect(() => {
-    if (maintenanceSetting?.enabled && user?.role !== 'admin') {
-        logout();
-        toast({
-            variant: "destructive",
-            title: "Under Maintenance",
-            description: "The portal is currently under maintenance. You have been logged out.",
-        });
-    }
-  }, [maintenanceSetting, user]);
+      if (!user) {
+          setCart(null);
+          return;
+      };
 
+      const cartCollectionRef = collection(firestore, 'users', user.id, 'cart');
+      const unsubscribe = onSnapshot(cartCollectionRef, (snapshot) => {
+          const cartData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CartItem));
+          setCart(cartData);
+      });
 
-  const cartCollectionRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'users', user.id, 'cart');
-  }, [firestore, user]);
-  const { data: cart } = useCollection<CartItem>(cartCollectionRef);
+      return () => unsubscribe();
+  }, [user, firestore]);
   
-  const ordersQueryRef = useMemoFirebase(() => {
-    if (!firestore || !user?.id) return null;
-    if (user.role === 'admin') {
-      return collectionGroup(firestore, 'orders');
-    }
-    return collection(firestore, 'users', user.id, 'orders');
-  }, [firestore, user]);
-  const { data: orders } = useCollection<Order>(ordersQueryRef);
-  const prevOrders = usePrevious(orders);
+  const fetchOrders = async () => {
+    if (!user) return;
+    try {
+        const ordersQuery = user.role === 'admin'
+            ? collectionGroup(firestore, 'orders')
+            : collection(firestore, 'users', user.id, 'orders');
 
+        const snapshot = await getDocs(ordersQuery);
+        const fetchedOrders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Order));
+        
+        // This sorting is important
+        const sortedOrders = fetchedOrders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+        
+        setOrders(sortedOrders);
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+        fetchOrders();
+    } else {
+        setOrders(null);
+    }
+  }, [user, firestore]);
+
+  const prevOrders = usePrevious(orders);
 
   useEffect(() => {
     const handleAuthChange = async (fbUser: FirebaseUser | null) => {
@@ -271,6 +306,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+        const maintenanceSnap = await getDoc(maintenanceRef);
+        const maintenanceSetting = maintenanceSnap.data() as { enabled: boolean };
+        
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const fbUser = userCredential.user;
 
@@ -338,6 +376,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
     const register = async (email: string, password: string, displayName: string) => {
+    const maintenanceSnap = await getDoc(maintenanceRef);
+    const maintenanceSetting = maintenanceSnap.data() as { enabled: boolean };
+    
     if (maintenanceSetting?.enabled) {
         toast({
             variant: "destructive",
@@ -393,6 +434,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
+        const maintenanceSnap = await getDoc(maintenanceRef);
+        const maintenanceSetting = maintenanceSnap.data() as { enabled: boolean };
+        
         const provider = new GoogleAuthProvider();
         const userCredential = await signInWithPopup(auth, provider);
         const additionalInfo = getAdditionalUserInfo(userCredential);
@@ -714,6 +758,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
             });
             
+            await fetchOrders(); // Refetch orders to show the new one
             return true;
         } catch (error: any) {
             console.error("Quotation request failed:", error);
@@ -808,6 +853,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 await updateDoc(orderRef, dataToUpdate);
             }
 
+            await fetchOrders(); // Refetch orders to show the update
             toast({
                 title: "Order Updated",
                 description: `Order #${'\'\'\''}{order.id.substring(0,8)}... has been updated to ${'\'\'\''}{newStatus}.`,
@@ -891,7 +937,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, fetchOrders };
 
   return (
     <AuthContext.Provider value={value}>

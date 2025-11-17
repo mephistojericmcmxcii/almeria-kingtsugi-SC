@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import { EditAboutDialog } from '@/components/about/edit-about-dialog';
@@ -30,14 +30,33 @@ const defaultContent: AboutPageContent = {
 };
 
 export default function AboutPage() {
-    const { user, firestore } = useAuth();
+    const { user } = useAuth();
+    const { firestore } = useFirebase();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-    const aboutContentRef = useMemoFirebase(
-        () => (firestore ? doc(firestore, 'system_settings', 'about_page') : null),
-        [firestore]
-    );
-    const { data: content, isLoading } = useDoc<AboutPageContent>(aboutContentRef);
+    const [content, setContent] = useState<AboutPageContent | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    
+    useEffect(() => {
+        const fetchContent = async () => {
+            if (!firestore) return;
+            setIsLoading(true);
+            try {
+                const aboutContentRef = doc(firestore, 'system_settings', 'about_page');
+                const docSnap = await getDoc(aboutContentRef);
+                if (docSnap.exists()) {
+                    setContent(docSnap.data() as AboutPageContent);
+                } else {
+                    setContent(defaultContent);
+                }
+            } catch (error) {
+                console.error("Error fetching about page content:", error);
+                setContent(defaultContent);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchContent();
+    }, [firestore]);
     
     const displayContent = content || defaultContent;
     

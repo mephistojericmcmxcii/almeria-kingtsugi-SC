@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -9,15 +8,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock, RefreshCw } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
-import { useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection, collectionGroup } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
 import type { CartItem, Order, OrderStatus, StatusHistory } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -346,8 +344,9 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
 
 
 export default function ProfilePage() {
-  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications } = useAuth();
+  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, fetchOrders } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
 
   const cartItemCount = cart?.length || 0;
@@ -373,11 +372,10 @@ export default function ProfilePage() {
 
   const { quotationOrders, activeOrders, completedOrders } = useMemo(() => {
     if (!orders) return { quotationOrders: [], activeOrders: [], completedOrders: [] };
-    const sorted = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
     
-    const quotationOrders = sorted.filter(o => ['pending-quote', 'quote-ready'].includes(o.status));
-    const activeOrders = sorted.filter(o => ['confirmed', 'delivering'].includes(o.status));
-    const completedOrders = sorted.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
+    const quotationOrders = orders.filter(o => ['pending-quote', 'quote-ready'].includes(o.status));
+    const activeOrders = orders.filter(o => ['confirmed', 'delivering'].includes(o.status));
+    const completedOrders = orders.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
     
     return { quotationOrders, activeOrders, completedOrders };
   }, [orders]);
@@ -386,6 +384,12 @@ export default function ProfilePage() {
     if (value === 'quotation' || value === 'purchases' || value === 'orders') {
         dismissUserNotifications();
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchOrders();
+    setIsRefreshing(false);
   };
 
   const onSubmit = async (values: ProfileFormValues) => {
@@ -511,6 +515,12 @@ export default function ProfilePage() {
 
         <TabsContent value="quotation">
             <div className="space-y-6">
+                <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
                 <CartList />
                 {noQuotations && (
                     <div className="text-center py-12 text-muted-foreground border rounded-lg">
@@ -531,30 +541,46 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="purchases">
-            <OrderList 
-                orders={activeOrders}
-                title="My Purchases"
-                description="Track your active and ongoing orders here."
-                emptyMessage={
-                    <div className="text-center py-12 text-muted-foreground">
-                        <Truck className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4">You have no active purchases.</p>
-                    </div>
-                }
-            />
+            <div className="space-y-6">
+                 <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
+                <OrderList 
+                    orders={activeOrders}
+                    title="My Purchases"
+                    description="Track your active and ongoing orders here."
+                    emptyMessage={
+                        <div className="text-center py-12 text-muted-foreground">
+                            <Truck className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <p className="mt-4">You have no active purchases.</p>
+                        </div>
+                    }
+                />
+            </div>
         </TabsContent>
         <TabsContent value="orders">
-           <OrderList 
-                orders={completedOrders}
-                title="Order History"
-                description="A record of your completed or cancelled purchases."
-                emptyMessage={
-                    <div className="text-center py-12 text-muted-foreground">
-                        <History className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4">You have no past orders.</p>
-                    </div>
-                }
-           />
+           <div className="space-y-6">
+                <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
+               <OrderList 
+                    orders={completedOrders}
+                    title="Order History"
+                    description="A record of your completed or cancelled purchases."
+                    emptyMessage={
+                        <div className="text-center py-12 text-muted-foreground">
+                            <History className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <p className="mt-4">You have no past orders.</p>
+                        </div>
+                    }
+               />
+           </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -1,8 +1,8 @@
 
 "use client"
 
-import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { useFirebase } from "@/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "../ui/skeleton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type MaintenanceSetting = {
     enabled: boolean;
@@ -20,18 +20,35 @@ export function SystemSettings() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [maintenanceSetting, setMaintenanceSetting] = useState<MaintenanceSetting | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const maintenanceRef = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return doc(firestore, 'system_settings', 'maintenance_mode');
+  useEffect(() => {
+    const fetchSettings = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        try {
+            const maintenanceRef = doc(firestore, 'system_settings', 'maintenance_mode');
+            const docSnap = await getDoc(maintenanceRef);
+            if (docSnap.exists()) {
+                setMaintenanceSetting(docSnap.data() as MaintenanceSetting);
+            }
+        } catch (error) {
+            console.error("Failed to fetch settings", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchSettings();
   }, [firestore]);
 
-  const { data: maintenanceSetting, isLoading } = useDoc<MaintenanceSetting>(maintenanceRef);
 
   const handleMaintenanceToggle = async (enabled: boolean) => {
-    if (!maintenanceRef) return;
+    if (!firestore) return;
+    const maintenanceRef = doc(firestore, 'system_settings', 'maintenance_mode');
     try {
         await setDoc(maintenanceRef, { enabled });
+        setMaintenanceSetting({ enabled });
     } catch (error) {
         console.error("Failed to toggle maintenance mode", error);
         toast({

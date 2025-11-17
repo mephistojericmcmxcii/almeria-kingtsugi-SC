@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MoreHorizontal } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,9 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
-import { useFirebase, useCollection, useMemoFirebase } from "@/firebase"
+import { useFirebase } from "@/firebase"
 import type { User } from "@/lib/types"
-import { collection } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 import { Skeleton } from "../ui/skeleton"
 import {
   AlertDialog,
@@ -38,20 +38,36 @@ const getInitials = (name?: string) => {
 export function UserManagement() {
   const { user: currentUser, firestore, updateUserRole } = useAuth();
   const [userToUpdate, setUserToUpdate] = useState<{user: User, newRole: 'admin' | 'guest'} | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const usersCollectionRef = useMemoFirebase(() => {
-    // Only fetch users if the user is an admin and firestore is available
-    if (firestore && currentUser?.role === 'admin') {
-      return collection(firestore, 'users');
-    }
-    return null;
+  useEffect(() => {
+    const fetchUsers = async () => {
+        if (!firestore || currentUser?.role !== 'admin') {
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const usersCollectionRef = collection(firestore, 'users');
+            const snapshot = await getDocs(usersCollectionRef);
+            const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            setUsers(usersData);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchUsers();
   }, [firestore, currentUser?.role]);
-
-  const { data: users, isLoading } = useCollection<User>(usersCollectionRef);
 
   const handleRoleChangeConfirm = async () => {
     if (!userToUpdate) return;
-    await updateUserRole(userToUpdate.user.id, userToUpdate.newRole);
+    const success = await updateUserRole(userToUpdate.user.id, userToUpdate.newRole);
+    if (success) {
+        setUsers(users.map(u => u.id === userToUpdate.user.id ? { ...u, role: userToUpdate.newRole } : u));
+    }
     setUserToUpdate(null);
   };
 
