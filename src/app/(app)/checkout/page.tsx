@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import type { CartItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,11 +37,34 @@ export default function CheckoutPage() {
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     const [notes, setNotes] = useState('');
 
-    const cartCollectionRef = useMemoFirebase(() => {
-        if (!firestore || !user) return null;
-        return collection(firestore, 'users', user.id, 'cart');
-    }, [firestore, user]);
-    const { data: cartItems, isLoading } = useCollection<CartItem>(cartCollectionRef);
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCartItems = async () => {
+            if (!firestore || !user) {
+                setIsLoading(false);
+                return;
+            };
+            setIsLoading(true);
+            try {
+                const cartCollectionRef = collection(firestore, 'users', user.id, 'cart');
+                const snapshot = await getDocs(cartCollectionRef);
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CartItem));
+                setCartItems(items);
+            } catch (error) {
+                console.error("Error fetching cart items:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Could not load your cart items.'
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchCartItems();
+    }, [firestore, user, toast]);
 
     const subtotal = useMemo(() => {
         if (!cartItems) return 0;

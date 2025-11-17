@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -30,11 +30,34 @@ export default function PoDetailsPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<PurchaseOrderItem | null>(null);
 
-    const poRef = useMemoFirebase(() => doc(firestore, 'purchase_orders', poId), [firestore, poId]);
-    const { data: po, isLoading: isPoLoading } = useDoc<PurchaseOrder>(poRef);
+    const [po, setPo] = useState<PurchaseOrder | null>(null);
+    const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const itemsCollectionRef = useMemoFirebase(() => collection(firestore, 'purchase_orders', poId, 'items'), [firestore, poId]);
-    const { data: poItems, isLoading: areItemsLoading } = useCollection<PurchaseOrderItem>(itemsCollectionRef);
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!firestore || !poId) return;
+            setIsLoading(true);
+            try {
+                const poRef = doc(firestore, 'purchase_orders', poId);
+                const poSnap = await getDoc(poRef);
+                if (poSnap.exists()) {
+                    setPo({ id: poSnap.id, ...poSnap.data() } as PurchaseOrder);
+                }
+
+                const itemsCollectionRef = collection(firestore, 'purchase_orders', poId, 'items');
+                const itemsSnap = await getDocs(itemsCollectionRef);
+                setPoItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem)));
+
+            } catch (error) {
+                console.error("Error fetching PO details:", error);
+                toast({ variant: "destructive", title: "Error", description: "Could not load PO details." });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [firestore, poId, toast]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -45,6 +68,7 @@ export default function PoDetailsPage() {
         try {
             const itemRef = doc(firestore, 'purchase_orders', poId, 'items', itemToDelete.id);
             await deleteDoc(itemRef);
+            setPoItems(prev => prev.filter(item => item.id !== itemToDelete.id));
             toast({ title: "Item Deleted", description: "The item has been removed from this PO." });
             setItemToDelete(null);
         } catch (error) {
@@ -52,8 +76,6 @@ export default function PoDetailsPage() {
             toast({ variant: "destructive", title: "Error", description: "Could not delete the item." });
         }
     };
-    
-    const isLoading = isPoLoading || areItemsLoading;
 
     return (
         <div className="space-y-8">
@@ -65,8 +87,8 @@ export default function PoDetailsPage() {
                     </Link>
                 </Button>
                 <div>
-                    {isPoLoading ? <Skeleton className="h-8 w-48" /> : <h1 className="text-3xl font-bold tracking-tight font-headline">PO # {po?.poNumber}</h1>}
-                    {isPoLoading ? <Skeleton className="h-4 w-64 mt-2" /> : <p className="text-muted-foreground">Manage items for this purchase order.</p>}
+                    {isLoading ? <Skeleton className="h-8 w-48" /> : <h1 className="text-3xl font-bold tracking-tight font-headline">PO # {po?.poNumber}</h1>}
+                    {isLoading ? <Skeleton className="h-4 w-64 mt-2" /> : <p className="text-muted-foreground">Manage items for this purchase order.</p>}
                 </div>
             </div>
 

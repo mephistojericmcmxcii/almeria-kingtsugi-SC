@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
@@ -44,9 +44,32 @@ export default function InventoryPage() {
   const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
   const [areCountsLoading, setAreCountsLoading] = useState(true);
 
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const inventoryCollectionRef = useMemoFirebase(() => collection(firestore, 'inventory'), [firestore]);
-  const { data: inventoryItems, isLoading } = useCollection<InventoryItem>(inventoryCollectionRef);
+  useEffect(() => {
+    const fetchItems = async () => {
+      if (!firestore) return;
+      setIsLoading(true);
+      try {
+        const inventoryCollectionRef = collection(firestore, 'inventory');
+        const snapshot = await getDocs(inventoryCollectionRef);
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+        setInventoryItems(items);
+      } catch (error) {
+        console.error("Error fetching inventory items:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load inventory.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchItems();
+  }, [firestore, toast]);
+
 
   useEffect(() => {
     if (!inventoryItems) {
@@ -112,6 +135,7 @@ export default function InventoryPage() {
       // Note: In a real app, you'd also want to delete all variants in the subcollection.
       // This typically requires a Cloud Function for atomicity and efficiency.
       await deleteDoc(doc(firestore, 'inventory', itemToDelete.id));
+      setInventoryItems(prev => prev.filter(item => item.id !== itemToDelete.id));
       toast({
         title: "Item Deleted",
         description: `${itemToDelete.name} has been removed from the inventory.`,
@@ -308,3 +332,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    

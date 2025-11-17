@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -39,12 +39,40 @@ export default function ItemVariantsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [variantToEdit, setVariantToEdit] = useState<InventoryVariant | null>(null);
   const [variantToDelete, setVariantToDelete] = useState<InventoryVariant | null>(null);
+  
+  const [item, setItem] = useState<InventoryItem | null>(null);
+  const [variants, setVariants] = useState<InventoryVariant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const itemRef = useMemoFirebase(() => doc(firestore, 'inventory', itemId), [firestore, itemId]);
-  const { data: item, isLoading: isItemLoading } = useDoc<InventoryItem>(itemRef);
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!firestore || !itemId) return;
+      setIsLoading(true);
+      try {
+        const itemRef = doc(firestore, 'inventory', itemId);
+        const itemSnap = await getDoc(itemRef);
+        if (itemSnap.exists()) {
+          setItem({ id: itemSnap.id, ...itemSnap.data() } as InventoryItem);
+        }
 
-  const variantsCollectionRef = useMemoFirebase(() => collection(firestore, 'inventory', itemId, 'variants'), [firestore, itemId]);
-  const { data: variants, isLoading: areVariantsLoading } = useCollection<InventoryVariant>(variantsCollectionRef);
+        const variantsCollectionRef = collection(firestore, 'inventory', itemId, 'variants');
+        const variantsSnap = await getDocs(variantsCollectionRef);
+        const variantsData = variantsSnap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryVariant));
+        setVariants(variantsData);
+
+      } catch (error) {
+        console.error("Error fetching item and variants:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load item details. Please try again.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [firestore, itemId, toast]);
 
   const totalQuantity = useMemo(() => {
     if (!variants) return 0;
@@ -66,6 +94,7 @@ export default function ItemVariantsPage() {
     if (!variantToDelete) return;
     try {
       await deleteDoc(doc(firestore, 'inventory', itemId, 'variants', variantToDelete.id));
+      setVariants(prev => prev.filter(v => v.id !== variantToDelete.id));
       toast({
         title: "Variant Deleted",
         description: `The variant has been removed from ${item?.name}.`,
@@ -100,8 +129,6 @@ export default function ItemVariantsPage() {
     }
     return <Badge className="bg-green-600 text-green-50 hover:bg-green-700 border-green-700">Good</Badge>;
   }
-  
-  const isLoading = isItemLoading || areVariantsLoading;
 
   return (
     <div className="space-y-8">
@@ -113,8 +140,8 @@ export default function ItemVariantsPage() {
             </Link>
         </Button>
         <div>
-            {isItemLoading ? <Skeleton className="h-8 w-48" /> : <h1 className="text-3xl font-bold tracking-tight font-headline">{item?.name} Variants</h1>}
-            {isItemLoading ? <Skeleton className="h-4 w-64 mt-2" /> : <p className="text-muted-foreground">Manage specific variants for {item?.name}</p>}
+            {isLoading ? <Skeleton className="h-8 w-48" /> : <h1 className="text-3xl font-bold tracking-tight font-headline">{item?.name} Variants</h1>}
+            {isLoading ? <Skeleton className="h-4 w-64 mt-2" /> : <p className="text-muted-foreground">Manage specific variants for {item?.name}</p>}
         </div>
       </div>
       

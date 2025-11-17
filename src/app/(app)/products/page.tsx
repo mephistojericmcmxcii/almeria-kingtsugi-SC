@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useMemoFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, collectionGroup, getDoc, doc } from 'firebase/firestore';
+import { collection, collectionGroup, getDoc, getDocs, doc } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ViewProductModal } from '@/components/dashboard/view-product-modal';
@@ -46,43 +46,53 @@ export default function ProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [variantToAddToCart, setVariantToAddToCart] = useState<CombinedVariant | null>(null);
 
-  const variantsCollectionGroup = useMemoFirebase(() => collectionGroup(firestore, 'variants'), [firestore]);
-  const { data: variants, isLoading: areVariantsLoading } = useCollection<InventoryVariant>(variantsCollectionGroup);
-
   useEffect(() => {
-    const fetchParentData = async () => {
-        if (!variants) {
-            setIsDataLoading(areVariantsLoading);
-            if (!areVariantsLoading) setCombinedVariants([]);
-            return;
-        }
-
+    const fetchAllData = async () => {
+        if (!firestore) return;
         setIsDataLoading(true);
-        const parentPromises = variants.map(async (variant) => {
-            // variant.ref.parent.parent is how you get the parent doc from a subcollection doc
-            const parentDocRef = variant.ref?.parent.parent;
-            if (!parentDocRef) return null;
 
-            const parentSnap = await getDoc(parentDocRef);
-            if (parentSnap.exists()) {
-                const parentData = parentSnap.data() as InventoryItem;
-                return {
-                    ...variant,
-                    parentName: parentData.name,
-                    parentCategory: parentData.category,
-                    parentItemId: parentSnap.id,
-                };
-            }
-            return null;
-        });
+        try {
+            const variantsCollectionGroup = collectionGroup(firestore, 'variants');
+            const variantsSnapshot = await getDocs(variantsCollectionGroup);
+            const variants = variantsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ref: doc.ref,
+                ...doc.data()
+            } as InventoryVariant));
 
-        const settledVariants = await Promise.all(parentPromises);
-        setCombinedVariants(settledVariants.filter((v): v is CombinedVariant => v !== null));
-        setIsDataLoading(false);
+            const parentPromises = variants.map(async (variant) => {
+                const parentDocRef = variant.ref?.parent.parent;
+                if (!parentDocRef) return null;
+
+                const parentSnap = await getDoc(parentDocRef);
+                if (parentSnap.exists()) {
+                    const parentData = parentSnap.data() as InventoryItem;
+                    return {
+                        ...variant,
+                        parentName: parentData.name,
+                        parentCategory: parentData.category,
+                        parentItemId: parentSnap.id,
+                    };
+                }
+                return null;
+            });
+
+            const settledVariants = await Promise.all(parentPromises);
+            setCombinedVariants(settledVariants.filter((v): v is CombinedVariant => v !== null));
+        } catch (error) {
+            console.error("Error fetching product data:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error Fetching Products',
+                description: 'Could not load the product catalog.'
+            });
+        } finally {
+            setIsDataLoading(false);
+        }
     };
 
-    fetchParentData();
-  }, [variants, areVariantsLoading]);
+    fetchAllData();
+  }, [firestore, toast]);
 
 
   const filteredItems = useMemo(() => {
@@ -261,3 +271,5 @@ export default function ProductsPage() {
     </>
   );
 }
+
+    

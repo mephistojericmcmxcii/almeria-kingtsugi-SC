@@ -3,8 +3,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { collectionGroup, getDocs } from 'firebase/firestore';
 import type { Order, OrderStatus, CartItem } from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 
 const getStatusBadge = (status: OrderStatus) => {
@@ -61,6 +62,7 @@ const REQUIRES_REASON: OrderStatus[] = ['declined', 'cancelled'];
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
     const { firestore } = useFirebase();
+    const { toast } = useToast();
     
     const [isUpdating, setIsUpdating] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -75,10 +77,36 @@ export default function AllOrdersPage() {
     const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
     const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
 
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        dismissAdminOrderBadge();
-    }, [dismissAdminOrderBadge]);
+      const fetchOrders = async () => {
+        if (!firestore || user?.role !== 'admin') {
+            setIsLoading(false);
+            return;
+        };
+        setIsLoading(true);
+        try {
+            const allOrdersQuery = collectionGroup(firestore, 'orders');
+            const snapshot = await getDocs(allOrdersQuery);
+            const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+            setOrders(fetchedOrders);
+        } catch (error) {
+            console.error("Error fetching orders:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not load orders.'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+      }
+      fetchOrders();
+      dismissAdminOrderBadge();
+    }, [firestore, user?.role, toast, dismissAdminOrderBadge]);
+
     
     useEffect(() => {
         if (selectedOrder) {
@@ -101,13 +129,6 @@ export default function AllOrdersPage() {
         }
     }, [selectedOrder]);
 
-    const allOrdersQuery = useMemoFirebase(() => {
-        if (!firestore || user?.role !== 'admin') return null;
-        return collectionGroup(firestore, 'orders');
-    }, [firestore, user?.role]);
-
-    const { data: orders, isLoading } = useCollection<Order>(allOrdersQuery);
-    
     const handleItemDiscountChange = (itemId: string, discount: number) => {
         setItemDiscounts(prev => ({ ...prev, [itemId]: discount }));
     };
@@ -150,16 +171,16 @@ export default function AllOrdersPage() {
         );
         
         if (success) {
-             setSelectedOrder(prev => prev ? { 
-                ...prev, 
+            setOrders(prevOrders => prevOrders.map(o => o.id === selectedOrder.id ? { 
+                ...o, 
                 status: selectedStatus, 
-                cancellationReason: cancellationReason || prev.cancellationReason,
+                cancellationReason: cancellationReason || o.cancellationReason,
                 items: updatedItems,
                 totalAmount: finalTotal,
                 discount: totalDiscountAmount,
                 deliveryFee,
                 packagingFee,
-            } : null);
+            } : o));
             setIsModalOpen(false);
         }
         setIsUpdating(false);
@@ -484,3 +505,5 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    

@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
@@ -34,10 +34,28 @@ export default function PoPage() {
   const [totalAmounts, setTotalAmounts] = useState<Record<string, number | null>>({});
   const [areTotalsLoading, setAreTotalsLoading] = useState(true);
 
-  
-  const poCollectionRef = useMemoFirebase(() => collection(firestore, 'purchase_orders'), [firestore]);
-  const { data: purchaseOrders, isLoading: arePOsLoading } = useCollection<PurchaseOrder>(poCollectionRef);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [arePOsLoading, setArePOsLoading] = useState(true);
 
+  useEffect(() => {
+      const fetchPOs = async () => {
+          if (!firestore) return;
+          setArePOsLoading(true);
+          try {
+              const poCollectionRef = collection(firestore, 'purchase_orders');
+              const snapshot = await getDocs(poCollectionRef);
+              const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+              setPurchaseOrders(pos);
+          } catch (error) {
+              console.error("Error fetching POs:", error);
+              toast({ variant: 'destructive', title: 'Error', description: 'Could not load purchase orders.' });
+          } finally {
+              setArePOsLoading(false);
+          }
+      };
+      fetchPOs();
+  }, [firestore, toast]);
+  
   useEffect(() => {
     if (!purchaseOrders) {
       setAreTotalsLoading(false);
@@ -86,6 +104,7 @@ export default function PoPage() {
       if (!poToDelete) return;
       try {
         await deleteDoc(doc(firestore, 'purchase_orders', poToDelete.id));
+        setPurchaseOrders(prev => prev.filter(po => po.id !== poToDelete.id));
         toast({
             title: "PO Deleted",
             description: `Purchase Order ${poToDelete.poNumber} has been deleted.`,
