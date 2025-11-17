@@ -204,8 +204,8 @@ export default function AllOrdersPage() {
         );
     }
     
-    const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
-        if (!selectedOrder) return { subtotal: 0, totalDiscount: 0, finalTotal: 0 };
+    const { subtotal, totalDiscount, finalTotal, totalDiscountPercentage } = useMemo(() => {
+        if (!selectedOrder) return { subtotal: 0, totalDiscount: 0, finalTotal: 0, totalDiscountPercentage: 0 };
         
         const currentSubtotal = selectedOrder.items.reduce((acc, item) => {
             const price = itemPrices[item.id] || item.price || 0;
@@ -219,14 +219,18 @@ export default function AllOrdersPage() {
             const discountValue = itemTotal * (discountPercent / 100);
             return acc + discountValue;
         }, 0);
-
-        const currentFinalTotal = currentSubtotal - currentTotalDiscount + deliveryFee + packagingFee;
         
-        return { subtotal: currentSubtotal, totalDiscount: currentTotalDiscount, finalTotal: currentFinalTotal };
+        const currentFinalTotal = currentSubtotal - currentTotalDiscount + deliveryFee + packagingFee;
+        const discountPercentage = currentSubtotal > 0 ? (currentTotalDiscount / currentSubtotal) * 100 : 0;
+        
+        return { subtotal: currentSubtotal, totalDiscount: currentTotalDiscount, finalTotal: currentFinalTotal, totalDiscountPercentage: discountPercentage };
     }, [selectedOrder, itemPrices, itemDiscounts, deliveryFee, packagingFee]);
 
     const isPricingEditable = selectedOrder?.status === 'pending-quote';
-
+    
+    const handleNumberInputOnWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+      e.currentTarget.blur();
+    };
 
     return (
         <>
@@ -382,6 +386,8 @@ export default function AllOrdersPage() {
                                                     className="h-8 w-20 ml-auto text-right"
                                                     value={discountPercent}
                                                     onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
+                                                    onWheel={handleNumberInputOnWheel}
+                                                    onFocus={(e) => e.target.select()}
                                                     disabled={isUpdating || !isPricingEditable}
                                                 />
                                             </TableCell>
@@ -398,11 +404,11 @@ export default function AllOrdersPage() {
                                 <div className="w-1/2 space-y-2">
                                      <div className="flex justify-between items-center">
                                         <Label htmlFor="deliveryFee">Delivery Fee</Label>
-                                        <Input id="deliveryFee" type="number" className="h-8 w-24 text-right" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                        <Input id="deliveryFee" type="number" className="h-8 w-24 text-right" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
                                     </div>
                                      <div className="flex justify-between items-center">
                                         <Label htmlFor="packagingFee">Packaging Fee</Label>
-                                        <Input id="packagingFee" type="number" className="h-8 w-24 text-right" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} disabled={isUpdating || !isPricingEditable} />
+                                        <Input id="packagingFee" type="number" className="h-8 w-24 text-right" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
                                     </div>
                                      <div className="flex justify-between items-center font-medium">
                                         <p>Subtotal</p>
@@ -411,7 +417,7 @@ export default function AllOrdersPage() {
                                     {totalDiscount > 0 && (
                                         <div className="flex justify-between items-center text-green-600">
                                             <p>Total Item Discounts</p>
-                                            <p>- {formatCurrency(totalDiscount)}</p>
+                                            <p>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</p>
                                         </div>
                                     )}
                                 </div>
@@ -469,5 +475,7 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    
 
     

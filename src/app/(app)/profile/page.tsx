@@ -160,12 +160,9 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                     {orders.map(order => {
                         const isQuoteReady = order.status === 'quote-ready';
                         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-                        const totalDiscount = order.items.reduce((acc, item) => {
-                            const itemTotal = (item.price || 0) * item.quantity;
-                            const discountValue = itemTotal * ((item.discount || 0) / 100);
-                            return acc + discountValue;
-                        }, 0);
-                        const finalTotal = subtotal - totalDiscount + (order.deliveryFee || 0) + (order.packagingFee || 0);
+                        const totalDiscount = order.discount || 0;
+                        const finalTotal = order.totalAmount;
+                        const totalDiscountPercentage = subtotal > 0 ? (totalDiscount / subtotal) * 100 : 0;
 
                         return (
                         <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
@@ -219,7 +216,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             {(totalDiscount) > 0 && (
                                                 <div className="flex justify-between text-sm text-green-600">
                                                     <span className="text-muted-foreground">Total Item Discounts</span>
-                                                    <span>- {formatCurrency(totalDiscount)}</span>
+                                                    <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
                                                 </div>
                                             )}
                                             {(order.deliveryFee || 0) > 0 && (
@@ -500,5 +497,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
 
     
