@@ -16,7 +16,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection, useMemoFirebase, useFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, collectionGroup } from 'firebase/firestore';
 import type { CartItem, Order, OrderStatus } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +37,7 @@ const getInitials = (name?: string) => {
   if (!name) return '';
   const names = name.split(' ');
   if (names.length > 1) {
-    return `${names[0][0]}${names[1][0]}`;
+    return `${'\'\'\''}{names[0][0]}${'\'\'\''}{names[1][0]}`;
   }
   return name.substring(0, 2);
 };
@@ -56,69 +56,64 @@ function CartList() {
     }
     
     if (!cartItems || cartItems.length === 0) {
-        return (
-            <div className="text-center py-12 text-muted-foreground">
-                <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4">Your quotation list is empty.</p>
-            </div>
-        );
+        return null;
     }
     
     return (
-        <div className="space-y-4">
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-                {cartItems.map(item => {
-                    const isStockLimitReached = item.quantity >= (item.stock || 0);
-                    return (
-                    <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
-                         <img 
-                            src={item.imageUrl} 
-                            alt={item.parentName || 'product'} 
-                            className="rounded-md object-cover w-16 h-16"
-                            data-ai-hint={item.imageHint}
-                            />
-                        <div className="flex-grow">
-                            <p className="font-semibold">{item.parentName}</p>
-                            <p className="text-sm text-muted-foreground">{item.brand}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                                <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item, item.quantity - 1)} disabled={item.quantity <= 1}><Minus className="h-4 w-4" /></Button>
-                                <span className="w-8 text-center">{item.quantity}</span>
-                                <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item, item.quantity + 1)} disabled={isStockLimitReached}><Plus className="h-4 w-4" /></Button>
+        <Card>
+            <CardHeader>
+              <CardTitle>Items to Quote</CardTitle>
+              <CardDescription>These items have not been submitted for a quote yet.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+                        {cartItems.map(item => {
+                            const isStockLimitReached = item.quantity >= (item.stock || 0);
+                            return (
+                            <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
+                                <img 
+                                    src={item.imageUrl} 
+                                    alt={item.parentName || 'product'} 
+                                    className="rounded-md object-cover w-16 h-16"
+                                    data-ai-hint={item.imageHint}
+                                    />
+                                <div className="flex-grow">
+                                    <p className="font-semibold">{item.parentName}</p>
+                                    <p className="text-sm text-muted-foreground">{item.brand}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item, item.quantity - 1)} disabled={item.quantity <= 1}><Minus className="h-4 w-4" /></Button>
+                                        <span className="w-8 text-center">{item.quantity}</span>
+                                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateCartItemQuantity(item, item.quantity + 1)} disabled={isStockLimitReached}><Plus className="h-4 w-4" /></Button>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 mt-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeCartItem(item.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                        <div className="text-right">
-                             <Button size="icon" variant="ghost" className="h-8 w-8 mt-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeCartItem(item.id)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
+                            )
+                        })}
                     </div>
-                    )
-                })}
-            </div>
-             <Alert>
-                <AlertTitle className="font-semibold">Price on Request</AlertTitle>
-                <AlertDescription>
-                    Prices will be provided in the official quotation sent to your email.
-                </AlertDescription>
-            </Alert>
-             <CardFooter className="flex justify-end p-0 pt-6">
+                    <Alert>
+                        <AlertTitle className="font-semibold">Price on Request</AlertTitle>
+                        <AlertDescription>
+                            Prices will be provided in the official quotation sent to your email.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            </CardContent>
+             <CardFooter className="flex justify-end p-6 pt-0">
                 <Button onClick={() => router.push('/checkout')} disabled={!cartItems || cartItems.length === 0}>Request Quotation</Button>
             </CardFooter>
-        </div>
+        </Card>
     );
 }
 
-function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
+function OrderList({ orders, title, description, emptyMessage }: { orders: Order[], title: string, description: string, emptyMessage: React.ReactNode }) {
     const { user, updateOrderStatus } = useAuth();
-    const { firestore } = useFirebase();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
-
-    const userOrdersQuery = useMemoFirebase(() => {
-        if (!firestore || !user?.id) return null;
-        return collection(firestore, 'users', user.id, 'orders');
-    }, [firestore, user]);
-
-    const { data: orders, isLoading } = useCollection<Order>(userOrdersQuery);
 
     const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
         setIsUpdating(order.id);
@@ -138,126 +133,117 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
         }
     };
     
-    const filteredOrders = useMemo(() => {
-        if (!orders) return [];
-        const sorted = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
-        if (statusFilter === 'active') {
-            return sorted.filter(o => ['pending-quote', 'quote-ready', 'confirmed', 'delivering'].includes(o.status));
-        } else { // 'completed'
-            return sorted.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
-        }
-    }, [orders, statusFilter]);
 
-
-    if (isLoading) {
-        return <div className="text-center py-12 text-muted-foreground">Loading orders...</div>;
-    }
-
-    if (!filteredOrders || filteredOrders.length === 0) {
+    if (!orders || orders.length === 0) {
         return (
-            <div className="text-center py-12 text-muted-foreground">
-                {statusFilter === 'active' ? (
-                     <>
-                        <Truck className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4">You have no active purchases.</p>
-                     </>
-                ) : (
-                    <>
-                        <History className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4">You have no past orders.</p>
-                    </>
-                )}
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {emptyMessage}
+                </CardContent>
+            </Card>
         );
     }
 
     return (
-        <Accordion type="single" collapsible className="w-full space-y-4">
-            {filteredOrders.map(order => (
-                <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
-                    <AccordionTrigger>
-                        <div className="flex justify-between w-full items-center">
-                            <div className="flex flex-col text-left">
-                                <span className="font-semibold text-sm font-mono break-all">{order.id}</span>
-                                <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
-                                {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
-                            </div>
-                            <div className="flex items-center gap-4">
-                               {getStatusBadge(order.status)}
-                            </div>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-4">
-                        <div className="space-y-4">
-                            <div>
-                                <h4 className="font-semibold mb-2">Items</h4>
-                                <div className="space-y-2">
-                                {order.items.map(item => (
-                                    <div key={item.id} className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
-                                            <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
+        <Card>
+            <CardHeader>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Accordion type="single" collapsible className="w-full space-y-4">
+                    {orders.map(order => (
+                        <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
+                            <AccordionTrigger>
+                                <div className="flex justify-between w-full items-center">
+                                    <div className="flex flex-col text-left">
+                                        <span className="font-semibold text-sm font-mono break-all">{order.id}</span>
+                                        <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
+                                        {user?.role === 'admin' && order.userId !== user.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                    {getStatusBadge(order.status)}
+                                    </div>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-4">
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="font-semibold mb-2">Items</h4>
+                                        <div className="space-y-2">
+                                        {order.items.map(item => (
+                                            <div key={item.id} className="flex justify-between items-center text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
+                                                    <span>{item.parentName} ({item.brand}) x {item.quantity}</span>
+                                                </div>
+                                            </div>
+                                        ))}
                                         </div>
                                     </div>
-                                ))}
+                                    <div className="pt-2 border-t">
+                                        <h4 className="font-semibold mb-1">Shipping Address</h4>
+                                        <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                                    </div>
+                                    
+                                    {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
+                                        <Alert variant="destructive">
+                                            <Info className="h-4 w-4" />
+                                            <AlertTitle>Reason for {order.status === 'cancelled' ? 'Cancellation' : 'Decline'}</AlertTitle>
+                                            <AlertDescription>{order.cancellationReason}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                
+                                    {user?.role === 'admin' && user?.id === order.userId ? ( // Admin viewing their own order
+                                        <div className="flex gap-2 justify-end pt-4">
+                                            {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
+                                                <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                                    <XCircle className="mr-2 h-4 w-4"/>
+                                                    {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
+                                                </Button>
+                                            )}
+                                            {order.status === 'delivering' && (
+                                                <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                                                    <CheckCircle className="mr-2 h-4 w-4"/>
+                                                    {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : user?.role !== 'admin' ? ( // Non-admin user
+                                        <div className="flex gap-2 justify-end pt-4">
+                                            {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
+                                                <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                                    <XCircle className="mr-2 h-4 w-4"/>
+                                                    {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
+                                                </Button>
+                                            )}
+                                            {order.status === 'delivering' && (
+                                                <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                                                    <CheckCircle className="mr-2 h-4 w-4"/>
+                                                    {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : null }
                                 </div>
-                            </div>
-                            <div className="pt-2 border-t">
-                                <h4 className="font-semibold mb-1">Shipping Address</h4>
-                                <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
-                            </div>
-                            
-                            {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
-                                <Alert variant="destructive">
-                                    <Info className="h-4 w-4" />
-                                    <AlertTitle>Reason for {order.status === 'cancelled' ? 'Cancellation' : 'Decline'}</AlertTitle>
-                                    <AlertDescription>{order.cancellationReason}</AlertDescription>
-                                </Alert>
-                            )}
-                           
-                            {user?.role === 'admin' && user?.id === order.userId ? ( // Admin viewing their own order
-                                <div className="flex gap-2 justify-end pt-4">
-                                    {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
-                                        <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                            <XCircle className="mr-2 h-4 w-4"/>
-                                            {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
-                                        </Button>
-                                    )}
-                                    {order.status === 'delivering' && (
-                                        <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
-                                            <CheckCircle className="mr-2 h-4 w-4"/>
-                                            {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
-                                        </Button>
-                                    )}
-                                </div>
-                            ) : user?.role !== 'admin' ? ( // Non-admin user
-                                <div className="flex gap-2 justify-end pt-4">
-                                    {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
-                                        <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                            <XCircle className="mr-2 h-4 w-4"/>
-                                            {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
-                                        </Button>
-                                    )}
-                                    {order.status === 'delivering' && (
-                                        <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
-                                            <CheckCircle className="mr-2 h-4 w-4"/>
-                                            {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
-                                        </Button>
-                                    )}
-                                </div>
-                            ) : null }
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            ))}
-        </Accordion>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            </CardContent>
+        </Card>
     );
 }
 
 
 export default function ProfilePage() {
-  const { user, cart, updateUserProfile, isLoading: isAuthLoading, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge } = useAuth();
+  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, dismissCartBadge, showOrderHistoryBadge, dismissOrderHistoryBadge } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const cartItemCount = cart?.length || 0;
 
@@ -279,12 +265,23 @@ export default function ProfilePage() {
       });
     }
   }, [user, form]);
+
+  const { quotationOrders, activeOrders, completedOrders } = useMemo(() => {
+    if (!orders) return { quotationOrders: [], activeOrders: [], completedOrders: [] };
+    const sorted = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+    
+    const quotationOrders = sorted.filter(o => ['pending-quote', 'quote-ready'].includes(o.status));
+    const activeOrders = sorted.filter(o => ['confirmed', 'delivering'].includes(o.status));
+    const completedOrders = sorted.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
+    
+    return { quotationOrders, activeOrders, completedOrders };
+  }, [orders]);
   
   const handleTabChange = (value: string) => {
-    if (value === 'cart') {
+    if (value === 'quotation') {
       dismissCartBadge();
     }
-    if (value === 'orders' || value === 'purchases') {
+    if (value === 'purchases' || value === 'orders') {
         dismissOrderHistoryBadge();
     }
   };
@@ -299,6 +296,8 @@ export default function ProfilePage() {
   if (!user) {
     return null;
   }
+  
+  const noQuotations = (!cart || cart.length === 0) && quotationOrders.length === 0;
 
   return (
     <div className="space-y-8">
@@ -319,7 +318,7 @@ export default function ProfilePage() {
             <User className="mr-2" />
             Profile
           </TabsTrigger>
-           <TabsTrigger value="cart" className="relative">
+           <TabsTrigger value="quotation" className="relative">
             <FileQuestion className="mr-2" />
             My Quotation
             {showCartBadge && cartItemCount > 0 && (
@@ -402,42 +401,55 @@ export default function ProfilePage() {
             </form>
           </Form>
         </TabsContent>
+
+        <TabsContent value="quotation">
+            <div className="space-y-6">
+                <CartList />
+                {noQuotations && (
+                    <div className="text-center py-12 text-muted-foreground border rounded-lg">
+                        <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4">Your quotation list is empty.</p>
+                        <Button variant="link" onClick={() => router.push('/products')}>Add items to get a quote</Button>
+                    </div>
+                )}
+                {quotationOrders.length > 0 && (
+                    <OrderList 
+                        orders={quotationOrders}
+                        title="Submitted Quotations"
+                        description="These are your active quotation requests. You will be notified when the seller responds."
+                        emptyMessage={<></>} // This won't be shown if orders exist
+                    />
+                )}
+            </div>
+        </TabsContent>
+
         <TabsContent value="purchases">
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Purchases</CardTitle>
-                    <CardDescription>Track your active and ongoing orders here.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <OrderList statusFilter="active" />
-                </CardContent>
-            </Card>
+            <OrderList 
+                orders={activeOrders}
+                title="My Purchases"
+                description="Track your active and ongoing orders here."
+                emptyMessage={
+                    <div className="text-center py-12 text-muted-foreground">
+                        <Truck className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4">You have no active purchases.</p>
+                    </div>
+                }
+            />
         </TabsContent>
         <TabsContent value="orders">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order History</CardTitle>
-              <CardDescription>A record of your completed or cancelled purchases.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <OrderList statusFilter="completed" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="cart">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Quotation</CardTitle>
-              <CardDescription>Items you have added for quotation.</CardDescription>
-            </CardHeader>
-            <CardContent>
-               <CartList />
-            </CardContent>
-          </Card>
+           <OrderList 
+                orders={completedOrders}
+                title="Order History"
+                description="A record of your completed or cancelled purchases."
+                emptyMessage={
+                    <div className="text-center py-12 text-muted-foreground">
+                        <History className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4">You have no past orders.</p>
+                    </div>
+                }
+           />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-    
