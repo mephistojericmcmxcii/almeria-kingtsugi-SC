@@ -113,6 +113,17 @@ function CartList() {
     );
 }
 
+const statusDisplayMap: Record<OrderStatus, string> = {
+  'pending-quote': 'Request for Quotation',
+  'quote-ready': 'Quotation Received',
+  'confirmed': 'Proceed to Purchase',
+  'delivering': 'Out for Delivery',
+  'completed': 'Delivered',
+  'cancelled': 'Cancelled',
+  'declined': 'Declined by Seller',
+};
+
+
 function OrderList({ orders, title, description, emptyMessage }: { orders: Order[], title: string, description: string, emptyMessage: React.ReactNode }) {
     const { user, updateOrderStatus } = useAuth();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
@@ -125,14 +136,15 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
     };
 
     const getStatusBadge = (status: OrderStatus) => {
+        const displayName = statusDisplayMap[status] || status;
         switch (status) {
-            case 'pending-quote': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending Quote</Badge>;
-            case 'quote-ready': return <Badge className="bg-blue-500 text-blue-50">Quote Ready</Badge>;
-            case 'confirmed': return <Badge className="bg-teal-500 text-teal-50">Confirmed</Badge>;
-            case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
-            case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
-            case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
-            case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined by Seller</Badge>;
+            case 'pending-quote': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">{displayName}</Badge>;
+            case 'quote-ready': return <Badge className="bg-blue-500 text-blue-50">{displayName}</Badge>;
+            case 'confirmed': return <Badge className="bg-teal-500 text-teal-50">{displayName}</Badge>;
+            case 'delivering': return <Badge className="bg-purple-500 text-purple-50">{displayName}</Badge>;
+            case 'completed': return <Badge className="bg-green-600 text-green-50">{displayName}</Badge>;
+            case 'cancelled': return <Badge variant="destructive">{displayName}</Badge>;
+            case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">{displayName}</Badge>;
         }
     };
     
@@ -271,7 +283,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             <ul className="space-y-1 text-sm text-muted-foreground">
                                                 {order.statusHistory.map((h: StatusHistory, index: number) => (
                                                     <li key={index} className="flex items-center justify-between">
-                                                        <span className="font-medium capitalize">{h.status.replace('-', ' ')}</span>
+                                                        <span className="font-medium capitalize">{statusDisplayMap[h.status] || h.status.replace('-', ' ')}</span>
                                                         <span>{format(h.timestamp.toDate(), 'MMM d, yyyy, h:mm a')}</span>
                                                     </li>
                                                 ))}
