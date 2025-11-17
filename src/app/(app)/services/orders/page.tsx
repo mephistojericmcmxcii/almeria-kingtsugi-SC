@@ -22,8 +22,9 @@ import { Textarea } from '@/components/ui/textarea';
 
 const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
-        case 'pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
-        case 'confirmed': return <Badge className="bg-blue-500 text-blue-50">Confirmed</Badge>;
+        case 'pending-quote': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending Quote</Badge>;
+        case 'quote-ready': return <Badge className="bg-blue-500 text-blue-50">Quote Ready</Badge>;
+        case 'confirmed': return <Badge className="bg-teal-500 text-teal-50">Confirmed</Badge>;
         case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
         case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
         case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
@@ -32,8 +33,9 @@ const getStatusBadge = (status: OrderStatus) => {
 };
 
 const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-    pending: ['confirmed', 'declined'],
-    confirmed: ['delivering', 'declined'], // Changed 'cancelled' to 'declined' for admin action
+    'pending-quote': ['quote-ready', 'declined'],
+    'quote-ready': ['confirmed', 'declined'],
+    confirmed: ['delivering', 'declined'],
     delivering: [],
     completed: [],
     cancelled: [],
@@ -293,7 +295,7 @@ export default function AllOrdersPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {availableActions.map(status => (
-                                            <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
+                                            <SelectItem key={status} value={status} className="capitalize">{status.replace('-', ' ')}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -309,3 +311,5 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    

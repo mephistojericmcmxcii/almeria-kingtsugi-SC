@@ -349,7 +349,8 @@
         "status": {
           "type": "string",
           "enum": [
-            "pending",
+            "pending-quote",
+            "quote-ready",
             "confirmed",
             "delivering",
             "completed",

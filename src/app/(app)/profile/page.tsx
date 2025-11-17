@@ -128,8 +128,9 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
 
     const getStatusBadge = (status: OrderStatus) => {
         switch (status) {
-            case 'pending': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending</Badge>;
-            case 'confirmed': return <Badge className="bg-blue-500 text-blue-50">Confirmed</Badge>;
+            case 'pending-quote': return <Badge variant="secondary" className="bg-yellow-500 text-yellow-50">Pending Quote</Badge>;
+            case 'quote-ready': return <Badge className="bg-blue-500 text-blue-50">Quote Ready</Badge>;
+            case 'confirmed': return <Badge className="bg-teal-500 text-teal-50">Confirmed</Badge>;
             case 'delivering': return <Badge className="bg-purple-500 text-purple-50">Delivering</Badge>;
             case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
             case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
@@ -141,7 +142,7 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
         if (!orders) return [];
         const sorted = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
         if (statusFilter === 'active') {
-            return sorted.filter(o => ['pending', 'confirmed', 'delivering'].includes(o.status));
+            return sorted.filter(o => ['pending-quote', 'quote-ready', 'confirmed', 'delivering'].includes(o.status));
         } else { // 'completed'
             return sorted.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
         }
@@ -216,7 +217,7 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                            
                             {user?.role === 'admin' && user?.id === order.userId ? ( // Admin viewing their own order
                                 <div className="flex gap-2 justify-end pt-4">
-                                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                                    {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
                                             <XCircle className="mr-2 h-4 w-4"/>
                                             {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
@@ -231,7 +232,7 @@ function OrderList({ statusFilter }: { statusFilter: 'active' | 'completed' }) {
                                 </div>
                             ) : user?.role !== 'admin' ? ( // Non-admin user
                                 <div className="flex gap-2 justify-end pt-4">
-                                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                                    {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
                                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
                                             <XCircle className="mr-2 h-4 w-4"/>
                                             {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
@@ -438,3 +439,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

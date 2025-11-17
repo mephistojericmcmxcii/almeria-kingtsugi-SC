@@ -644,18 +644,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     totalAmount,
                     shippingAddress,
                     shippingContactNumber,
-                    status: 'pending',
+                    status: 'pending-quote',
                     paymentMethod,
                     updatedAt: serverTimestamp(),
                 };
                 transaction.set(newOrderRef, newOrder);
 
-                for (const item of cartItems) {
-                    const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                    transaction.update(variantRef, {
-                        quantity: increment(-item.quantity)
-                    });
-                }
+                // This logic is commented out as price is on request, but kept for future reference
+                // for (const item of cartItems) {
+                //     const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                //     transaction.update(variantRef, {
+                //         quantity: increment(-item.quantity)
+                //     });
+                // }
 
                 for (const item of cartItems) {
                     const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
@@ -810,3 +811,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
