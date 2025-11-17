@@ -181,6 +181,13 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                             </AccordionTrigger>
                             <AccordionContent className="pt-4">
                                 <div className="space-y-4">
+                                    {order.notes && (
+                                        <Alert>
+                                            <Info className="h-4 w-4" />
+                                            <AlertTitle>Notes from you</AlertTitle>
+                                            <AlertDescription className="whitespace-pre-wrap">{order.notes}</AlertDescription>
+                                        </Alert>
+                                    )}
                                     <div>
                                         <h4 className="font-semibold mb-2">Items</h4>
                                         <div className="space-y-2">
@@ -192,7 +199,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             return (
                                             <div key={item.id} className="flex justify-between items-center text-sm">
                                                 <div className="flex items-center gap-2">
-                                                    <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" />
+                                                    <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" data-ai-hint={item.imageHint} />
                                                     <div>
                                                         <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
                                                         {isQuoteReady && (item.discount || 0) > 0 && (
@@ -255,15 +262,21 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                     {/* User action buttons */}
                                     <div className="flex gap-2 justify-end pt-4">
                                         {isQuoteReady && (
-                                            <Button size="sm" onClick={() => handleUpdateStatus(order, 'confirmed')} disabled={isUpdating === order.id}>
-                                                <CheckCircle className="mr-2 h-4 w-4"/>
-                                                {isUpdating === order.id ? 'Confirming...' : 'Confirm Order'}
-                                            </Button>
-                                        )}
-                                        {(order.status === 'pending-quote' || order.status === 'quote-ready' || order.status === 'confirmed') && (
+                                            <>
                                             <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
                                                 <XCircle className="mr-2 h-4 w-4"/>
                                                 {isUpdating === order.id ? 'Cancelling...' : 'Cancel Order'}
+                                            </Button>
+                                            <Button size="sm" onClick={() => handleUpdateStatus(order, 'confirmed')} disabled={isUpdating === order.id}>
+                                                <CheckCircle className="mr-2 h-4 w-4"/>
+                                                {isUpdating === order.id ? 'Confirming...' : 'Confirm Order & Purchase'}
+                                            </Button>
+                                            </>
+                                        )}
+                                        {(order.status === 'pending-quote') && (
+                                            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                                                <XCircle className="mr-2 h-4 w-4"/>
+                                                {isUpdating === order.id ? 'Cancelling...' : 'Cancel Request'}
                                             </Button>
                                         )}
                                         {order.status === 'delivering' && (

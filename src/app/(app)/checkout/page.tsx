@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, CreditCard, Home, ShoppingCart, Phone, FileQuestion } from 'lucide-react';
+import { ChevronLeft, CreditCard, Home, ShoppingCart, Phone, FileQuestion, MessageSquare } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,7 @@ export default function CheckoutPage() {
     const [customContact, setCustomContact] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'instapay'>('cod');
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [notes, setNotes] = useState('');
 
     const cartCollectionRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -71,7 +72,7 @@ export default function CheckoutPage() {
         if (!finalShippingAddress || !finalContactNumber || !cartItems) return;
         setIsPlacingOrder(true);
 
-        const success = await placeOrder(cartItems, total, finalShippingAddress, finalContactNumber, paymentMethod);
+        const success = await placeOrder(cartItems, total, finalShippingAddress, finalContactNumber, paymentMethod, notes);
 
         if (success) {
             toast({
@@ -92,6 +93,7 @@ export default function CheckoutPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <Skeleton className="h-40 w-full" />
                         <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-24 w-full" />
                     </div>
                     <div className="space-y-6">
                         <Skeleton className="h-64 w-full" />
@@ -186,6 +188,21 @@ export default function CheckoutPage() {
                                     </div>
                                 )}
                            </RadioGroup>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row items-center gap-4">
+                           <MessageSquare className="w-6 h-6 text-primary" />
+                           <CardTitle className="font-headline text-2xl">Notes for the Seller</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <Textarea 
+                                placeholder="Add any special instructions, questions, or requests for your quotation here..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                rows={4}
+                            />
                         </CardContent>
                     </Card>
 

@@ -299,7 +299,7 @@
         },
         "discount": {
           "type": "number",
-          "description": "Optional discount amount for this specific item in the order."
+          "description": "Optional discount percentage for this specific item in the order."
         }
       },
       "required": [
@@ -377,6 +377,10 @@
         "cancellationReason": {
           "type": "string",
           "description": "Reason for cancellation or decline, provided by an admin."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes from the customer included with the quotation request."
         }
       },
       "required": [

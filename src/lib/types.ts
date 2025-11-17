@@ -51,7 +51,7 @@ export type CartItem = {
   imageUrl?: string;
   imageHint?: string;
   stock?: number;
-  discount?: number; // Per-item discount
+  discount?: number; // Per-item discount as a percentage
 };
 
 export type OrderStatus = 'pending-quote' | 'quote-ready' | 'confirmed' | 'delivering' | 'completed' | 'cancelled' | 'declined';
@@ -74,6 +74,7 @@ export type Order = {
   discount: number; // Overall order discount, can be sum of item discounts
   deliveryFee?: number;
   packagingFee?: number;
+  notes?: string;
 };
 
 export type PurchaseOrderStatus = 'Pending' | 'Approved' | 'Paid' | 'Completed' | 'Cancelled';

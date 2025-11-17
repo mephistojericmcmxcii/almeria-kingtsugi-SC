@@ -44,7 +44,7 @@ interface AuthContextType {
   addToCart: (variant: CombinedVariant) => Promise<void>;
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
-  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string) => Promise<boolean>;
+  placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string, notes?: string) => Promise<boolean>;
   updateOrderStatus: (
     order: Order, 
     newStatus: OrderStatus, 
@@ -633,7 +633,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string): Promise<boolean> => {
+    const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string, notes?: string): Promise<boolean> => {
         if (!user) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to request a quotation.' });
             return false;
@@ -655,6 +655,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     shippingContactNumber,
                     status: 'pending-quote',
                     paymentMethod,
+                    notes,
                     updatedAt: serverTimestamp(),
                     discount: 0,
                 };
@@ -729,11 +730,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 await runTransaction(firestore, async (transaction: Transaction) => {
                     transaction.update(orderRef, dataToUpdate);
 
-                    for (const item of order.items) {
-                        const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                        transaction.update(variantRef, {
-                            quantity: increment(item.quantity)
-                        });
+                    // Only restock items if the order was confirmed or in delivery before cancellation
+                    if (order.status === 'confirmed' || order.status === 'delivering') {
+                        for (const item of order.items) {
+                            const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                            transaction.update(variantRef, {
+                                quantity: increment(item.quantity)
+                            });
+                        }
                     }
                 });
             } else {

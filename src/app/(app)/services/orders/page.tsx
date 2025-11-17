@@ -14,12 +14,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent } from 'lucide-react';
+import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const getStatusBadge = (status: OrderStatus) => {
@@ -345,6 +346,12 @@ export default function AllOrdersPage() {
                             <h3 className="font-semibold mb-2">Shipping Address</h3>
                             <p className="text-sm text-muted-foreground">{selectedOrder.shippingAddress}</p>
                         </div>
+                        {selectedOrder.notes && (
+                            <div>
+                                <h3 className="font-semibold mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Customer Notes</h3>
+                                <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md whitespace-pre-wrap">{selectedOrder.notes}</p>
+                            </div>
+                        )}
                         <div>
                             <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
                             <Table>
