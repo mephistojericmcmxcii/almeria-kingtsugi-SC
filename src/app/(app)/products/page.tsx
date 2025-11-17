@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Eye, ShoppingCart, Search, Tag, Package } from 'lucide-react';
+import { Eye, ShoppingCart, Search, Tag, Package, FileQuestion } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -210,10 +210,6 @@ export default function ProductsPage() {
                                 </p>
                                 <div className="flex items-center justify-between text-sm pt-2">
                                     <div className="flex items-center gap-2 text-muted-foreground">
-                                        <Tag className="w-4 h-4" />
-                                        <span className="font-medium text-foreground">{formatCurrency(item.price)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-muted-foreground">
                                          <Package className="w-4 h-4" />
                                         <span className="font-medium text-foreground">{item.quantity} left</span>
                                     </div>
@@ -224,7 +220,7 @@ export default function ProductsPage() {
                                     <Eye className="mr-2 h-4 w-4" /> View
                                 </Button>
                                 <Button size="sm" onClick={() => setVariantToAddToCart(item)} disabled={item.quantity <= 0}>
-                                    <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+                                    <FileQuestion className="mr-2 h-4 w-4" /> Add to Quotation
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -249,9 +245,9 @@ export default function ProductsPage() {
     <AlertDialog open={!!variantToAddToCart} onOpenChange={(open) => !open && setVariantToAddToCart(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Add to Cart</AlertDialogTitle>
+                <AlertDialogTitle>Confirm Add to Quotation</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Are you sure you want to add <strong>{variantToAddToCart?.parentName} ({variantToAddToCart?.brand})</strong> to your cart?
+                    Are you sure you want to add <strong>{variantToAddToCart?.parentName} ({variantToAddToCart?.brand})</strong> to your quotation list?
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

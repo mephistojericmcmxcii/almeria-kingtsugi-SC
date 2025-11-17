@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, CreditCard, Home, ShoppingCart, Phone } from 'lucide-react';
+import { ChevronLeft, CreditCard, Home, ShoppingCart, Phone, FileQuestion } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -47,7 +47,7 @@ export default function CheckoutPage() {
         return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }, [cartItems]);
     
-    const shippingFee = 10;
+    const shippingFee = 0; // No shipping fee for quotations
     const total = subtotal + shippingFee;
 
     const finalShippingAddress = useMemo(() => {
@@ -75,8 +75,8 @@ export default function CheckoutPage() {
 
         if (success) {
             toast({
-                title: "Order Placed!",
-                description: "Thank you for your purchase. Your order is being processed.",
+                title: "Quotation Request Sent!",
+                description: "Thank you for your request. We will get back to you shortly with a quotation.",
             });
             router.push('/profile');
         }
@@ -104,13 +104,13 @@ export default function CheckoutPage() {
     if (!cartItems || cartItems.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                 <ShoppingCart className="w-16 h-16 text-muted-foreground mb-4" />
-                <h1 className="text-3xl font-bold font-headline">Your Cart is Empty</h1>
+                 <FileQuestion className="w-16 h-16 text-muted-foreground mb-4" />
+                <h1 className="text-3xl font-bold font-headline">Your Quotation List is Empty</h1>
                 <p className="text-muted-foreground mt-2">
-                    Looks like you haven't added anything to your cart yet.
+                    Looks like you haven't added anything to your list yet.
                 </p>
                 <Button asChild className="mt-6">
-                    <Link href="/products">Continue Shopping</Link>
+                    <Link href="/products">Continue Browsing</Link>
                 </Button>
             </div>
         )
@@ -126,8 +126,8 @@ export default function CheckoutPage() {
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight font-headline">Checkout</h1>
-                    <p className="text-muted-foreground">Review your order and complete your purchase.</p>
+                    <h1 className="text-3xl font-bold tracking-tight font-headline">Quotation Request</h1>
+                    <p className="text-muted-foreground">Review your items and submit your request for a quotation.</p>
                 </div>
             </div>
 
@@ -137,7 +137,7 @@ export default function CheckoutPage() {
                     <Card>
                         <CardHeader className="flex flex-row items-center gap-4">
                             <Home className="w-6 h-6 text-primary" />
-                            <CardTitle className="font-headline text-2xl">Shipping Information</CardTitle>
+                            <CardTitle className="font-headline text-2xl">Contact & Delivery Information</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                            <RadioGroup value={shippingOption} onValueChange={(value) => setShippingOption(value as 'profile' | 'custom')}>
@@ -189,51 +189,13 @@ export default function CheckoutPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Payment Method */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center gap-4">
-                             <CreditCard className="w-6 h-6 text-primary" />
-                            <CardTitle className="font-headline text-2xl">Payment Method</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'cod' | 'gcash' | 'instapay')}>
-                                <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
-                                    <div className="flex items-center space-x-3">
-                                        <RadioGroupItem value="gcash" id="gcash" disabled />
-                                        <Label htmlFor="gcash">GCash</Label>
-                                    </div>
-                                    <span className="text-xs font-semibold text-muted-foreground">SOON</span>
-                                </div>
-                                 <div className="flex items-center justify-between rounded-lg border p-4 has-[input:disabled]:opacity-50">
-                                    <div className="flex items-center space-x-3">
-                                        <RadioGroupItem value="instapay" id="instapay" disabled />
-                                        <Label htmlFor="instapay">Instapay</Label>
-                                    </div>
-                                    <span className="text-xs font-semibold text-muted-foreground">SOON</span>
-                                </div>
-                                 <div className="flex items-center justify-between rounded-lg border p-4">
-                                    <div className="flex items-center space-x-3">
-                                        <RadioGroupItem value="cod" id="cod" />
-                                        <Label htmlFor="cod">Cash on Delivery</Label>
-                                    </div>
-                                     <span className="text-xs font-semibold text-primary">AVAILABLE</span>
-                                </div>
-                            </RadioGroup>
-                            <Alert>
-                                <AlertTitle className="font-semibold">Cash on Delivery Only</AlertTitle>
-                                <AlertDescription>
-                                    Digital payment options will be available in the future. For now, all orders are processed as Cash on Delivery.
-                                </AlertDescription>
-                            </Alert>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 {/* Order Summary */}
                 <Card className="lg:sticky lg:top-24">
                     <CardHeader>
-                        <CardTitle className="font-headline text-2xl">Order Summary</CardTitle>
-                        <CardDescription>Here's what's in your cart.</CardDescription>
+                        <CardTitle className="font-headline text-2xl">Quotation Summary</CardTitle>
+                        <CardDescription>Here's what's in your list.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
@@ -250,32 +212,22 @@ export default function CheckoutPage() {
                                     <p className="text-xs text-muted-foreground">{item.brand}</p>
                                 </div>
                                 <div className="text-right text-sm">
-                                    <p className="font-medium">{formatCurrency((item.price || 0) * item.quantity)}</p>
-                                    <p className="text-xs text-muted-foreground">{item.quantity} x {formatCurrency(item.price || 0)}</p>
+                                    <p className="font-medium">x {item.quantity}</p>
                                 </div>
                             </div>
                         ))}
                         </div>
                         <Separator />
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>{formatCurrency(subtotal)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Shipping</span>
-                                <span>{formatCurrency(shippingFee)}</span>
-                            </div>
-                        </div>
-                        <Separator />
-                        <div className="flex justify-between font-bold text-lg">
-                            <span>Total</span>
-                            <span>{formatCurrency(total)}</span>
-                        </div>
+                        <Alert>
+                            <AlertTitle className="font-semibold">Price on Request</AlertTitle>
+                            <AlertDescription>
+                                Prices will be provided in the official quotation sent to your email.
+                            </AlertDescription>
+                        </Alert>
                     </CardContent>
                     <CardFooter>
                         <Button className="w-full" size="lg" onClick={handlePlaceOrder} disabled={isPlaceOrderDisabled}>
-                            {isPlacingOrder ? 'Placing Order...' : (isPlaceOrderDisabled ? 'Complete Shipping Info' : 'Place Order')}
+                            {isPlacingOrder ? 'Submitting...' : (isPlaceOrderDisabled ? 'Complete Contact Info' : 'Submit Quotation Request')}
                         </Button>
                     </CardFooter>
                 </Card>

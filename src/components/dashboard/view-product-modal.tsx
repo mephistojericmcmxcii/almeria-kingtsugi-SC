@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { InventoryVariant } from '@/lib/types';
@@ -11,7 +12,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tag, Package } from 'lucide-react';
+import { Tag, Package, FileQuestion } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ShoppingCart } from 'lucide-react';
 
@@ -96,7 +97,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                     <div className="flex items-center justify-between text-base pt-4">
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <Tag className="w-5 h-5" />
-                            <span className="font-bold text-2xl text-foreground">{formatCurrency(variant.price)}</span>
+                            <span className="font-bold text-2xl text-foreground">Price on Request</span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                              <Package className="w-5 h-5" />
@@ -107,7 +108,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
 
                 <div className="pt-4 flex flex-col gap-2">
                     <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
-                        <ShoppingCart className="mr-2" /> Add to Cart
+                        <FileQuestion className="mr-2" /> Add to Quotation
                     </Button>
                     <Button size="lg" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                 </div>

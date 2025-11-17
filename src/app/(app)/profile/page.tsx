@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,7 +52,7 @@ function CartList() {
     const router = useRouter();
 
     if (isAuthLoading) {
-        return <div className="text-center py-12 text-muted-foreground">Loading your cart...</div>;
+        return <div className="text-center py-12 text-muted-foreground">Loading your quotation...</div>;
     }
     
     const totalCartPrice = useMemo(() => {
@@ -63,8 +63,8 @@ function CartList() {
     if (!cartItems || cartItems.length === 0) {
         return (
             <div className="text-center py-12 text-muted-foreground">
-                <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4">Your cart is empty.</p>
+                <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4">Your quotation list is empty.</p>
             </div>
         );
     }
@@ -107,7 +107,7 @@ function CartList() {
                 <span className="ml-4">{formatCurrency(totalCartPrice)}</span>
             </div>
              <CardFooter className="flex justify-end p-0 pt-6">
-                <Button onClick={() => router.push('/checkout')} disabled={!cartItems || cartItems.length === 0}>Proceed to Checkout</Button>
+                <Button onClick={() => router.push('/checkout')} disabled={!cartItems || cartItems.length === 0}>Request Quotation</Button>
             </CardFooter>
         </div>
     );
@@ -326,8 +326,8 @@ export default function ProfilePage() {
             Profile
           </TabsTrigger>
            <TabsTrigger value="cart" className="relative">
-            <ShoppingCart className="mr-2" />
-            My Cart
+            <FileQuestion className="mr-2" />
+            My Quotation
             {showCartBadge && cartItemCount > 0 && (
               <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
                 {cartItemCount}
@@ -433,8 +433,8 @@ export default function ProfilePage() {
         <TabsContent value="cart">
           <Card>
             <CardHeader>
-              <CardTitle>My Cart</CardTitle>
-              <CardDescription>Items you have added to your cart.</CardDescription>
+              <CardTitle>My Quotation</CardTitle>
+              <CardDescription>Items you have added to your quotation list.</CardDescription>
             </CardHeader>
             <CardContent>
                <CartList />

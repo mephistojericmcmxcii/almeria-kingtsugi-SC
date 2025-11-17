@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
@@ -515,7 +516,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const addToCart = async (variant: CombinedVariant) => {
         if (!user) {
-            toast({ variant: 'destructive', title: 'Not Logged In', description: 'Please log in to add items to your cart.' });
+            toast({ variant: 'destructive', title: 'Not Logged In', description: 'Please log in to add items to your quotation.' });
             return;
         }
 
@@ -555,8 +556,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
 
             toast({
-                title: "Item Added to Cart",
-                description: `${'\'\'\''}{variant.parentName} - ${'\'\'\''}{variant.brand} has been added to your cart.`,
+                title: "Item Added to Quotation",
+                description: `${'\'\'\''}{variant.parentName} - ${'\'\'\''}{variant.brand} has been added to your quotation list.`,
             });
         } catch (error: any) {
             if (error.message.includes('Stock Limit Reached')) {
@@ -611,7 +612,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await deleteDoc(cartItemRef);
              toast({
                 title: "Item Removed",
-                description: "The item has been removed from your cart.",
+                description: "The item has been removed from your quotation list.",
             });
         } catch (error: any) {
             console.error("Error removing cart item:", error);
@@ -625,7 +626,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const placeOrder = async (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string): Promise<boolean> => {
         if (!user) {
-            toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to place an order.' });
+            toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to request a quotation.' });
             return false;
         }
 
@@ -664,17 +665,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             return true;
         } catch (error: any) {
-            console.error("Order placement failed:", error);
+            console.error("Quotation request failed:", error);
             toast({
                 variant: 'destructive',
-                title: 'Order Failed',
-                description: error.message || "There was a problem placing your order. Please try again."
+                title: 'Request Failed',
+                description: error.message || "There was a problem submitting your request. Please try again."
             });
             if (error.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
                     path: `users/${'\'\'\''}{user.id}/orders`,
                     operation: 'write',
-                    requestResourceData: { note: "Order placement transaction" }
+                    requestResourceData: { note: "Quotation request transaction" }
                 });
                 errorEmitter.emit('permission-error', permissionError);
             }
