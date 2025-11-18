@@ -59,17 +59,22 @@ export default function PoPaymentPage() {
         const pos = poSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
 
         const summaryPromises = pos.map(async (po) => {
-          const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
-          const itemsSnapshot = await getDocs(itemsCollectionRef);
           
           let totalAllocation = 0;
           let totalExpenses = 0;
 
-          itemsSnapshot.forEach(itemDoc => {
-            const item = itemDoc.data() as PurchaseOrderItem;
-            totalAllocation += (item.amount || 0) * (item.quantity || 0);
-            totalExpenses += (item.actualAmount || 0) * (item.quantity || 0);
-          });
+          if (po.entryType === 'manual') {
+              totalAllocation = po.totalAllocation || 0;
+              totalExpenses = po.totalExpenses || 0;
+          } else {
+              const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
+              const itemsSnapshot = await getDocs(itemsCollectionRef);
+              itemsSnapshot.forEach(itemDoc => {
+                const item = itemDoc.data() as PurchaseOrderItem;
+                totalAllocation += (item.amount || 0) * (item.quantity || 0);
+                totalExpenses += (item.actualAmount || 0) * (item.quantity || 0);
+              });
+          }
 
           const taxDeduction = po.taxDeduction || 0;
           
