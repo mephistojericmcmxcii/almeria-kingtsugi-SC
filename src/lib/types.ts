@@ -1,4 +1,5 @@
 
+
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type User = {
@@ -114,6 +115,7 @@ export type PurchaseOrder = {
   amountDeposited?: number;
   bank?: string;
   paymentStatus?: PoPaymentStatus;
+  entryType?: 'system' | 'manual';
 };
 
     

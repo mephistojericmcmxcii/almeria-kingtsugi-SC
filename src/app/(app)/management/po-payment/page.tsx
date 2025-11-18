@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,11 +15,13 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Eye, ShieldAlert, MoreHorizontal } from "lucide-react";
+import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { cn } from '@/lib/utils';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
+const AddManualPoDialog = lazy(() => import('@/components/po/add-manual-po-dialog').then(module => ({ default: module.AddManualPoDialog })));
 
 
 type PoFinancialSummary = {
@@ -40,6 +43,8 @@ export default function PoPaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSummary, setSelectedSummary] = useState<PoFinancialSummary | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddManualDialogOpen, setIsAddManualDialogOpen] = useState(false);
+  const [poToDelete, setPoToDelete] = useState<PoFinancialSummary | null>(null);
   
   const fetchSummaries = async () => {
       if (!firestore || user?.role !== 'admin') {
@@ -98,6 +103,21 @@ export default function PoPaymentPage() {
     }
   }, [firestore, user]);
 
+  const handleDeleteConfirm = async () => {
+    if (!poToDelete) return;
+
+    try {
+        const poRef = doc(firestore, 'purchase_orders', poToDelete.id);
+        await deleteDoc(poRef);
+        toast({ title: "Manual Entry Deleted", description: `Entry ${poToDelete.po.poNumber} has been deleted.`});
+        setPoToDelete(null);
+        fetchSummaries(); // Refetch the list
+    } catch (error) {
+        console.error("Error deleting manual PO entry:", error);
+        toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not delete the manual entry.' });
+    }
+  };
+
   const getStatusBadge = (status: PurchaseOrderStatus | PoPaymentStatus | undefined) => {
     switch (status) {
       case 'Approved': return <Badge className="bg-blue-500 text-blue-50 hover:bg-blue-600">Approved</Badge>;
@@ -140,9 +160,14 @@ export default function PoPaymentPage() {
   return (
     <>
     <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <CreditCard className="w-8 h-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight font-headline">PO Payment Summary</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+            <CreditCard className="w-8 h-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight font-headline">PO Payment Summary</h1>
+        </div>
+         <Button onClick={() => setIsAddManualDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Manual Payment
+        </Button>
       </div>
       <Card>
         <CardHeader>
@@ -202,6 +227,14 @@ export default function PoPaymentPage() {
                              <DropdownMenuItem onSelect={() => handleViewDetails(summary)}>
                               <Eye className="mr-2 h-4 w-4" /> Manage Payment
                             </DropdownMenuItem>
+                            {summary.po.entryType === 'manual' && (
+                                <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => setPoToDelete(summary)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
+                                </DropdownMenuItem>
+                                </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                     </TableCell>
@@ -230,6 +263,31 @@ export default function PoPaymentPage() {
           />
       </Suspense>
     )}
+    
+    <Suspense fallback={<div>Loading...</div>}>
+        <AddManualPoDialog
+            isOpen={isAddManualDialogOpen}
+            onOpenChange={setIsAddManualDialogOpen}
+            onSuccess={fetchSummaries}
+        />
+    </Suspense>
+
+    <AlertDialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the manual payment entry for PO #<span className="font-bold">{poToDelete?.po.poNumber}</span>. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

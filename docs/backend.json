@@ -111,7 +111,7 @@
       ]
     },
     "AboutPageContent": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$schema": "http://json-schema.org/draft-07-schema#",
       "title": "AboutPageContent",
       "type": "object",
       "description": "Stores the editable content for the About Us page.",
@@ -460,6 +460,11 @@
             "type": "string",
             "enum": ["Paid", "Unpaid"],
             "description": "The payment status of the purchase order."
+        },
+        "entryType": {
+          "type": "string",
+          "enum": ["system", "manual"],
+          "description": "Indicates if the PO was created via the standard system or as a manual payment entry."
         }
       },
       "required": ["poNumber", "date", "careOf", "status", "source"]
