@@ -155,13 +155,13 @@ export default function PoPaymentPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>PO #</TableHead>
-                <TableHead className="text-right">Total Allocation</TableHead>
-                <TableHead className="text-right">Total Expenses</TableHead>
-                <TableHead className="text-right">Tax Deducted</TableHead>
-                <TableHead className="text-right">Profit / Loss</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-[15%]">PO #</TableHead>
+                <TableHead className="text-right w-[15%]">Total Allocation</TableHead>
+                <TableHead className="text-right w-[15%]">Total Expenses</TableHead>
+                <TableHead className="text-right w-[15%]">Tax Deducted</TableHead>
+                <TableHead className="text-right w-[15%]">Profit / Loss</TableHead>
+                <TableHead className="w-[15%]">Payment Status</TableHead>
+                <TableHead className="text-right w-[10%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
