@@ -41,6 +41,17 @@ export default function PoDetailsPage() {
     const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    const refetchItems = async () => {
+        if (!firestore || !poId) return;
+        try {
+            const itemsCollectionRef = collection(firestore, 'purchase_orders', poId, 'items');
+            const itemsSnap = await getDocs(itemsCollectionRef);
+            setPoItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem)));
+        } catch (error) {
+             toast({ variant: "destructive", title: "Error", description: "Could not refresh item list." });
+        }
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             if (!firestore || !poId) return;
@@ -87,6 +98,10 @@ export default function PoDetailsPage() {
     const handleOpenUpdateDialog = (item: PurchaseOrderItem) => {
         setItemToUpdate(item);
         setIsUpdateDialogOpen(true);
+    };
+
+    const handleUpdateSuccess = () => {
+        refetchItems();
     };
 
     return (
@@ -205,6 +220,7 @@ export default function PoDetailsPage() {
                         isOpen={isAddDialogOpen}
                         onOpenChange={setIsAddDialogOpen}
                         poId={poId}
+                        onSuccess={refetchItems}
                     />
                     {itemToUpdate && (
                         <UpdateActualAmountDialog
@@ -212,6 +228,7 @@ export default function PoDetailsPage() {
                             onOpenChange={setIsUpdateDialogOpen}
                             poId={poId}
                             item={itemToUpdate}
+                            onSuccess={handleUpdateSuccess}
                         />
                     )}
                 </Suspense>

@@ -28,9 +28,10 @@ interface UpdateActualAmountDialogProps {
   onOpenChange: (open: boolean) => void;
   poId: string;
   item: PurchaseOrderItem;
+  onSuccess: () => void;
 }
 
-export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item }: UpdateActualAmountDialogProps) {
+export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onSuccess }: UpdateActualAmountDialogProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,6 +61,7 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item }: U
         title: 'Actual Amount Updated',
         description: `The actual cost for ${item.name} has been saved.`,
       });
+      onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to update actual amount:', error);

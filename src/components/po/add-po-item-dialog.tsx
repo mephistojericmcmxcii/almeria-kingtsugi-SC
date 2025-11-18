@@ -28,7 +28,7 @@ const poItemSchema = z.object({
     z.number().min(0, 'Allocated amount cannot be negative.')
   ),
   actualAmount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
+    (a) => parseFloat(z.string().parse(a) || '0'),
     z.number().min(0, 'Actual amount cannot be negative.')
   ).optional(),
 });
@@ -43,9 +43,10 @@ interface AddPoItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   poId: string;
+  onSuccess: () => void;
 }
 
-export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogProps) {
+export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPoItemDialogProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,6 +85,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
         title: 'Items Added',
         description: 'The new items have been added to the purchase order.',
       });
+      onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to add PO items:', error);
