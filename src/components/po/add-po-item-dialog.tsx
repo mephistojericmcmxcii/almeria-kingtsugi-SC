@@ -27,10 +27,6 @@ const poItemSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().min(0, 'Allocated amount cannot be negative.')
   ),
-  actualAmount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a) || '0'),
-    z.number().min(0, 'Actual amount cannot be negative.')
-  ).optional(),
 });
 
 const formSchema = z.object({
@@ -54,7 +50,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0, actualAmount: 0 }],
+      items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }],
     },
   });
 
@@ -65,7 +61,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
   useEffect(() => {
     if (!isOpen) {
-      form.reset({ items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0, actualAmount: 0 }] });
+      form.reset({ items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }] });
     }
   }, [isOpen, form]);
 
@@ -76,7 +72,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
     values.items.forEach(item => {
       const newItemRef = doc(poItemsCollectionRef);
-      batch.set(newItemRef, item);
+      batch.set(newItemRef, { ...item, actualAmount: 0 }); // Initialize actualAmount to 0
     });
 
     try {
@@ -101,7 +97,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Add Items to Purchase Order</DialogTitle>
           <DialogDescription>Add one or more line items to this PO.</DialogDescription>
@@ -110,7 +106,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-1 md:grid-cols-7 items-end gap-2 p-2 border rounded-lg">
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-6 items-end gap-2 p-2 border rounded-lg">
                   <FormField
                     control={form.control}
                     name={`items.${index}.name`}
@@ -189,19 +185,6 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                       </FormItem>
                     )}
                   />
-                   <FormField
-                    control={form.control}
-                    name={`items.${index}.actualAmount`}
-                    render={({ field }) => (
-                      <FormItem className="col-span-2 md:col-span-1">
-                        {index === 0 && <label className="text-sm font-medium">Actual</label>}
-                        <FormControl>
-                          <Input type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <Button
                     type="button"
                     variant="ghost"
@@ -220,7 +203,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0, actualAmount: 0 })}
+              onClick={() => append({ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 })}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Another Item
