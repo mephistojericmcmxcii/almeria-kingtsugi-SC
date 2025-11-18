@@ -106,12 +106,12 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-1 md:grid-cols-6 items-end gap-2 p-2 border rounded-lg">
+                <div key={field.id} className="grid grid-cols-[2fr,1fr,1fr,0.5fr,0.5fr,1fr,auto] items-end gap-2 p-2 border rounded-lg">
                   <FormField
                     control={form.control}
                     name={`items.${index}.name`}
                     render={({ field }) => (
-                      <FormItem className="col-span-2">
+                      <FormItem>
                         {index === 0 && <label className="text-sm font-medium">Item Name</label>}
                         <FormControl>
                           <Input placeholder="e.g., Bond Paper" {...field} />
@@ -150,10 +150,10 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                     control={form.control}
                     name={`items.${index}.unit`}
                     render={({ field }) => (
-                      <FormItem className="w-24">
+                      <FormItem>
                         {index === 0 && <label className="text-sm font-medium">Unit</label>}
                         <FormControl>
-                          <Input placeholder="e.g., ream" {...field} />
+                          <Input placeholder="ream" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -163,7 +163,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                     control={form.control}
                     name={`items.${index}.quantity`}
                     render={({ field }) => (
-                      <FormItem className="w-20">
+                      <FormItem>
                         {index === 0 && <label className="text-sm font-medium">Qty</label>}
                         <FormControl>
                           <Input type="number" {...field} />
@@ -176,7 +176,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                     control={form.control}
                     name={`items.${index}.amount`}
                     render={({ field }) => (
-                      <FormItem className="col-span-2 md:col-span-1">
+                      <FormItem>
                         {index === 0 && <label className="text-sm font-medium">Allocated</label>}
                         <FormControl>
                           <Input type="number" step="0.01" {...field} />
@@ -189,7 +189,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="text-destructive hover:bg-destructive/10 self-center"
+                    className="text-destructive hover:bg-destructive/10"
                     onClick={() => remove(index)}
                     disabled={fields.length <= 1}
                   >
