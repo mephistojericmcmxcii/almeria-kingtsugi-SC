@@ -91,8 +91,12 @@ export default function PoPaymentPage() {
 
 
   useEffect(() => {
-    fetchSummaries();
-  }, [firestore, user, toast]);
+    if (user?.role === 'admin') {
+        fetchSummaries();
+    } else {
+        setIsLoading(false);
+    }
+  }, [firestore, user]);
 
   const getStatusBadge = (status: PurchaseOrderStatus | PoPaymentStatus | undefined) => {
     switch (status) {
@@ -154,6 +158,7 @@ export default function PoPaymentPage() {
                 <TableHead>PO #</TableHead>
                 <TableHead className="text-right">Total Allocation</TableHead>
                 <TableHead className="text-right">Total Expenses</TableHead>
+                <TableHead className="text-right">Tax Deducted</TableHead>
                 <TableHead className="text-right">Profit / Loss</TableHead>
                 <TableHead>Payment Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -167,6 +172,7 @@ export default function PoPaymentPage() {
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
@@ -177,6 +183,7 @@ export default function PoPaymentPage() {
                     <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
                     <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
+                    <TableCell className="text-right text-orange-600">{formatCurrency(summary.po.taxDeduction || 0)}</TableCell>
                     <TableCell className={cn(
                         "text-right font-bold",
                         summary.profit >= 0 ? "text-green-600" : "text-red-600"
@@ -202,7 +209,7 @@ export default function PoPaymentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No purchase orders found.
                   </TableCell>
                 </TableRow>
