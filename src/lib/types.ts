@@ -85,6 +85,7 @@ export type Order = {
 };
 
 export type PurchaseOrderStatus = 'Approved' | 'Completed' | 'Cancelled';
+export type PoPaymentStatus = 'Paid' | 'Unpaid';
 
 export type PurchaseOrderItem = {
   id: string;
@@ -106,6 +107,13 @@ export type PurchaseOrder = {
   status: PurchaseOrderStatus;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  // New payment fields
+  agency?: string;
+  paymentDate?: Timestamp;
+  taxDeduction?: number;
+  amountDeposited?: number;
+  bank?: string;
+  paymentStatus?: PoPaymentStatus;
 };
 
     

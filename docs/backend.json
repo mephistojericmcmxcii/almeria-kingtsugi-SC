@@ -411,7 +411,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PurchaseOrder",
       "type": "object",
-      "description": "Represents a purchase order for acquiring inventory.",
+      "description": "Represents a purchase order for acquiring inventory, including payment details.",
       "properties": {
         "poNumber": {
           "type": "string",
@@ -434,6 +434,32 @@
           "type": "string",
           "enum": ["Approved", "Completed", "Cancelled"],
           "description": "The current status of the purchase order."
+        },
+        "agency": {
+            "type": "string",
+            "description": "The agency or institution related to the PO payment."
+        },
+        "paymentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date the payment was processed."
+        },
+        "taxDeduction": {
+            "type": "number",
+            "description": "The amount deducted for tax."
+        },
+        "amountDeposited": {
+            "type": "number",
+            "description": "The final amount deposited into the bank."
+        },
+        "bank": {
+            "type": "string",
+            "description": "The name of the bank where the amount was deposited."
+        },
+        "paymentStatus": {
+            "type": "string",
+            "enum": ["Paid", "Unpaid"],
+            "description": "The payment status of the purchase order."
         }
       },
       "required": ["poNumber", "date", "careOf", "status", "source"]

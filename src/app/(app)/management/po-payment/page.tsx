@@ -1,13 +1,12 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, getDocs } from 'firebase/firestore';
-import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
-import { format } from 'date-fns';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,16 +14,20 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Eye, ShieldAlert } from "lucide-react";
+import { CreditCard, Eye, ShieldAlert, MoreHorizontal } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
+
 
 type PoFinancialSummary = {
   id: string;
-  poNumber: string;
-  status: PurchaseOrder['status'];
+  po: PurchaseOrder;
   totalAllocation: number;
   totalExpenses: number;
   profit: number;
+  paymentStatus?: PoPaymentStatus;
 };
 
 export default function PoPaymentPage() {
@@ -35,9 +38,10 @@ export default function PoPaymentPage() {
 
   const [summaries, setSummaries] = useState<PoFinancialSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchSummaries = async () => {
+  const [selectedSummary, setSelectedSummary] = useState<PoFinancialSummary | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const fetchSummaries = async () => {
       if (!firestore || user?.role !== 'admin') {
         setIsLoading(false);
         return;
@@ -64,11 +68,11 @@ export default function PoPaymentPage() {
           
           return {
             id: po.id,
-            poNumber: po.poNumber,
-            status: po.status,
+            po: po,
             totalAllocation,
             totalExpenses,
             profit: totalAllocation - totalExpenses,
+            paymentStatus: po.paymentStatus,
           };
         });
 
@@ -83,15 +87,19 @@ export default function PoPaymentPage() {
       }
     };
 
+
+  useEffect(() => {
     fetchSummaries();
   }, [firestore, user, toast]);
 
-  const getStatusBadge = (status: PurchaseOrder['status']) => {
+  const getStatusBadge = (status: PurchaseOrderStatus | PoPaymentStatus | undefined) => {
     switch (status) {
-      case 'Approved': return <Badge className="bg-blue-500 text-blue-50">Approved</Badge>;
-      case 'Completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
+      case 'Approved': return <Badge className="bg-blue-500 text-blue-50 hover:bg-blue-600">Approved</Badge>;
+      case 'Completed': return <Badge className="bg-green-600 text-green-50 hover:bg-green-700">Completed</Badge>;
       case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      case 'Paid': return <Badge className="bg-teal-500 text-teal-50 hover:bg-teal-600">Paid</Badge>;
+      case 'Unpaid': return <Badge variant="secondary" className="bg-orange-500 text-orange-50 hover:bg-orange-600">Unpaid</Badge>;
+      default: return <Badge variant="secondary">{status || 'N/A'}</Badge>;
     }
   };
   
@@ -99,9 +107,17 @@ export default function PoPaymentPage() {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
   };
   
-  const handleView = (poId: string) => {
-    router.push(`/management/po/${poId}`);
+  const handleViewDetails = (summary: PoFinancialSummary) => {
+    setSelectedSummary(summary);
+    setIsModalOpen(true);
   };
+  
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setSelectedSummary(null);
+    }
+    setIsModalOpen(open);
+  }
 
   if (user?.role !== 'admin' && !isLoading) {
     return (
@@ -116,6 +132,7 @@ export default function PoPaymentPage() {
   }
 
   return (
+    <>
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <CreditCard className="w-8 h-8 text-primary" />
@@ -136,7 +153,7 @@ export default function PoPaymentPage() {
                 <TableHead className="text-right">Total Allocation</TableHead>
                 <TableHead className="text-right">Total Expenses</TableHead>
                 <TableHead className="text-right">Profit / Loss</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Payment Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -149,13 +166,13 @@ export default function PoPaymentPage() {
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : summaries.length > 0 ? (
                 summaries.map((summary) => (
                   <TableRow key={summary.id}>
-                    <TableCell className="font-medium">{summary.poNumber}</TableCell>
+                    <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
                     <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
                     <TableCell className={cn(
@@ -164,11 +181,20 @@ export default function PoPaymentPage() {
                     )}>
                         {formatCurrency(summary.profit)}
                     </TableCell>
-                    <TableCell>{getStatusBadge(summary.status)}</TableCell>
+                    <TableCell>{getStatusBadge(summary.paymentStatus)}</TableCell>
                     <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleView(summary.id)}>
-                            <Eye className="mr-2 h-4 w-4" /> View
-                        </Button>
+                       <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                             <DropdownMenuItem onSelect={() => handleViewDetails(summary)}>
+                              <Eye className="mr-2 h-4 w-4" /> Manage Payment
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -184,5 +210,17 @@ export default function PoPaymentPage() {
         </CardContent>
       </Card>
     </div>
+    
+    {selectedSummary && (
+      <Suspense fallback={<div>Loading...</div>}>
+          <PaymentDetailsDialog
+              isOpen={isModalOpen}
+              onOpenChange={handleDialogClose}
+              summary={selectedSummary}
+              onSuccess={fetchSummaries}
+          />
+      </Suspense>
+    )}
+    </>
   );
 }
