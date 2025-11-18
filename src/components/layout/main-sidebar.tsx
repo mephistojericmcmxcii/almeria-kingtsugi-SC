@@ -41,13 +41,13 @@ import { cn } from "@/lib/utils";
 const MainSidebar = () => {
   const pathname = usePathname();
   const { user, logout, showAdminOrderBadge } = useAuth();
-  const [servicesOpen, setServicesOpen] = React.useState(false);
+  const [managementOpen, setManagementOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (pathname.startsWith('/services')) {
-      setServicesOpen(true);
+    if (pathname.startsWith('/management')) {
+      setManagementOpen(true);
     } else {
-      setServicesOpen(false);
+      setManagementOpen(false);
     }
   }, [pathname]);
 
@@ -78,14 +78,14 @@ const MainSidebar = () => {
     },
   ];
 
-  const servicesMenuItems = [
-    { href: '/services/inventory', label: 'Inventory', icon: Boxes, notification: false },
-    { href: '/services/orders', label: 'Orders', icon: ShoppingCart, notification: showAdminOrderBadge },
-    { href: '/services/po-payment', label: 'PO Payment', icon: CreditCard, notification: false },
-    { href: '/services/po', label: 'Purchase Order', icon: FileText, notification: false },
+  const managementMenuItems = [
+    { href: '/management/inventory', label: 'Inventory', icon: Boxes, notification: false },
+    { href: '/management/orders', label: 'Orders', icon: ShoppingCart, notification: showAdminOrderBadge },
+    { href: '/management/po-payment', label: 'PO Payment', icon: CreditCard, notification: false },
+    { href: '/management/po', label: 'Purchase Order', icon: FileText, notification: false },
   ];
 
-  const isServicesActive = servicesMenuItems.some(item => pathname.startsWith(item.href));
+  const isManagementActive = managementMenuItems.some(item => pathname.startsWith(item.href));
 
 
   return (
@@ -119,18 +119,18 @@ const MainSidebar = () => {
         })}
         
         {user?.role === 'admin' && (
-            <Collapsible open={servicesOpen} onOpenChange={setServicesOpen} asChild>
+            <Collapsible open={managementOpen} onOpenChange={setManagementOpen} asChild>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip="Services" isActive={isServicesActive}>
+                        <SidebarMenuButton tooltip="Management" isActive={isManagementActive}>
                             <Briefcase />
-                            <span>Services</span>
-                            <ChevronDown className={cn("ml-auto transition-transform", servicesOpen && "rotate-180")} />
+                            <span>Management</span>
+                            <ChevronDown className={cn("ml-auto transition-transform", managementOpen && "rotate-180")} />
                         </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent asChild>
                         <SidebarMenuSub>
-                            {servicesMenuItems.map(item => (
+                            {managementMenuItems.map(item => (
                                 <SidebarMenuItem key={item.href}>
                                     <Link href={item.href}>
                                         <SidebarMenuSubButton isActive={pathname.startsWith(item.href)} className="relative">
