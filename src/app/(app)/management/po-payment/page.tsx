@@ -160,7 +160,7 @@ export default function PoPaymentPage() {
                 <TableHead className="text-right w-[15%]">Total Expenses</TableHead>
                 <TableHead className="text-right w-[15%]">Tax Deducted</TableHead>
                 <TableHead className="text-right w-[15%]">Profit / Loss</TableHead>
-                <TableHead className="w-[15%]">Payment Status</TableHead>
+                <TableHead className="text-center w-[15%]">Payment Status</TableHead>
                 <TableHead className="text-right w-[10%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,7 +173,7 @@ export default function PoPaymentPage() {
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-24 mx-auto" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -190,7 +190,7 @@ export default function PoPaymentPage() {
                     )}>
                         {formatCurrency(summary.profit)}
                     </TableCell>
-                    <TableCell>{getStatusBadge(summary.paymentStatus)}</TableCell>
+                    <TableCell className="text-center">{getStatusBadge(summary.paymentStatus)}</TableCell>
                     <TableCell className="text-right">
                        <DropdownMenu>
                           <DropdownMenuTrigger asChild>
