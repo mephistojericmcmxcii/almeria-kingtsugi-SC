@@ -25,8 +25,12 @@ const poItemSchema = z.object({
   ),
   amount: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
-    z.number().positive('Amount must be positive.')
+    z.number().min(0, 'Allocated amount cannot be negative.')
   ),
+  actualAmount: z.preprocess(
+    (a) => parseFloat(z.string().parse(a)),
+    z.number().min(0, 'Actual amount cannot be negative.')
+  ).optional(),
 });
 
 const formSchema = z.object({
@@ -49,7 +53,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }],
+      items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0, actualAmount: 0 }],
     },
   });
 
@@ -60,7 +64,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
 
   useEffect(() => {
     if (!isOpen) {
-      form.reset({ items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }] });
+      form.reset({ items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0, actualAmount: 0 }] });
     }
   }, [isOpen, form]);
 
@@ -104,12 +108,12 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg">
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-7 items-end gap-2 p-2 border rounded-lg">
                   <FormField
                     control={form.control}
                     name={`items.${index}.name`}
                     render={({ field }) => (
-                      <FormItem className="flex-1">
+                      <FormItem className="col-span-2">
                         {index === 0 && <label className="text-sm font-medium">Item Name</label>}
                         <FormControl>
                           <Input placeholder="e.g., Bond Paper" {...field} />
@@ -122,8 +126,8 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                     control={form.control}
                     name={`items.${index}.brand`}
                     render={({ field }) => (
-                      <FormItem className="flex-1">
-                        {index === 0 && <label className="text-sm font-medium">Brand (Optional)</label>}
+                      <FormItem>
+                        {index === 0 && <label className="text-sm font-medium">Brand</label>}
                         <FormControl>
                           <Input placeholder="e.g., Pilot" {...field} />
                         </FormControl>
@@ -135,8 +139,8 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                     control={form.control}
                     name={`items.${index}.model`}
                     render={({ field }) => (
-                      <FormItem className="flex-1">
-                        {index === 0 && <label className="text-sm font-medium">Model (Optional)</label>}
+                      <FormItem>
+                        {index === 0 && <label className="text-sm font-medium">Model</label>}
                         <FormControl>
                           <Input placeholder="e.g., G2" {...field} />
                         </FormControl>
@@ -174,8 +178,21 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                     control={form.control}
                     name={`items.${index}.amount`}
                     render={({ field }) => (
-                      <FormItem className="w-28">
-                        {index === 0 && <label className="text-sm font-medium">Amount (per unit)</label>}
+                      <FormItem className="col-span-2 md:col-span-1">
+                        {index === 0 && <label className="text-sm font-medium">Allocated</label>}
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name={`items.${index}.actualAmount`}
+                    render={({ field }) => (
+                      <FormItem className="col-span-2 md:col-span-1">
+                        {index === 0 && <label className="text-sm font-medium">Actual</label>}
                         <FormControl>
                           <Input type="number" step="0.01" {...field} />
                         </FormControl>
@@ -187,7 +204,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:bg-destructive/10 self-center"
                     onClick={() => remove(index)}
                     disabled={fields.length <= 1}
                   >
@@ -201,7 +218,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 })}
+              onClick={() => append({ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0, actualAmount: 0 })}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Another Item

@@ -93,7 +93,8 @@ export type PurchaseOrderItem = {
   model?: string;
   unit: string;
   quantity: number;
-  amount: number; // This is the amount per unit
+  amount: number; // Allocated amount per unit
+  actualAmount?: number; // Real cost per unit
 }
 
 export type PurchaseOrder = {
