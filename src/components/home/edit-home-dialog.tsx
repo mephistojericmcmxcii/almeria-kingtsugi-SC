@@ -347,5 +347,3 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
     </Dialog>
   );
 }
-
-    

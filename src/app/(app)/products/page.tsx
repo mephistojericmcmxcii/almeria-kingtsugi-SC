@@ -1,13 +1,12 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useFirebase, useMemoFirebase } from '@/firebase';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, collectionGroup, getDoc, getDocs, doc } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { ViewProductModal } from '@/components/dashboard/view-product-modal';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
 type CombinedVariant = InventoryVariant & {
     parentName: string;
@@ -243,13 +244,15 @@ export default function ProductsPage() {
             </div>
         )}
     </div>
-    {selectedVariant && (
-        <ViewProductModal 
-            isOpen={isModalOpen}
-            onOpenChange={setIsModalOpen}
-            variant={selectedVariant}
-            onAddToCart={handleAddToCartRequest}
-        />
+    {isModalOpen && selectedVariant && (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ViewProductModal 
+                isOpen={isModalOpen}
+                onOpenChange={setIsModalOpen}
+                variant={selectedVariant}
+                onAddToCart={handleAddToCartRequest}
+            />
+        </Suspense>
     )}
 
     <AlertDialog open={!!variantToAddToCart} onOpenChange={(open) => !open && setVariantToAddToCart(null)}>
@@ -271,5 +274,3 @@ export default function ProductsPage() {
     </>
   );
 }
-
-    

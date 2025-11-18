@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useFirebase } from '@/firebase';
 import type { CartItem, Order, OrderStatus, StatusHistory } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -23,7 +23,8 @@ import { format } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { ConfirmOrderDialog } from '@/components/profile/confirm-order-dialog';
+
+const ConfirmOrderDialog = lazy(() => import('@/components/profile/confirm-order-dialog').then(module => ({ default: module.ConfirmOrderDialog })));
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -332,11 +333,13 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
             </CardContent>
         </Card>
         {orderToConfirm && (
-            <ConfirmOrderDialog
-                isOpen={!!orderToConfirm}
-                onOpenChange={() => setOrderToConfirm(null)}
-                order={orderToConfirm}
-            />
+            <Suspense fallback={<div>Loading...</div>}>
+                <ConfirmOrderDialog
+                    isOpen={!!orderToConfirm}
+                    onOpenChange={() => setOrderToConfirm(null)}
+                    order={orderToConfirm}
+                />
+            </Suspense>
         )}
         </>
     );
@@ -586,5 +589,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

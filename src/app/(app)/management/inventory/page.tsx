@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDocs } from 'firebase/firestore';
@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { AddEditItemDialog } from '@/components/inventory/add-edit-item-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -28,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const AddEditItemDialog = lazy(() => import('@/components/inventory/add-edit-item-dialog').then(module => ({ default: module.AddEditItemDialog })));
 
 export default function InventoryPage() {
   const { firestore } = useFirebase();
@@ -303,11 +304,13 @@ export default function InventoryPage() {
       </Card>
       
       {user?.role === 'admin' && (
-        <AddEditItemDialog
-            isOpen={isAddDialogOpen}
-            onOpenChange={handleDialogClose}
-            itemToEdit={itemToEdit}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+            <AddEditItemDialog
+                isOpen={isAddDialogOpen}
+                onOpenChange={handleDialogClose}
+                itemToEdit={itemToEdit}
+            />
+        </Suspense>
       )}
 
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>

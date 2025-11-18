@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
@@ -17,7 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AddPoItemDialog } from '@/components/po/add-po-item-dialog';
+
+const AddPoItemDialog = lazy(() => import('@/components/po/add-po-item-dialog').then(module => ({ default: module.AddPoItemDialog })));
 
 
 export default function PoDetailsPage() {
@@ -167,11 +168,13 @@ export default function PoDetailsPage() {
             </Card>
 
             {user?.role === 'admin' && (
-                <AddPoItemDialog
-                    isOpen={isAddDialogOpen}
-                    onOpenChange={setIsAddDialogOpen}
-                    poId={poId}
-                />
+                <Suspense fallback={<div>Loading...</div>}>
+                    <AddPoItemDialog
+                        isOpen={isAddDialogOpen}
+                        onOpenChange={setIsAddDialogOpen}
+                        poId={poId}
+                    />
+                </Suspense>
             )}
 
             <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
@@ -27,7 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AddEditVariantDialog } from '@/components/inventory/add-edit-variant-dialog';
+
+const AddEditVariantDialog = lazy(() => import('@/components/inventory/add-edit-variant-dialog').then(module => ({ default: module.AddEditVariantDialog })));
 
 export default function ItemVariantsPage() {
   const { firestore } = useFirebase();
@@ -278,12 +279,14 @@ export default function ItemVariantsPage() {
       </Card>
       
       {user?.role === 'admin' && (
-        <AddEditVariantDialog
-            isOpen={isAddDialogOpen}
-            onOpenChange={handleDialogClose}
-            item={item}
-            variantToEdit={variantToEdit}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+            <AddEditVariantDialog
+                isOpen={isAddDialogOpen}
+                onOpenChange={handleDialogClose}
+                item={item}
+                variantToEdit={variantToEdit}
+            />
+        </Suspense>
       )}
 
       <AlertDialog open={!!variantToDelete} onOpenChange={(open) => !open && setVariantToDelete(null)}>

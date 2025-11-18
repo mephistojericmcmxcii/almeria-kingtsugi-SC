@@ -1,15 +1,16 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
-import { EditAboutDialog } from '@/components/about/edit-about-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const EditAboutDialog = lazy(() => import('@/components/about/edit-about-dialog').then(module => ({ default: module.EditAboutDialog })));
 
 export type AboutPageContent = {
   title: string;
@@ -112,11 +113,13 @@ export default function AboutPage() {
                 </Card>
             </div>
             {user?.role === 'admin' && (
-                <EditAboutDialog 
-                    isOpen={isEditDialogOpen}
-                    onOpenChange={setIsEditDialogOpen}
-                    content={displayContent}
-                />
+                 <Suspense fallback={<div>Loading...</div>}>
+                    <EditAboutDialog 
+                        isOpen={isEditDialogOpen}
+                        onOpenChange={setIsEditDialogOpen}
+                        content={displayContent}
+                    />
+                 </Suspense>
             )}
         </>
     );

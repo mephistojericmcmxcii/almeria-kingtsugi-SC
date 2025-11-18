@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -18,8 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { AddEditPoDialog } from '@/components/po/add-edit-po-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
 
 export default function PoPage() {
   const { firestore } = useFirebase();
@@ -239,11 +240,13 @@ export default function PoPage() {
           </CardContent>
         </Card>
       </div>
-      <AddEditPoDialog
-        isOpen={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        poToEdit={poToEdit}
-      />
+        <Suspense fallback={<div>Loading...</div>}>
+            <AddEditPoDialog
+                isOpen={isAddDialogOpen}
+                onOpenChange={setIsAddDialogOpen}
+                poToEdit={poToEdit}
+            />
+        </Suspense>
      
        <AlertDialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
         <AlertDialogContent>

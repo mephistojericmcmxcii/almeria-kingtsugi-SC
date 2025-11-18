@@ -1,15 +1,16 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, Pencil } from 'lucide-react';
-import { EditHomeDialog } from '@/components/home/edit-home-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+const EditHomeDialog = lazy(() => import('@/components/home/edit-home-dialog').then(module => ({ default: module.EditHomeDialog })));
 
 export type HomePageSettings = {
   backgroundUrl: string;
@@ -158,11 +159,13 @@ export default function HomePage() {
       </div>
 
       {user?.role === 'admin' && content && (
-          <EditHomeDialog 
-              isOpen={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              content={content}
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <EditHomeDialog 
+                isOpen={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                content={content}
+            />
+          </Suspense>
       )}
     </>
   );
