@@ -65,13 +65,15 @@ export default function PoPaymentPage() {
             totalAllocation += (item.amount || 0) * (item.quantity || 0);
             totalExpenses += (item.actualAmount || 0) * (item.quantity || 0);
           });
+
+          const taxDeduction = po.taxDeduction || 0;
           
           return {
             id: po.id,
             po: po,
             totalAllocation,
             totalExpenses,
-            profit: totalAllocation - totalExpenses,
+            profit: totalAllocation - totalExpenses - taxDeduction,
             paymentStatus: po.paymentStatus,
           };
         });

@@ -75,8 +75,8 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
         paymentDate: po.paymentDate?.toDate(),
         agency: po.agency || '',
         careOf: po.careOf || '',
-        taxDeduction: po.taxDeduction || 0,
-        amountDeposited: po.amountDeposited || 0,
+        taxDeduction: po.taxDeduction,
+        amountDeposited: po.amountDeposited,
         bank: po.bank || '',
         paymentStatus: po.paymentStatus || 'Unpaid',
       });
@@ -87,11 +87,16 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     setIsSubmitting(true);
     const poRef = doc(firestore, 'purchase_orders', po.id);
 
-    const dataToUpdate = {
-        ...values,
-        paymentDate: values.paymentDate ? Timestamp.fromDate(values.paymentDate) : null,
-        updatedAt: serverTimestamp(),
+    const dataToUpdate: any = {
+      ...values,
+      paymentDate: values.paymentDate ? Timestamp.fromDate(values.paymentDate) : null,
+      updatedAt: serverTimestamp(),
     };
+
+    // Ensure empty strings for numbers become null or undefined in Firestore
+    if (values.taxDeduction === undefined) dataToUpdate.taxDeduction = null;
+    if (values.amountDeposited === undefined) dataToUpdate.amountDeposited = null;
+
 
     try {
       await updateDoc(poRef, dataToUpdate);
@@ -184,14 +189,14 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                 <FormField control={form.control} name="taxDeduction" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Tax Deduction</FormLabel>
-                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} /></FormControl>
+                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )} />
                  <FormField control={form.control} name="amountDeposited" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Amount Deposited</FormLabel>
-                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} /></FormControl>
+                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )} />
