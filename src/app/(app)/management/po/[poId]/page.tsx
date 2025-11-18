@@ -10,15 +10,18 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'next/navigation';
 
-import { ChevronLeft, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
 
 const AddPoItemDialog = lazy(() => import('@/components/po/add-po-item-dialog').then(module => ({ default: module.AddPoItemDialog })));
+const UpdateActualAmountDialog = lazy(() => import('@/components/po/update-actual-amount-dialog').then(module => ({ default: module.UpdateActualAmountDialog })));
 
 
 export default function PoDetailsPage() {
@@ -30,6 +33,9 @@ export default function PoDetailsPage() {
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<PurchaseOrderItem | null>(null);
+    const [itemToUpdate, setItemToUpdate] = useState<PurchaseOrderItem | null>(null);
+    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+
 
     const [po, setPo] = useState<PurchaseOrder | null>(null);
     const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
@@ -77,6 +83,11 @@ export default function PoDetailsPage() {
             toast({ variant: "destructive", title: "Error", description: "Could not delete the item." });
         }
     };
+    
+    const handleOpenUpdateDialog = (item: PurchaseOrderItem) => {
+        setItemToUpdate(item);
+        setIsUpdateDialogOpen(true);
+    };
 
     return (
         <div className="space-y-8">
@@ -113,7 +124,7 @@ export default function PoDetailsPage() {
                             <TableRow>
                                 <TableHead>Item Name</TableHead>
                                 <TableHead>Brand</TableHead>
-                                <TableHead>Model</TableHead>
+                                <TableHead>Model/Description</TableHead>
                                 <TableHead>Unit</TableHead>
                                 <TableHead className="text-right">Quantity</TableHead>
                                 <TableHead className="text-right">Allocated Amount</TableHead>
@@ -153,10 +164,25 @@ export default function PoDetailsPage() {
                                         <TableCell className="text-right font-medium">{formatCurrency((item.actualAmount || 0) * item.quantity)}</TableCell>
                                         {user?.role === 'admin' && (
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setItemToDelete(item)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                    <span className="sr-only">Delete Item</span>
-                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onSelect={() => handleOpenUpdateDialog(item)}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Update
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => setItemToDelete(item)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         )}
                                     </TableRow>
@@ -180,6 +206,14 @@ export default function PoDetailsPage() {
                         onOpenChange={setIsAddDialogOpen}
                         poId={poId}
                     />
+                    {itemToUpdate && (
+                        <UpdateActualAmountDialog
+                            isOpen={isUpdateDialogOpen}
+                            onOpenChange={setIsUpdateDialogOpen}
+                            poId={poId}
+                            item={itemToUpdate}
+                        />
+                    )}
                 </Suspense>
             )}
 

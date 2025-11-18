@@ -140,7 +140,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId }: AddPoItemDialogP
                     name={`items.${index}.model`}
                     render={({ field }) => (
                       <FormItem>
-                        {index === 0 && <label className="text-sm font-medium">Model</label>}
+                        {index === 0 && <label className="text-sm font-medium">Model/Description</label>}
                         <FormControl>
                           <Input placeholder="e.g., G2" {...field} />
                         </FormControl>
