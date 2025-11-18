@@ -45,7 +45,8 @@ export default function PoPage() {
           try {
               const poCollectionRef = collection(firestore, 'purchase_orders');
               const snapshot = await getDocs(poCollectionRef);
-              const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+              const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder))
+                                    .filter(po => po.entryType !== 'manual'); // Exclude manual entries
               setPurchaseOrders(pos);
           } catch (error) {
               console.error("Error fetching POs:", error);
@@ -267,3 +268,5 @@ export default function PoPage() {
     </>
   );
 }
+
+    
