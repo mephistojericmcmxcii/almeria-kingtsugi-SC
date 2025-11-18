@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, setDoc, serverTimestamp, Timestamp, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderStatus, PoPaymentStatus } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -81,12 +81,17 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
     const docId = poToEdit ? poToEdit.id : doc(collection(firestore, 'purchase_orders')).id;
     const poRef = doc(firestore, 'purchase_orders', docId);
 
-    const dataToSave = {
+    const dataToSave: Partial<PurchaseOrder> = {
       ...values,
       date: Timestamp.fromDate(values.date),
       updatedAt: serverTimestamp(),
-      ...(!poToEdit && { createdAt: serverTimestamp() }),
     };
+    
+    if (!poToEdit) {
+      dataToSave.createdAt = serverTimestamp();
+      dataToSave.paymentStatus = 'Unpaid';
+    }
+
 
     try {
       await setDoc(poRef, dataToSave, { merge: true });
