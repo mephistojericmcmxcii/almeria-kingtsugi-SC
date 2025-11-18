@@ -62,6 +62,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { po, totalAllocation, totalExpenses } = summary;
 
   const form = useForm<FormValues>({
@@ -155,7 +156,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
             <FormField control={form.control} name="paymentDate" render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Date</FormLabel>
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -165,7 +166,14 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                    <Calendar 
+                        mode="single" 
+                        selected={field.value} 
+                        onSelect={(date) => {
+                            field.onChange(date);
+                            setIsCalendarOpen(false);
+                        }}
+                    />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
