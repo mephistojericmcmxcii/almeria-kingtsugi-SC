@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -147,44 +146,46 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
           <DialogTitle>Manage Payment for PO #{po.poNumber}</DialogTitle>
           <DialogDescription>Update payment and deposit information for this purchase order.</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-4 py-4 border-y">
-            {isManualEntry ? (
-              <>
-                <FormField control={form.control} name="totalAllocation" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Total Allocation</FormLabel>
-                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
-                 <FormField control={form.control} name="totalExpenses" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Total Expenses</FormLabel>
-                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
-              </>
-            ) : (
-                <>
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
-                    <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                    <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
-                </div>
-                </>
-            )}
-        </div>
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[50vh] overflow-y-auto pr-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 py-4 border-y">
+                {isManualEntry ? (
+                <>
+                    <FormField control={form.control} name="totalAllocation" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Total Allocation</FormLabel>
+                        <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                    <FormField control={form.control} name="totalExpenses" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Total Expenses</FormLabel>
+                        <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                </>
+                ) : (
+                    <>
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                    </div>
+                    </>
+                )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="agency" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Agency / Institution</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )} />
@@ -245,7 +246,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                 <FormField control={form.control} name="bank" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Bank</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )} />
