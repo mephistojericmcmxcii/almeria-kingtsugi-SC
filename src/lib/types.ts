@@ -108,7 +108,7 @@ export type PurchaseOrder = {
   status: PurchaseOrderStatus;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
-  // New payment fields
+  // Payment fields
   agency?: string;
   paymentDate?: Timestamp;
   taxDeduction?: number;
@@ -116,6 +116,9 @@ export type PurchaseOrder = {
   bank?: string;
   paymentStatus?: PoPaymentStatus;
   entryType?: 'system' | 'manual';
+  // Manual entry fields
+  totalAllocation?: number;
+  totalExpenses?: number;
 };
 
     

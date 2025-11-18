@@ -465,6 +465,14 @@
           "type": "string",
           "enum": ["system", "manual"],
           "description": "Indicates if the PO was created via the standard system or as a manual payment entry."
+        },
+        "totalAllocation": {
+          "type": "number",
+          "description": "The total allocated budget for a manually entered PO."
+        },
+        "totalExpenses": {
+            "type": "number",
+            "description": "The total actual expenses for a manually entered PO."
         }
       },
       "required": ["poNumber", "date", "careOf", "status", "source"]

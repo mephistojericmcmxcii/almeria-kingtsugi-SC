@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -38,6 +39,15 @@ const formSchema = z.object({
   ),
   bank: z.string().optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+  // Manual fields
+  totalAllocation: z.preprocess(
+    (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
+    z.number().optional()
+  ),
+  totalExpenses: z.preprocess(
+    (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
+    z.number().optional()
+  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,6 +74,8 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { po, totalAllocation, totalExpenses } = summary;
+  const isManualEntry = po.entryType === 'manual';
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -79,9 +91,11 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
         amountDeposited: po.amountDeposited,
         bank: po.bank || '',
         paymentStatus: po.paymentStatus || 'Unpaid',
+        totalAllocation: po.totalAllocation ?? totalAllocation,
+        totalExpenses: po.totalExpenses ?? totalExpenses,
       });
     }
-  }, [po, isOpen, form]);
+  }, [po, isOpen, form, totalAllocation, totalExpenses]);
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -96,6 +110,10 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     // Ensure empty strings for numbers become null or undefined in Firestore
     if (values.taxDeduction === undefined) dataToUpdate.taxDeduction = null;
     if (values.amountDeposited === undefined) dataToUpdate.amountDeposited = null;
+    if (isManualEntry) {
+        dataToUpdate.totalAllocation = values.totalAllocation ?? 0;
+        dataToUpdate.totalExpenses = values.totalExpenses ?? 0;
+    }
 
 
     try {
@@ -130,14 +148,35 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
           <DialogDescription>Update payment and deposit information for this purchase order.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-x-8 gap-y-4 py-4 border-y">
-            <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
-                <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
-            </div>
-             <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
-            </div>
+            {isManualEntry ? (
+              <>
+                <FormField control={form.control} name="totalAllocation" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Total Allocation</FormLabel>
+                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                 <FormField control={form.control} name="totalExpenses" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Total Expenses</FormLabel>
+                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )} />
+              </>
+            ) : (
+                <>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
+                    <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                    <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                </div>
+                </>
+            )}
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[50vh] overflow-y-auto pr-4">
@@ -175,7 +214,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                         mode="single" 
                         selected={field.value} 
                         onSelect={(date) => {
-                            field.onChange(date);
+                            if (date) field.onChange(date);
                             setIsCalendarOpen(false);
                         }}
                     />
