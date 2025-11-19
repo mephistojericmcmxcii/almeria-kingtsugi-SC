@@ -129,8 +129,11 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         let fileUrl = '';
         if (formData.requestType === 'attachment' && formData.fileAttachment) {
             const file = formData.fileAttachment as File;
+            console.log('[RFQ Form] Attempting to upload file:', file.name);
             const downloadUrl = await uploadFile(file, 'rfq-attachments');
+            console.log('[RFQ Form] Received download URL:', downloadUrl);
             if (!downloadUrl) {
+                console.error('[RFQ Form] File upload failed, uploadFile returned null.');
                 throw new Error("File upload failed. Please try again.");
             }
             fileUrl = downloadUrl;
@@ -147,6 +150,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
             items: formData.requestType === 'list' ? formData.items : [],
         };
         
+        console.log('[RFQ Form] Saving the following data to Firestore:', dataToSave);
         await setDoc(rfqRef, dataToSave);
 
         toast({
@@ -158,7 +162,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         form.reset();
 
     } catch (err: any) {
-        console.error("An error occurred during submission:", err);
+        console.error("[RFQ Form] An error occurred during submission:", err);
         toast({
             variant: "destructive",
             title: "Error",
