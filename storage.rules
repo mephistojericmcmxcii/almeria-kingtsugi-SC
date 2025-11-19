@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Warning: These rules are public and allow anyone to read and write to your storage.
+// This is not recommended for production applications.
+// You should secure these rules before launching.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
