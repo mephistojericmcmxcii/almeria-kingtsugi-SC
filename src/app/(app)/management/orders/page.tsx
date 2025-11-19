@@ -1,12 +1,11 @@
 
-
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirebase } from '@/firebase';
 import { collectionGroup, getDocs } from 'firebase/firestore';
-import type { Order, OrderStatus, CartItem } from '@/lib/types';
+import type { Order, OrderStatus, CartItem, QuotationRequest } from '@/lib/types';
 import { format } from 'date-fns';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, CheckCircle, XCircle, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info } from 'lucide-react';
+import { ShoppingCart, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info, FileText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +23,10 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
+const ViewRfqDetailsDialog = lazy(() => import('@/components/orders/view-rfq-details-dialog').then(module => ({ default: module.ViewRfqDetailsDialog })));
+
+
+type UnifiedTransaction = (Order | QuotationRequest) & { transactionType: 'order' | 'rfq' };
 
 const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -61,14 +64,16 @@ const STATUS_DISPLAY_NAMES: Record<OrderStatus, string> = {
 const REQUIRES_REASON: OrderStatus[] = ['declined', 'cancelled'];
 
 export default function AllOrdersPage() {
-    const { user, updateOrderStatus, dismissAdminOrderBadge } = useAuth();
+    const { user, updateOrderStatus, dismissAdminOrderBadge, dismissAdminRfqBadge } = useAuth();
     const { firestore } = useFirebase();
     const { toast } = useToast();
     
     const [isUpdating, setIsUpdating] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedRfq, setSelectedRfq] = useState<QuotationRequest | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRfqModalOpen, setIsRfqModalOpen] = useState(false);
     const [cancellationReason, setCancellationReason] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
     
@@ -78,40 +83,57 @@ export default function AllOrdersPage() {
     const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
     const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
 
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchTransactions = async () => {
             if (!firestore || user?.role !== 'admin') {
                 setIsLoading(false);
                 return;
             }
-            // No need to set isLoading(true) here as it's set initially.
+            
             try {
+                // Fetch Orders
                 const allOrdersQuery = collectionGroup(firestore, 'orders');
-                const snapshot = await getDocs(allOrdersQuery);
-                const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-                setOrders(fetchedOrders);
+                const ordersSnapshot = await getDocs(allOrdersQuery);
+                const fetchedOrders = ordersSnapshot.docs.map(doc => ({ ...doc.data() as Order, transactionType: 'order' } as UnifiedTransaction));
+
+                // Fetch RFQs
+                const allRfqsQuery = collection(firestore, 'rfq-records');
+                const rfqsSnapshot = await getDocs(allRfqsQuery);
+                const fetchedRfqs = rfqsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as QuotationRequest, transactionType: 'rfq' } as UnifiedTransaction));
+                
+                // Combine and sort
+                const combined = [...fetchedOrders, ...fetchedRfqs];
+                combined.sort((a, b) => {
+                    const dateA = a.transactionType === 'order' ? (a as Order).orderDate.toMillis() : (a as QuotationRequest).createdAt.toMillis();
+                    const dateB = b.transactionType === 'order' ? (b as Order).orderDate.toMillis() : (b as QuotationRequest).createdAt.toMillis();
+                    return dateB - dateA;
+                });
+                
+                setTransactions(combined);
+
             } catch (error) {
-                console.error("Error fetching orders:", error);
+                console.error("Error fetching transactions:", error);
                 toast({
                     variant: 'destructive',
                     title: 'Error',
-                    description: 'Could not load orders.'
+                    description: 'Could not load transaction records.'
                 });
             } finally {
                 setIsLoading(false);
             }
         }
 
-        if (user) { // Only fetch orders once the user object is available
-            fetchOrders();
+        if (user) { 
+            fetchTransactions();
             dismissAdminOrderBadge();
-        } else if (user === null && !isLoading) { // User is loaded but not an admin or not logged in
-            setIsLoading(false);
+            dismissAdminRfqBadge();
+        } else if (user === null) {
+             setIsLoading(false);
         }
-    }, [firestore, user, toast, dismissAdminOrderBadge, isLoading]);
+    }, [firestore, user, toast, dismissAdminOrderBadge, dismissAdminRfqBadge]);
     
     useEffect(() => {
         if (selectedOrder) {
@@ -155,7 +177,7 @@ export default function AllOrdersPage() {
         const updatedItems: CartItem[] = selectedOrder.items.map(item => ({
             ...item,
             price: itemPrices[item.id] || item.price || 0,
-            discount: itemDiscounts[item.id] || 0, // Discount is a percentage
+            discount: itemDiscounts[item.id] || 0,
         }));
         
         const subtotal = updatedItems.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
@@ -180,24 +202,33 @@ export default function AllOrdersPage() {
         );
         
         if (success) {
-            setOrders(prevOrders => prevOrders.map(o => o.id === selectedOrder.id ? { 
-                ...o, 
-                status: selectedStatus, 
-                cancellationReason: cancellationReason || o.cancellationReason,
-                items: updatedItems,
-                totalAmount: finalTotal,
-                discount: totalDiscountAmount,
-                deliveryFee,
-                packagingFee,
-            } : o));
+            setTransactions(prev => prev.map(t => {
+                if (t.transactionType === 'order' && t.id === selectedOrder.id) {
+                    return { ...t, 
+                        status: selectedStatus, 
+                        cancellationReason: cancellationReason || t.cancellationReason,
+                        items: updatedItems,
+                        totalAmount: finalTotal,
+                        discount: totalDiscountAmount,
+                        deliveryFee,
+                        packagingFee,
+                    };
+                }
+                return t;
+            }));
             setIsModalOpen(false);
         }
         setIsUpdating(false);
     };
     
-    const handleViewDetails = (order: Order) => {
-        setSelectedOrder(order);
-        setIsModalOpen(true);
+    const handleViewDetails = (transaction: UnifiedTransaction) => {
+        if (transaction.transactionType === 'order') {
+            setSelectedOrder(transaction as Order);
+            setIsModalOpen(true);
+        } else {
+            setSelectedRfq(transaction as QuotationRequest);
+            setIsRfqModalOpen(true);
+        }
     };
     
     const isStatusUpdateDisabled = (order: Order | null): boolean => {
@@ -212,17 +243,23 @@ export default function AllOrdersPage() {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
     };
     
-    const filteredOrders = useMemo(() => {
-        if (!orders) return [];
-        const sorted = [...orders].sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
-        if (!searchTerm) return sorted;
+    const filteredTransactions = useMemo(() => {
+        if (!transactions) return [];
+        if (!searchTerm) return transactions;
         
-        return sorted.filter(order =>
-            order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.userDisplayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [orders, searchTerm]);
+        return transactions.filter(t => {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            if (t.transactionType === 'order') {
+                return t.id.toLowerCase().includes(lowerSearchTerm) ||
+                       t.userDisplayName.toLowerCase().includes(lowerSearchTerm) ||
+                       t.userEmail.toLowerCase().includes(lowerSearchTerm);
+            } else { // RFQ
+                return t.id.toLowerCase().includes(lowerSearchTerm) ||
+                       t.customerName.toLowerCase().includes(lowerSearchTerm) ||
+                       t.emailAddress.toLowerCase().includes(lowerSearchTerm);
+            }
+        });
+    }, [transactions, searchTerm]);
 
 
     if (user?.role !== 'admin' && !isLoading) {
@@ -288,14 +325,15 @@ export default function AllOrdersPage() {
                                 />
                             </div>
                         </div>
-                         <CardDescription>{isLoading ? "Loading orders..." : `${filteredOrders.length} order(s) found.`}</CardDescription>
+                         <CardDescription>{isLoading ? "Loading records..." : `${filteredTransactions.length} record(s) found.`}</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Order ID</TableHead>
+                                <TableHead>Reference ID</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Customer</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Amount</TableHead>
@@ -308,26 +346,30 @@ export default function AllOrdersPage() {
                             Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-28" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
-                        ) : filteredOrders.length > 0 ? (
-                            filteredOrders.map((order) => (
-                            <TableRow key={order.id}>
-                                <TableCell className="font-mono text-sm">{order.id.substring(0, 8)}...</TableCell>
+                        ) : filteredTransactions.length > 0 ? (
+                            filteredTransactions.map((t) => (
+                            <TableRow key={t.id}>
+                                <TableCell className="font-mono text-sm">{t.id.substring(0, 8)}...</TableCell>
                                 <TableCell>
-                                    <div className="font-medium">{order.userDisplayName}</div>
-                                    <div className="text-xs text-muted-foreground">{order.userEmail}</div>
+                                    {t.transactionType === 'order' ? <Badge variant="secondary"><ShoppingCart className="mr-2 h-3 w-3"/>Standard Order</Badge> : <Badge><FileText className="mr-2 h-3 w-3"/>Quotation Request</Badge>}
                                 </TableCell>
-                                <TableCell>{format(order.orderDate.toDate(), 'MMM d, yyyy')}</TableCell>
-                                <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-                                <TableCell>{getStatusBadge(order.status)}</TableCell>
+                                <TableCell>
+                                    <div className="font-medium">{t.transactionType === 'order' ? (t as Order).userDisplayName : (t as QuotationRequest).customerName}</div>
+                                    <div className="text-xs text-muted-foreground">{t.transactionType === 'order' ? (t as Order).userEmail : (t as QuotationRequest).emailAddress}</div>
+                                </TableCell>
+                                <TableCell>{format(t.transactionType === 'order' ? (t as Order).orderDate.toDate() : (t as QuotationRequest).createdAt.toDate(), 'MMM d, yyyy')}</TableCell>
+                                <TableCell>{t.transactionType === 'order' ? formatCurrency((t as Order).totalAmount) : <span className="text-muted-foreground">N/A</span>}</TableCell>
+                                <TableCell>{t.transactionType === 'order' ? getStatusBadge((t as Order).status) : <Badge variant="outline">Submitted</Badge>}</TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(order)}>
+                                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(t)}>
                                         <Eye className="mr-2 h-4 w-4" /> View
                                     </Button>
                                 </TableCell>
@@ -335,8 +377,8 @@ export default function AllOrdersPage() {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    {searchTerm ? 'No orders match your search.' : 'No orders found.'}
+                                <TableCell colSpan={7} className="h-24 text-center">
+                                    {searchTerm ? 'No records match your search.' : 'No records found.'}
                                 </TableCell>
                             </TableRow>
                         )}
@@ -514,6 +556,18 @@ export default function AllOrdersPage() {
                 </DialogContent>
             </Dialog>
         )}
+        
+        {selectedRfq && (
+            <Suspense fallback={<div>Loading...</div>}>
+                <ViewRfqDetailsDialog
+                    isOpen={isRfqModalOpen}
+                    onOpenChange={setIsRfqModalOpen}
+                    rfq={selectedRfq}
+                />
+            </Suspense>
+        )}
         </>
     );
 }
+
+    

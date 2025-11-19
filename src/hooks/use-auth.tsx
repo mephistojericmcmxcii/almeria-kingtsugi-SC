@@ -9,7 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory } from '@/lib/types';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -62,6 +62,8 @@ interface AuthContextType {
   dismissUserNotifications: () => void;
   showAdminOrderBadge: boolean;
   dismissAdminOrderBadge: () => void;
+  showAdminRfqBadge: boolean;
+  dismissAdminRfqBadge: () => void;
   fetchOrders: () => Promise<void>;
 }
 
@@ -87,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [showNewPurchaseBadge, setShowNewPurchaseBadge] = useState(false);
   const [showNewHistoryBadge, setShowNewHistoryBadge] = useState(false);
   const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
+  const [showAdminRfqBadge, setShowAdminRfqBadge] = useState(false);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -177,6 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               contactNumber: userData.contactNumber || '',
               lastViewedOrdersAt: userData.lastViewedOrdersAt,
               lastViewedAllOrdersAt: userData.lastViewedAllOrdersAt,
+              lastViewedAllRfqsAt: userData.lastViewedAllRfqsAt,
             };
             setUser(appUser);
           } else {
@@ -223,42 +227,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [cart]);
   
   useEffect(() => {
-    if (!orders || !user) return;
+    if (!user) return;
 
-    let hasNewQuoteReady = false;
-    let hasNewPurchase = false;
-    let hasNewHistory = false;
-    let hasNewAdminUpdate = false;
+    if (user.role === 'admin') {
+        const ordersUnsub = onSnapshot(collectionGroup(firestore, 'orders'), (snapshot) => {
+            const lastViewedAdminOrders = user.lastViewedAllOrdersAt?.toMillis() || 0;
+            const hasNew = snapshot.docs.some(doc => (doc.data().updatedAt?.toMillis() || doc.data().orderDate.toMillis()) > lastViewedAdminOrders);
+            setShowAdminOrderBadge(hasNew);
+        });
+        
+        const rfqsUnsub = onSnapshot(collection(firestore, 'rfq-records'), (snapshot) => {
+            const lastViewedAdminRfqs = user.lastViewedAllRfqsAt?.toMillis() || 0;
+            const hasNew = snapshot.docs.some(doc => doc.data().createdAt.toMillis() > lastViewedAdminRfqs);
+            setShowAdminRfqBadge(hasNew);
+        });
 
-    const lastViewedUser = user.lastViewedOrdersAt?.toMillis() || 0;
-    const lastViewedAdmin = user.lastViewedAllOrdersAt?.toMillis() || 0;
+        return () => {
+            ordersUnsub();
+            rfqsUnsub();
+        };
 
-    for (const order of orders) {
-      const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-      
-      // Admin Notifications
-      if (user.role === 'admin' && updatedAt > lastViewedAdmin) {
-        hasNewAdminUpdate = true;
-      }
-      
-      // User-specific notifications
-      if (order.userId === user.id && updatedAt > lastViewedUser) {
-        if (order.status === 'quote-ready') {
-          hasNewQuoteReady = true;
-        } else if (['confirmed', 'delivering'].includes(order.status)) {
-          hasNewPurchase = true;
-        } else if (['completed', 'cancelled', 'declined'].includes(order.status)) {
-          hasNewHistory = true;
-        }
-      }
+    } else {
+        const userOrdersQuery = query(collection(firestore, 'users', user.id, 'orders'));
+        const unsub = onSnapshot(userOrdersQuery, (snapshot) => {
+            let hasNewQuoteReady = false;
+            let hasNewPurchase = false;
+            let hasNewHistory = false;
+            const lastViewedUser = user.lastViewedOrdersAt?.toMillis() || 0;
+
+            snapshot.forEach(doc => {
+                const order = doc.data() as Order;
+                const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
+                
+                if (updatedAt > lastViewedUser) {
+                    if (order.status === 'quote-ready') hasNewQuoteReady = true;
+                    if (['confirmed', 'delivering'].includes(order.status)) hasNewPurchase = true;
+                    if (['completed', 'cancelled', 'declined'].includes(order.status)) hasNewHistory = true;
+                }
+            });
+
+            setShowQuoteReadyBadge(hasNewQuoteReady);
+            setShowNewPurchaseBadge(hasNewPurchase);
+            setShowNewHistoryBadge(hasNewHistory);
+        });
+        return () => unsub();
     }
-    
-    setShowQuoteReadyBadge(hasNewQuoteReady);
-    setShowNewPurchaseBadge(hasNewPurchase);
-    setShowNewHistoryBadge(hasNewHistory);
-    setShowAdminOrderBadge(hasNewAdminUpdate);
-
-  }, [orders, user]);
+  }, [user, firestore]);
 
 
   const dismissUserNotifications = async () => {
@@ -282,12 +296,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setShowAdminOrderBadge(false);
       try {
           const userRef = doc(firestore, 'users', user.id);
-          const newTimestamp = serverTimestamp();
-          await updateDoc(userRef, { lastViewedAllOrdersAt: newTimestamp });
+          await updateDoc(userRef, { lastViewedAllOrdersAt: serverTimestamp() });
            setUser(prev => prev ? {...prev, lastViewedAllOrdersAt: Timestamp.now()} : null);
       } catch (error) {
           console.error("Error updating lastViewedAllOrdersAt:", error);
       }
+  };
+
+  const dismissAdminRfqBadge = async () => {
+    if (!user || user.role !== 'admin') return;
+    setShowAdminRfqBadge(false);
+    try {
+        const userRef = doc(firestore, 'users', user.id);
+        await updateDoc(userRef, { lastViewedAllRfqsAt: serverTimestamp() });
+        setUser(prev => prev ? {...prev, lastViewedAllRfqsAt: Timestamp.now()} : null);
+    } catch (error) {
+        console.error("Error updating lastViewedAllRfqsAt:", error);
+    }
   };
 
 
@@ -917,7 +942,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, fetchOrders };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
 
   return (
     <AuthContext.Provider value={value}>
@@ -933,3 +958,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

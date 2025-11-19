@@ -12,6 +12,7 @@ export type User = {
   contactNumber?: string;
   lastViewedOrdersAt?: Timestamp;
   lastViewedAllOrdersAt?: Timestamp;
+  lastViewedAllRfqsAt?: Timestamp;
 };
 
 export type InventoryItem = {
@@ -150,3 +151,5 @@ export type QuotationRequest = {
   additionalDetails?: string;
   createdAt: any;
 };
+
+    

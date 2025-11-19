@@ -42,7 +42,7 @@ import { SendRfqForm } from "@/components/rfq/send-rfq-form";
 
 const MainSidebar = () => {
   const pathname = usePathname();
-  const { user, logout, showAdminOrderBadge } = useAuth();
+  const { user, logout, showAdminOrderBadge, showAdminRfqBadge } = useAuth();
   const [managementOpen, setManagementOpen] = React.useState(false);
   const [isRfqOpen, setIsRfqOpen] = React.useState(false);
 
@@ -90,7 +90,7 @@ const MainSidebar = () => {
 
   const managementMenuItems = [
     { href: '/management/inventory', label: 'Inventory', icon: Boxes, notification: false },
-    { href: '/management/orders', label: 'Orders', icon: ShoppingCart, notification: showAdminOrderBadge },
+    { href: '/management/orders', label: 'Orders', icon: ShoppingCart, notification: showAdminOrderBadge || showAdminRfqBadge },
     { href: '/management/po-payment', label: 'PO Payment', icon: CreditCard, notification: false },
     { href: '/management/po', label: 'Purchase Order', icon: FileText, notification: false },
   ];
@@ -187,3 +187,5 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
+
+    
