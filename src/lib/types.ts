@@ -121,4 +121,22 @@ export type PurchaseOrder = {
   totalExpenses?: number;
 };
 
-    
+export type QuotationRequestItem = {
+  name: string;
+  quantity: number;
+  specs?: string;
+};
+
+export type QuotationRequest = {
+  id: string;
+  userId: string;
+  customerName: string;
+  contactNumber: string;
+  emailAddress: string;
+  companyName?: string;
+  requestType: 'list' | 'attachment';
+  items?: QuotationRequestItem[];
+  fileAttachment?: string; // URL to the uploaded file
+  additionalDetails?: string;
+  createdAt: any;
+};

@@ -58,6 +58,14 @@ service cloud.firestore {
       // Writes should only happen from a secure backend.
       allow read: if isAdmin();
     }
+    
+    // --- RFQ Records collection ---
+    match /rfq-records/{rfqId} {
+      // Any authenticated user can create a request.
+      allow create: if request.auth != null;
+      // Only admins can read, update, or delete requests.
+      allow read, update, delete: if isAdmin();
+    }
 
     // Fallback: deny everything else
     match /{document=**} {

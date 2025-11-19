@@ -513,6 +513,40 @@
         }
       },
       "required": ["name", "unit", "quantity", "amount"]
+    },
+    "QuotationRequestItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuotationRequestItem",
+      "type": "object",
+      "description": "Represents a single item manually listed in a quotation request.",
+      "properties": {
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "specs": { "type": "string" }
+      },
+      "required": ["name", "quantity"]
+    },
+    "QuotationRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuotationRequest",
+      "type": "object",
+      "description": "Represents a user's custom request for a quotation.",
+      "properties": {
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "emailAddress": { "type": "string", "format": "email" },
+        "companyName": { "type": "string" },
+        "requestType": { "type": "string", "enum": ["list", "attachment"] },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/QuotationRequestItem" }
+        },
+        "fileAttachment": { "type": "string", "format": "uri" },
+        "additionalDetails": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerName", "contactNumber", "emailAddress", "requestType", "createdAt"]
     }
   },
   "auth": {
@@ -695,6 +729,20 @@
             {
               "name": "itemId",
               "description": "The unique ID for the purchase order item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rfq-records/{rfqId}",
+        "definition": {
+          "entityName": "QuotationRequest",
+          "schema": { "$ref": "#/backend/entities/QuotationRequest" },
+          "description": "Stores custom quotation requests submitted by users.",
+          "params": [
+            {
+              "name": "rfqId",
+              "description": "The unique identifier for the quotation request."
             }
           ]
         }
