@@ -45,7 +45,7 @@ import {
 const itemSchema = z.object({
   name: z.string().min(1, 'Item name is required.'),
   quantity: z.preprocess(
-    (val) => (val === "" || val === undefined ? "1" : String(val)),
+    (val) => (val === "" || val === undefined ? 1 : parseInt(String(val), 10)),
     z.coerce.number().int().min(1, 'Quantity must be at least 1.')
   ),
   specs: z.string().optional(),
@@ -69,6 +69,8 @@ const formSchema = z.object({
     message: 'Please add at least one item to the list.',
     path: ['items'],
 }).refine(data => {
+    // This validation ensures that if the request type is attachment, a file must be uploaded.
+    // It's coupled with the form's `disabled` state logic.
     if (data.requestType === 'attachment' && !data.fileAttachment) {
         return false;
     }
@@ -261,9 +263,9 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
                     <FormItem>
                         <FormLabel>Quotation File</FormLabel>
                         <FormControl>
-                            <Input type="file" accept=".pdf,.doc,.docx" onChange={e => onChange(e.target.files?.[0])} {...rest} />
+                            <Input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={e => onChange(e.target.files?.[0])} {...rest} />
                         </FormControl>
-                        <FormDescription>Attach your quotation file (PDF or Word document).</FormDescription>
+                        <FormDescription>Attach your quotation file (PDF, Word, or Excel).</FormDescription>
                         <FormMessage />
                     </FormItem>
                 )}/>
