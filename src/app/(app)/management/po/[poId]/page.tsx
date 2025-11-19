@@ -189,7 +189,7 @@ export default function PoDetailsPage() {
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem onSelect={() => handleOpenUpdateDialog(item)}>
                                                             <Edit className="mr-2 h-4 w-4" />
-                                                            Update
+                                                            Edit
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem onSelect={() => setItemToDelete(item)} className="text-destructive focus:text-destructive focus:bg-destructive/10">

@@ -97,6 +97,8 @@ export type PurchaseOrderItem = {
   quantity: number;
   amount: number; // Allocated amount per unit
   actualAmount?: number; // Real cost per unit
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export type PurchaseOrder = {

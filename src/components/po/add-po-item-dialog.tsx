@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFirebase } from '@/firebase';
-import { writeBatch, doc, collection } from 'firebase/firestore';
+import { writeBatch, doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -20,8 +20,8 @@ const poItemSchema = z.object({
   model: z.string().optional(),
   unit: z.string().min(1, 'Unit is required.'),
   quantity: z.preprocess(
-    (a) => parseInt(z.string().parse(a), 10),
-    z.number().positive('Quantity must be positive.')
+    (val) => (val === '' ? 1 : parseInt(String(val), 10)),
+    z.number().min(1, 'Quantity must be at least 1.')
   ),
   amount: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
@@ -72,7 +72,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
     values.items.forEach(item => {
       const newItemRef = doc(poItemsCollectionRef);
-      batch.set(newItemRef, { ...item, actualAmount: 0 }); // Initialize actualAmount to 0
+      batch.set(newItemRef, { ...item, actualAmount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     });
 
     try {
