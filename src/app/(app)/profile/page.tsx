@@ -543,6 +543,10 @@ export default function ProfilePage() {
             <User className="mr-2" />
             Profile
           </TabsTrigger>
+          <TabsTrigger value="rfq">
+            <Send className="mr-2" />
+            Request Quotations
+          </TabsTrigger>
            <TabsTrigger value="quotation" className="relative">
             <FileQuestion className="mr-2" />
             My Quotation
@@ -567,10 +571,6 @@ export default function ProfilePage() {
              {showNewHistoryBadge && (
                 <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
              )}
-          </TabsTrigger>
-           <TabsTrigger value="rfq">
-            <Send className="mr-2" />
-            Request Quotations
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
@@ -720,5 +720,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
 
     
