@@ -74,12 +74,14 @@ export default function ProductsPage() {
 
   const filteredItems = useMemo(() => {
     if (!allVariants) return [];
-    return allVariants.filter(item =>
-      item.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.parentCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    return allVariants.filter(item => {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      const hasParentName = item.parentName && item.parentName.toLowerCase().includes(lowercasedTerm);
+      const hasParentCategory = item.parentCategory && item.parentCategory.toLowerCase().includes(lowercasedTerm);
+      const hasBrand = item.brand && item.brand.toLowerCase().includes(lowercasedTerm);
+      const hasDescription = item.description && item.description.toLowerCase().includes(lowercasedTerm);
+      return hasParentName || hasParentCategory || hasBrand || hasDescription;
+    });
   }, [allVariants, searchTerm]);
   
   const handleAddToCartConfirm = () => {
@@ -102,7 +104,7 @@ export default function ProductsPage() {
       if (item.imageUrl) {
           return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
       }
-      const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+      const categoryId = item.parentCategory?.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
       const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
       if (categoryImage) {
           return categoryImage;
