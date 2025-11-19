@@ -1,7 +1,7 @@
 "use client"
 
-import { login } from "../lib/firebase-optimized"
+import config from "../tailwind.config"
 
 export default function SyntheticV0PageForDeployment() {
-  return <login />
+  return <config />
 }
