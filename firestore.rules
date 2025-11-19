@@ -31,6 +31,18 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
         allow read, write: if isAdmin();
       }
+
+      // --- RFQ subcollection ---
+      match /rfq/{rfqId} {
+        // User can create their own RFQ
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // User can read their own RFQs
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Admins can read any RFQ
+        allow read: if isAdmin();
+        // RFQs are not updatable/deletable by users after creation.
+        allow update, delete: if isAdmin();
+      }
     }
     
     // --- Inventory collection ---
@@ -59,17 +71,11 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
     
-    // --- RFQ Records collection ---
-    match /rfq-records/{rfqId} {
-      // Any authenticated user can create a request.
-      allow create: if request.auth != null;
-      // Only admins can read, update, or delete requests.
-      allow read, update, delete: if isAdmin();
-    }
-
     // Fallback: deny everything else
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+
+    

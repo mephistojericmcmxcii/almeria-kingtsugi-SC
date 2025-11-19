@@ -128,7 +128,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
   };
 
   const handleConfirmSubmit = async () => {
-    if (!formData) return;
+    if (!formData || !user) return;
     setIsSubmitting(true);
     setShowConfirmation(false);
 
@@ -143,10 +143,10 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
             fileUrl = downloadUrl;
         }
 
-        const rfqRef = doc(collection(firestore, 'rfq-records'));
+        const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
         const dataToSave = {
             ...formData,
-            userId: user?.id,
+            userId: user.id,
             createdAt: serverTimestamp(),
             fileAttachment: fileUrl,
         };
@@ -300,3 +300,5 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
     </>
   );
 }
+
+    

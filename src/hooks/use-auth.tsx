@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setShowAdminOrderBadge(hasNew);
         });
         
-        const rfqsUnsub = onSnapshot(collection(firestore, 'rfq-records'), (snapshot) => {
+        const rfqsUnsub = onSnapshot(collectionGroup(firestore, 'rfq'), (snapshot) => {
             const lastViewedAdminRfqs = user.lastViewedAllRfqsAt?.toMillis() || 0;
             const hasNew = snapshot.docs.some(doc => doc.data().createdAt.toMillis() > lastViewedAdminRfqs);
             setShowAdminRfqBadge(hasNew);

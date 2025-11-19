@@ -100,7 +100,7 @@ export default function AllOrdersPage() {
                 const fetchedOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Order, transactionType: 'order' } as UnifiedTransaction));
 
                 // Fetch RFQs
-                const allRfqsQuery = collection(firestore, 'rfq-records');
+                const allRfqsQuery = collectionGroup(firestore, 'rfq');
                 const rfqsSnapshot = await getDocs(allRfqsQuery);
                 const fetchedRfqs = rfqsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as QuotationRequest, transactionType: 'rfq' } as UnifiedTransaction));
                 
@@ -571,6 +571,3 @@ export default function AllOrdersPage() {
 }
 
     
-
-    
-

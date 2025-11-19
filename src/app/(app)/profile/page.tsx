@@ -360,7 +360,7 @@ function RfqList() {
             };
             setIsLoading(true);
             try {
-                const q = query(collection(firestore, 'rfq-records'), where('userId', '==', user.id));
+                const q = query(collection(firestore, 'users', user.id, 'rfq'));
                 const querySnapshot = await getDocs(q);
                 const fetchedRfqs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuotationRequest))
                                                     .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
@@ -720,7 +720,5 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
 
     
