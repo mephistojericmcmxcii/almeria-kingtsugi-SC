@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -28,7 +27,6 @@ const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
-  source: z.string().min(2, 'Source/Supplier is required.'),
   status: z.enum(PO_STATUSES),
 });
 
@@ -51,7 +49,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
     defaultValues: {
       poNumber: '',
       careOf: '',
-      source: '',
       status: 'Lacking',
     },
   });
@@ -63,7 +60,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           poNumber: poToEdit.poNumber,
           date: poToEdit.date.toDate(),
           careOf: poToEdit.careOf,
-          source: poToEdit.source,
           status: poToEdit.status,
         });
       } else {
@@ -71,7 +67,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           poNumber: '',
           date: new Date(),
           careOf: '',
-          source: '',
           status: 'Lacking',
         });
       }
@@ -86,6 +81,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
     const dataToSave: Partial<PurchaseOrder> = {
       ...values,
       date: Timestamp.fromDate(values.date),
+      source: '', // Set source to empty string
       updatedAt: serverTimestamp(),
     };
     
@@ -172,13 +168,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
               <FormItem>
                 <FormLabel>Care Of</FormLabel>
                 <FormControl><Input {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-             <FormField control={form.control} name="source" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Source / Supplier</FormLabel>
-                <FormControl><Input placeholder="e.g., National Bookstore" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
