@@ -44,41 +44,30 @@ import {
 
 const itemSchema = z.object({
   name: z.string().min(1, 'Item name is required.'),
-  quantity: z.preprocess(
-    (val) => (val === "" || val === undefined ? 1 : parseInt(String(val), 10)),
-    z.coerce.number().int().min(1, 'Quantity must be at least 1.')
-  ),
+  quantity: z.coerce.number().int().min(1, 'Quantity must be at least 1.').default(1),
   specs: z.string().optional(),
 });
 
-const formSchema = z.object({
+const baseSchema = z.object({
   customerName: z.string().min(1, 'Customer name is required.'),
   contactNumber: z.string().min(1, 'Contact number is required.'),
   emailAddress: z.string().email(),
   companyName: z.string().optional(),
-  requestType: z.enum(['list', 'attachment']),
-  items: z.array(itemSchema).optional(),
-  fileAttachment: z.any().optional(),
   additionalDetails: z.string().optional(),
-}).superRefine((data, ctx) => {
-    if (data.requestType === 'list') {
-        if (!data.items || data.items.length === 0) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: 'Please add at least one item to the list.',
-                path: ['items'],
-            });
-        }
-    } else if (data.requestType === 'attachment') {
-        if (!data.fileAttachment) {
-             ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: 'Please attach a file for the quotation request.',
-                path: ['fileAttachment'],
-            });
-        }
-    }
 });
+
+const formSchema = z.discriminatedUnion('requestType', [
+    z.object({
+        requestType: z.literal('list'),
+        items: z.array(itemSchema).min(1, 'Please add at least one item.'),
+        fileAttachment: z.any().optional(),
+    }),
+    z.object({
+        requestType: z.literal('attachment'),
+        fileAttachment: z.any().refine(file => file instanceof File, 'Please attach a file.'),
+        items: z.array(itemSchema).optional(),
+    })
+]).and(baseSchema);
 
 
 type FormValues = z.infer<typeof formSchema>;
@@ -111,11 +100,11 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
   const requestType = form.watch('requestType');
 
   useEffect(() => {
-    if (isOpen && user) {
+    if (isOpen) {
       form.reset({
-        customerName: user.displayName,
-        contactNumber: user.contactNumber || '',
-        emailAddress: user.email,
+        customerName: user?.displayName || '',
+        contactNumber: user?.contactNumber || '',
+        emailAddress: user?.email || '',
         companyName: '',
         requestType: 'list',
         items: [{ name: '', quantity: 1, specs: '' }],
@@ -147,18 +136,16 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         }
 
         const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
+        const { fileAttachment, ...restOfData } = formData;
+        
         const dataToSave = {
-            ...formData,
+            ...restOfData,
             userId: user.id,
             createdAt: serverTimestamp(),
             fileAttachment: fileUrl,
+            items: formData.requestType === 'list' ? formData.items : [],
         };
         
-        // Make sure items is not undefined when saving
-        if(dataToSave.requestType === 'list' && !dataToSave.items) {
-            dataToSave.items = [];
-        }
-
         await setDoc(rfqRef, dataToSave);
 
         toast({
@@ -254,7 +241,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
                     <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', quantity: 1, specs: '' })}>
                         <Plus className="mr-2"/> Add Row
                     </Button>
-                    {form.formState.errors.items && <FormMessage>{form.formState.errors.items.message}</FormMessage>}
+                    {form.formState.errors.items?.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.root.message}</p>}
                 </div>
             )}
             
@@ -263,9 +250,9 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
                     <FormItem>
                         <FormLabel>Quotation File</FormLabel>
                         <FormControl>
-                            <Input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={e => onChange(e.target.files?.[0])} {...rest} />
+                            <Input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={e => onChange(e.target.files?.[0])} {...rest} />
                         </FormControl>
-                        <FormDescription>Attach your quotation file (PDF, Word, or Excel).</FormDescription>
+                        <FormDescription>Attach your quotation file (e.g., PDF, Word, Excel, Image).</FormDescription>
                         <FormMessage />
                     </FormItem>
                 )}/>
