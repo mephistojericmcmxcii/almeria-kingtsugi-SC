@@ -826,8 +826,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (details?.discount !== undefined) dataToUpdate.discount = details.discount;
                 if (details?.deliveryFee !== undefined) dataToUpdate.deliveryFee = details.deliveryFee;
                 if (details?.packagingFee !== undefined) dataToUpdate.packagingFee = details.packagingFee;
-                if (details?.shippingAddress !== undefined) dataToUpdate.shippingAddress = details.shippingAddress;
-                if (details?.shippingContactNumber !== undefined) dataToUpdate.shippingContactNumber = details.shippingContactNumber;
+                if (details?.shippingAddress !== undefined) dataToUpdate.shippingAddress = details.shippingContactNumber;
                 if (details?.paymentMethod !== undefined) dataToUpdate.paymentMethod = details.paymentMethod;
             }
 
@@ -920,21 +919,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const uploadImage = async (file: File, path: string): Promise<string | null> => {
+        console.log(`[uploadImage] Starting upload for: ${'\'\'\''}{file.name} to path: ${'\'\'\''}{path}`);
+        
         if (!storage) {
             const err = 'Firebase Storage is not available. Check your Firebase provider setup.';
-            console.error(err);
+            console.error('[uploadImage] Error:', err);
             toast({ variant: 'destructive', title: 'Storage Error', description: err });
             return null;
         }
+        console.log('[uploadImage] Storage service is available.');
         
         const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
+        console.log(`[uploadImage] Created storage reference: ${storageRef.fullPath}`);
 
         try {
+            console.log('[uploadImage] Attempting to upload bytes...');
             const snapshot = await uploadBytes(storageRef, file);
+            console.log('[uploadImage] Upload successful. Snapshot:', snapshot);
+            
+            console.log('[uploadImage] Attempting to get download URL...');
             const downloadURL = await getDownloadURL(snapshot.ref);
+            console.log(`[uploadImage] Successfully got download URL: ${downloadURL}`);
+            
             return downloadURL;
         } catch (error: any) {
-            console.error("Upload failed:", error);
+            console.error("[uploadImage] Upload failed:", error);
+            console.error("[uploadImage] Error Code:", error.code);
+            console.error("[uploadImage] Error Message:", error.message);
+            console.error("[uploadImage] Error Server Response:", error.serverResponse);
             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
             return null;
         }
@@ -963,3 +975,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
