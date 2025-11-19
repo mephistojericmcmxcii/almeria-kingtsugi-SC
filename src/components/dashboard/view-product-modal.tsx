@@ -34,10 +34,12 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
       if (item.imageUrl) {
           return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
       }
-      const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
-      const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
-      if (categoryImage) {
-          return categoryImage;
+      if (item.parentCategory) {
+        const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+        const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
+        if (categoryImage) {
+            return categoryImage;
+        }
       }
       const itemImage = PlaceHolderImages.find(p => p.id === item.parentItemId);
       if (itemImage) {
@@ -65,7 +67,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
             <div className="aspect-square relative">
                 <img
                     src={placeholder.imageUrl}
-                    alt={placeholder.description}
+                    alt={placeholder.description || 'Product Image'}
                     className="object-cover rounded-lg w-full h-full"
                     data-ai-hint={placeholder.imageHint}
                 />
@@ -73,7 +75,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
             <div className="flex flex-col space-y-4">
                 <DialogHeader>
                     <div className='flex items-center justify-between'>
-                        <Badge variant="secondary">{variant.parentCategory}</Badge>
+                        <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
                         {getStatusBadge(variant)}
                     </div>
                     <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
