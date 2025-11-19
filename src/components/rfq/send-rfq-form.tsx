@@ -8,7 +8,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -73,10 +72,9 @@ const formSchema = z.discriminatedUnion('requestType', [
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function SendRfqForm() {
+export function SendRfqForm({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const { user, firestore, uploadFile } = useAuth();
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [formData, setFormData] = useState<FormValues | null>(null);
@@ -97,19 +95,17 @@ export function SendRfqForm() {
   const requestType = form.watch('requestType');
 
   useEffect(() => {
-    if (isOpen) {
-      form.reset({
-        requestType: 'list',
-        customerName: user?.displayName || '',
-        contactNumber: user?.contactNumber || '',
-        emailAddress: user?.email || '',
-        companyName: '',
-        items: [{ name: '', quantity: 1, specs: '' }],
-        additionalDetails: '',
-        fileAttachment: undefined,
-      });
-    }
-  }, [user, isOpen, form]);
+    form.reset({
+      requestType: 'list',
+      customerName: user?.displayName || '',
+      contactNumber: user?.contactNumber || '',
+      emailAddress: user?.email || '',
+      companyName: '',
+      items: [{ name: '', quantity: 1, specs: '' }],
+      additionalDetails: '',
+      fileAttachment: undefined,
+    });
+  }, [user, form]);
   
   const onFormSubmit = (data: FormValues) => {
     setFormData(data);
@@ -154,7 +150,7 @@ export function SendRfqForm() {
             description: "Your Request for Quotation has been successfully submitted.",
         });
 
-        setIsOpen(false);
+        onOpenChange(false);
         form.reset();
 
     } catch (err: any) {
@@ -169,15 +165,9 @@ export function SendRfqForm() {
         setFormData(null);
     }
   };
-  
-  const handleOpenChange = (open: boolean) => {
-    if (isSubmitting) return;
-    setIsOpen(open);
-  }
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">Request for Quotation</DialogTitle>
@@ -273,7 +263,7 @@ export function SendRfqForm() {
             )}/>
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -283,7 +273,6 @@ export function SendRfqForm() {
           </form>
         </Form>
       </DialogContent>
-    </Dialog>
      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <AlertDialogContent>
             <AlertDialogHeader>
