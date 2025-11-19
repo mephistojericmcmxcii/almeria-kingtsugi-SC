@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock, RefreshCw } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock, RefreshCw, Send, Link as LinkIcon, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,13 +16,15 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useFirebase } from '@/firebase';
-import type { CartItem, Order, OrderStatus, StatusHistory } from '@/lib/types';
+import type { CartItem, Order, OrderStatus, StatusHistory, QuotationRequest } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ConfirmOrderDialog = lazy(() => import('@/components/profile/confirm-order-dialog').then(module => ({ default: module.ConfirmOrderDialog })));
 
@@ -345,6 +347,120 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
     );
 }
 
+function RfqList() {
+    const { user, firestore } = useAuth();
+    const [rfqs, setRfqs] = useState<QuotationRequest[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRfqs = async () => {
+            if (!user || !firestore) {
+                setIsLoading(false);
+                return;
+            };
+            setIsLoading(true);
+            try {
+                const q = query(collection(firestore, 'rfq-records'), where('userId', '==', user.id));
+                const querySnapshot = await getDocs(q);
+                const fetchedRfqs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuotationRequest))
+                                                    .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+                setRfqs(fetchedRfqs);
+            } catch (error) {
+                console.error("Error fetching RFQs:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchRfqs();
+    }, [user, firestore]);
+
+    if (isLoading) {
+        return <div className="text-center py-12 text-muted-foreground">Loading your quotation requests...</div>;
+    }
+
+    if (rfqs.length === 0) {
+        return (
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="text-center py-12 text-muted-foreground">
+                        <Send className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4">You have not submitted any custom quotation requests.</p>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    return (
+         <Card>
+            <CardHeader>
+                <CardTitle>Custom Quotation Requests</CardTitle>
+                <CardDescription>A history of your special quotation requests sent to the seller.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Accordion type="single" collapsible className="w-full space-y-4">
+                    {rfqs.map(rfq => (
+                        <AccordionItem value={rfq.id} key={rfq.id} className="border rounded-lg px-4">
+                            <AccordionTrigger>
+                                <div className="flex justify-between w-full items-center">
+                                    <div className="flex flex-col text-left">
+                                        <span className="font-semibold text-sm">Request from {format(rfq.createdAt.toDate(), 'MMMM d, yyyy')}</span>
+                                        <span className="text-xs text-muted-foreground">Ref: {rfq.id.substring(0, 8)}...</span>
+                                    </div>
+                                    <Badge variant={rfq.requestType === 'list' ? 'secondary' : 'default'}>
+                                        {rfq.requestType === 'list' ? 'Listed Items' : 'File Attachment'}
+                                    </Badge>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-4 space-y-4">
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div><span className="font-semibold">Name:</span> {rfq.customerName}</div>
+                                    <div><span className="font-semibold">Contact:</span> {rfq.contactNumber}</div>
+                                    <div><span className="font-semibold">Email:</span> {rfq.emailAddress}</div>
+                                    {rfq.companyName && <div><span className="font-semibold">Company:</span> {rfq.companyName}</div>}
+                                </div>
+                                {rfq.requestType === 'list' && rfq.items && (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Item Name</TableHead>
+                                                <TableHead className="text-center">Quantity</TableHead>
+                                                <TableHead>Specifications</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {rfq.items.map((item, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell>{item.name}</TableCell>
+                                                    <TableCell className="text-center">{item.quantity}</TableCell>
+                                                    <TableCell>{item.specs || 'N/A'}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                                {rfq.requestType === 'attachment' && rfq.fileAttachment && (
+                                     <a href={rfq.fileAttachment} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="outline" size="sm">
+                                            <Download className="mr-2 h-4 w-4" /> View Attachment
+                                        </Button>
+                                    </a>
+                                )}
+                                {rfq.additionalDetails && (
+                                    <Alert>
+                                        <Info className="h-4 w-4" />
+                                        <AlertTitle>Additional Message</AlertTitle>
+                                        <AlertDescription className="whitespace-pre-wrap">{rfq.additionalDetails}</AlertDescription>
+                                    </Alert>
+                                )}
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                 </Accordion>
+            </CardContent>
+         </Card>
+    );
+}
 
 export default function ProfilePage() {
   const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, fetchOrders } = useAuth();
@@ -384,7 +500,7 @@ export default function ProfilePage() {
   }, [orders]);
   
   const handleTabChange = (value: string) => {
-    if (value === 'quotation' || value === 'purchases' || value === 'orders') {
+    if (['quotation', 'purchases', 'orders', 'rfq'].includes(value)) {
         dismissUserNotifications();
     }
   };
@@ -451,6 +567,10 @@ export default function ProfilePage() {
              {showNewHistoryBadge && (
                 <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
              )}
+          </TabsTrigger>
+           <TabsTrigger value="rfq">
+            <Send className="mr-2" />
+            Request Quotations
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
@@ -585,7 +705,20 @@ export default function ProfilePage() {
                />
            </div>
         </TabsContent>
+         <TabsContent value="rfq">
+            <div className="space-y-6">
+                 <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
+                <RfqList />
+            </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+    
