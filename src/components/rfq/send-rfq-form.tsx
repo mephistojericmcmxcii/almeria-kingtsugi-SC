@@ -109,7 +109,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
   const requestType = form.watch('requestType');
 
   useEffect(() => {
-    if (user) {
+    if (isOpen && user) {
       form.reset({
         customerName: user.displayName,
         contactNumber: user.contactNumber || '',
@@ -120,7 +120,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         additionalDetails: '',
       });
     }
-  }, [user, form, isOpen]);
+  }, [user, isOpen, form.reset]);
   
   const onFormSubmit = (data: FormValues) => {
     setFormData(data);
@@ -300,5 +300,3 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
     </>
   );
 }
-
-    
