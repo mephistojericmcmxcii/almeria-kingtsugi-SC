@@ -238,7 +238,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const rfqsUnsub = onSnapshot(collectionGroup(firestore, 'rfq'), (snapshot) => {
             const lastViewedAdminRfqs = user.lastViewedAllRfqsAt?.toMillis() || 0;
-            const hasNew = snapshot.docs.some(doc => doc.data().createdAt.toMillis() > lastViewedAdminRfqs);
+            const hasNew = snapshot.docs.some(doc => {
+                const createdAt = doc.data().createdAt;
+                return createdAt && createdAt.toMillis() > lastViewedAdminRfqs;
+            });
             setShowAdminRfqBadge(hasNew);
         });
 
@@ -605,10 +608,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (item.imageUrl) {
             return { imageUrl: item.imageUrl, imageHint: 'product' };
         }
-        const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
-        const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
-        if (categoryImage) {
-            return { imageUrl: categoryImage.imageUrl, imageHint: categoryImage.imageHint };
+        if (item.parentCategory) {
+            const categoryId = item.parentCategory.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+            const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
+            if (categoryImage) {
+                return { imageUrl: categoryImage.imageUrl, imageHint: categoryImage.imageHint };
+            }
         }
         const itemImage = PlaceHolderImages.find(p => p.id === item.parentItemId);
         if (itemImage) {
@@ -958,5 +963,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
