@@ -54,7 +54,7 @@ interface AuthContextType {
     }
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
-  uploadImage: (file: File, path: string) => Promise<string | null>;
+  uploadFile: (file: File, path: string) => Promise<string | null>;
   showCartBadge: boolean;
   showQuoteReadyBadge: boolean;
   showNewPurchaseBadge: boolean;
@@ -918,24 +918,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const uploadImage = async (file: File, path: string): Promise<string | null> => {
+    const uploadFile = async (file: File, path: string): Promise<string | null> => {
         if (!storage) {
             toast({
                 variant: 'destructive',
                 title: 'Storage Error',
                 description: 'Storage service is not available. Cannot upload file.'
             });
+            console.error("[uploadFile] Firebase Storage service is not available.");
             return null;
         }
+        console.log("[uploadFile] Firebase Storage service is available. Connection successful.");
 
         const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
+        console.log(`[uploadFile] Starting upload for: ${file.name} to path: ${path}`);
+        console.log(`[uploadFile] Created storage reference: ${storageRef.fullPath}`);
 
         try {
+            console.log("[uploadFile] Attempting to upload bytes...");
             const snapshot = await uploadBytes(storageRef, file);
+            console.log("[uploadFile] Upload successful:", snapshot);
             const downloadURL = await getDownloadURL(snapshot.ref);
+            console.log("[uploadFile] Got download URL:", downloadURL);
             return downloadURL;
         } catch (error: any) {
-            console.error("[uploadImage] Upload failed:", error);
+            console.error("[uploadFile] Upload failed:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
             return null;
         }
@@ -948,7 +955,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadImage, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
+  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
 
   return (
     <AuthContext.Provider value={value}>

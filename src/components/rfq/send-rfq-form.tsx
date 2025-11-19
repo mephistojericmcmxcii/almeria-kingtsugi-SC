@@ -79,7 +79,7 @@ interface SendRfqFormProps {
 }
 
 export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
-  const { user, firestore, uploadImage } = useAuth();
+  const { user, firestore, uploadFile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -129,7 +129,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         let fileUrl = '';
         if (formData.requestType === 'attachment' && formData.fileAttachment) {
             const file = formData.fileAttachment as File;
-            const downloadUrl = await uploadImage(file, 'rfq-attachments');
+            const downloadUrl = await uploadFile(file, 'rfq-attachments');
             if (!downloadUrl) {
                 throw new Error("File upload failed. Please try again.");
             }

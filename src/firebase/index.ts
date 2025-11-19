@@ -30,7 +30,7 @@ export function initializeFirebase(): FirebaseServices {
     firebaseApp: app,
     auth: getAuth(app),
     firestore: getFirestore(app),
-    storage: null, // Set to null initially
+    storage: null, // Set to null initially. It will be initialized on the client.
   };
 
   return firebaseServices;
@@ -42,5 +42,3 @@ export * from './non-blocking-updates';
 export * from './non-blocking-login';
 export * from './errors';
 export * from './error-emitter';
-
-    

@@ -48,7 +48,7 @@ const formSchema = z.object({
 
 export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: boolean, onOpenChange: (open: boolean) => void, content: HomePageSettings }) {
   const { firestore } = useFirebase();
-  const { uploadImage } = useAuth();
+  const { uploadFile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageSource, setImageSource] = useState<'url' | 'upload'>('url');
@@ -116,7 +116,7 @@ export function EditHomeDialog({ isOpen, onOpenChange, content }: { isOpen: bool
 
     try {
         if (imageSource === 'upload' && fileToUpload) {
-            const downloadUrl = await uploadImage(fileToUpload, 'homepage_backgrounds');
+            const downloadUrl = await uploadFile(fileToUpload, 'homepage_backgrounds');
             if (downloadUrl) {
                 finalBackgroundUrl = downloadUrl;
             } else {
