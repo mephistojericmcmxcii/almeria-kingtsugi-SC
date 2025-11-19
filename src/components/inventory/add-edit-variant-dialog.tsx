@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useAuth } from '@/hooks/use-auth';
 import { setDoc, doc, collection, serverTimestamp, runTransaction, Transaction } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { Label } from '../ui/label';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { useFirebase } from '@/firebase';
 
 type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' | 'ref' | 'parentItemId' | 'parentName' | 'parentCategory'>;
 
@@ -28,9 +30,53 @@ interface AddEditVariantDialogProps {
   variantToEdit?: InventoryVariant | null;
 }
 
+const compressImage = (file: File, quality = 0.7, maxSizeKB = 300): Promise<File> => {
+    return new Promise((resolve, reject) => {
+        if (file.size / 1024 <= maxSizeKB) {
+            resolve(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Failed to get canvas context'));
+                    return;
+                }
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const newFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        // If it's still too large, we could add recursive compression logic here
+                        // but for now, one pass is often enough.
+                        resolve(newFile);
+                    } else {
+                        reject(new Error('Canvas to Blob conversion failed'));
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+};
+
 
 export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit }: AddEditVariantDialogProps) {
   const { firestore } = useFirebase();
+  const { uploadFile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,29 +92,52 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   };
 
   const [formState, setFormState] = useState<VariantFormData>(initialFormState);
-
+  const [imageSource, setImageSource] = useState<'url' | 'upload'>('url');
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
   useEffect(() => {
     if (isOpen) {
-        if (variantToEdit) {
-            setFormState({
-                brand: variantToEdit.brand || '',
-                source: variantToEdit.source || '',
-                quantity: variantToEdit.quantity || 0,
-                price: variantToEdit.price || 0,
-                costPrice: variantToEdit.costPrice || 0,
-                warningLimit: variantToEdit.warningLimit || 10,
-                description: variantToEdit.description || '',
-                imageUrl: variantToEdit.imageUrl || '',
-            });
-        } else {
-            setFormState(initialFormState);
-        }
+        const initialState = variantToEdit ? {
+            brand: variantToEdit.brand || '',
+            source: variantToEdit.source || '',
+            quantity: variantToEdit.quantity || 0,
+            price: variantToEdit.price || 0,
+            costPrice: variantToEdit.costPrice || 0,
+            warningLimit: variantToEdit.warningLimit || 10,
+            description: variantToEdit.description || '',
+            imageUrl: variantToEdit.imageUrl || '',
+        } : initialFormState;
+
+        setFormState(initialState);
+        setFileToUpload(null);
+        setPreviewUrl(initialState.imageUrl || null);
+        setImageSource(initialState.imageUrl ? 'url' : 'upload');
+
     }
   }, [variantToEdit, isOpen]);
   
+  useEffect(() => {
+    if (imageSource === 'url') {
+      setPreviewUrl(formState.imageUrl || null);
+    }
+  }, [formState.imageUrl, imageSource]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormState(prevState => ({ ...prevState, [name]: value }));
+  };
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFileToUpload(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -81,6 +150,19 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     setIsSubmitting(true);
 
     try {
+        let finalImageUrl = formState.imageUrl;
+
+        if (imageSource === 'upload' && fileToUpload) {
+            toast({ title: 'Compressing Image...', description: 'Please wait.'});
+            const compressedFile = await compressImage(fileToUpload);
+            const downloadUrl = await uploadFile(compressedFile, `inventory_images/${item.id}`);
+            if (downloadUrl) {
+                finalImageUrl = downloadUrl;
+            } else {
+                throw new Error("File upload failed, please try again.");
+            }
+        }
+        
         const itemRef = doc(firestore, 'inventory', item.id);
 
         await runTransaction(firestore, async (transaction: Transaction) => {
@@ -100,6 +182,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
             const dataToSave: Omit<InventoryVariant, 'id' | 'ref'> = {
                 ...formState,
+                imageUrl: finalImageUrl,
                 parentItemId: item.id,
                 parentName: item.name,
                 parentCategory: item.category,
@@ -168,10 +251,40 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl} onChange={handleInputChange} disabled={isSubmitting} />
+            <div className="space-y-3">
+              <Label>Image Source</Label>
+               <RadioGroup value={imageSource} onValueChange={(v) => setImageSource(v as 'url' | 'upload')} className="flex space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="url" id="url" />
+                        <Label htmlFor="url">From URL</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="upload" id="upload" />
+                        <Label htmlFor="upload">Upload Image</Label>
+                    </div>
+                </RadioGroup>
             </div>
+
+            {imageSource === 'url' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl} onChange={handleInputChange} disabled={isSubmitting} />
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <Label htmlFor="imageUpload">Upload File</Label>
+                    <Input id="imageUpload" name="imageUpload" type="file" accept="image/*" onChange={handleFileChange} disabled={isSubmitting} />
+                </div>
+            )}
+            
+            {previewUrl && (
+              <div className="space-y-2">
+                <Label>Image Preview</Label>
+                <div className="relative mt-2 h-40 w-full border rounded-lg overflow-hidden bg-muted">
+                    <img src={previewUrl} alt="preview" className="object-cover w-full h-full" />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand} onChange={handleInputChange} disabled={isSubmitting} /></div>
             <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source} onChange={handleInputChange} disabled={isSubmitting} /></div>
@@ -189,7 +302,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || (imageSource === 'upload' && !fileToUpload && !variantToEdit?.imageUrl)}>
               {isSubmitting ? "Saving..." : (variantToEdit ? "Save Changes" : "Add Variant")}
             </Button>
           </DialogFooter>
