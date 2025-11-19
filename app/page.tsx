@@ -1,7 +1,7 @@
 "use client"
 
-import AccessPointForm from "../components/access-point-form"
+import { login } from "../lib/firebase-optimized"
 
 export default function SyntheticV0PageForDeployment() {
-  return <AccessPointForm />
+  return <login />
 }
