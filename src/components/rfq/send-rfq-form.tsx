@@ -45,8 +45,8 @@ import {
 const itemSchema = z.object({
   name: z.string().min(1, 'Item name is required.'),
   quantity: z.preprocess(
-    (a) => parseInt(z.string().default('1').parse(a), 10),
-    z.number().positive('Quantity must be positive.')
+    (val) => (val === "" || val === undefined ? "1" : String(val)),
+    z.coerce.number().int().min(1, 'Quantity must be at least 1.')
   ),
   specs: z.string().optional(),
 });
@@ -118,9 +118,10 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         requestType: 'list',
         items: [{ name: '', quantity: 1, specs: '' }],
         additionalDetails: '',
+        fileAttachment: undefined,
       });
     }
-  }, [user, isOpen, form.reset]);
+  }, [user, isOpen, form]);
   
   const onFormSubmit = (data: FormValues) => {
     setFormData(data);
@@ -150,6 +151,11 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
             createdAt: serverTimestamp(),
             fileAttachment: fileUrl,
         };
+        
+        // Make sure items is not undefined when saving
+        if(dataToSave.requestType === 'list' && !dataToSave.items) {
+            dataToSave.items = [];
+        }
 
         await setDoc(rfqRef, dataToSave);
 
