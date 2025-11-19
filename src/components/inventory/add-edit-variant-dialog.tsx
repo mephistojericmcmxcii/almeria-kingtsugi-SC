@@ -23,7 +23,7 @@ type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' |
 
 interface AddEditVariantDialogProps {
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (changed: boolean) => void;
   item: InventoryItem | null;
   variantToEdit?: InventoryVariant | null;
 }
@@ -129,7 +129,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             description: `The variant has been saved to ${item.name}.`,
         });
       
-        onOpenChange(false);
+        onOpenChange(true); // Signal that a change was made
 
     } catch (error: any) {
         console.error('Failed to save variant:', error);
@@ -145,7 +145,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   
   const handleDialogClose = (open: boolean) => {
     if (isSubmitting) return;
-    onOpenChange(open);
+    onOpenChange(false); // Signal no change on manual close
   }
 
   const title = variantToEdit ? `Edit Variant` : `Add New Variant to ${item?.name}`;
@@ -188,7 +188,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
           <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., G2, 0.5mm, Black Ink" value={formState.description} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : (variantToEdit ? "Save Changes" : "Add Variant")}
             </Button>

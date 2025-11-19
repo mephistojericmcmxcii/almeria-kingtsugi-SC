@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, getDoc, getDocs, runTransaction, Transaction } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDoc, getDocs, runTransaction, Transaction, serverTimestamp } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
