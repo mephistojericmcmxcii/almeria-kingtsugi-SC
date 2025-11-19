@@ -125,8 +125,9 @@ export default function PoPage() {
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
-      case 'Approved': return <Badge className="bg-blue-500 text-blue-50">Approved</Badge>;
       case 'Completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
+      case 'Lacking': return <Badge variant="secondary" className="bg-orange-500 text-orange-50">Lacking</Badge>;
+      case 'Delivered': return <Badge className="bg-blue-500 text-blue-50">Delivered</Badge>;
       case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }

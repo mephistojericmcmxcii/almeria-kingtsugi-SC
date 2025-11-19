@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -21,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const PO_STATUSES: PurchaseOrderStatus[] = ['Approved', 'Completed', 'Cancelled'];
+const PO_STATUSES: PurchaseOrderStatus[] = ['Completed', 'Lacking', 'Delivered', 'Cancelled'];
 
 const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
@@ -51,7 +52,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
       poNumber: '',
       careOf: '',
       source: '',
-      status: 'Approved',
+      status: 'Lacking',
     },
   });
 
@@ -71,7 +72,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           date: new Date(),
           careOf: '',
           source: '',
-          status: 'Approved',
+          status: 'Lacking',
         });
       }
     }

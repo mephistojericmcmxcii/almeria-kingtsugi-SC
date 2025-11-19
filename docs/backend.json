@@ -432,7 +432,7 @@
         },
         "status": {
           "type": "string",
-          "enum": ["Approved", "Completed", "Cancelled"],
+          "enum": ["Completed", "Lacking", "Delivered", "Cancelled"],
           "description": "The current status of the purchase order."
         },
         "agency": {
