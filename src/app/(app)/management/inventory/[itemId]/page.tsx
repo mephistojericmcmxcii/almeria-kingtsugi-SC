@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDoc, getDocs, runTransaction, Transaction } from 'firebase/firestore';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import { ChevronLeft, PackagePlus, MoreHorizontal, Trash2, Edit, Package, Boxes, Tag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -35,6 +35,7 @@ export default function ItemVariantsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const params = useParams();
+  const router = useRouter();
   const itemId = params.itemId as string;
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -45,35 +46,45 @@ export default function ItemVariantsPage() {
   const [variants, setVariants] = useState<InventoryVariant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!firestore || !itemId) return;
-      setIsLoading(true);
-      try {
-        const itemRef = doc(firestore, 'inventory', itemId);
-        const itemSnap = await getDoc(itemRef);
-        if (itemSnap.exists()) {
-          setItem({ id: itemSnap.id, ...itemSnap.data() } as InventoryItem);
-        }
+  const fetchAllData = useCallback(async () => {
+    if (!firestore || !itemId) return;
+    setIsLoading(true);
+    try {
+      const itemRef = doc(firestore, 'inventory', itemId);
+      const itemSnap = await getDoc(itemRef);
 
-        const variantsCollectionRef = collection(firestore, 'inventory', itemId, 'variants');
-        const variantsSnap = await getDocs(variantsCollectionRef);
-        const variantsData = variantsSnap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryVariant));
-        setVariants(variantsData);
-
-      } catch (error) {
-        console.error("Error fetching item and variants:", error);
+      if (itemSnap.exists()) {
+        setItem({ id: itemSnap.id, ...itemSnap.data() } as InventoryItem);
+      } else {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Could not load item details. Please try again.",
+          title: "Not Found",
+          description: "The requested inventory item could not be found.",
         });
-      } finally {
-        setIsLoading(false);
+        router.push('/management/inventory');
+        return;
       }
-    };
-    fetchData();
-  }, [firestore, itemId, toast]);
+
+      const variantsCollectionRef = collection(firestore, 'inventory', itemId, 'variants');
+      const variantsSnap = await getDocs(variantsCollectionRef);
+      const variantsData = variantsSnap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryVariant));
+      setVariants(variantsData);
+
+    } catch (error) {
+      console.error("Error fetching item and variants:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not load item details. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestore, itemId, toast, router]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const totalQuantity = useMemo(() => {
     if (!variants) return 0;
@@ -92,15 +103,44 @@ export default function ItemVariantsPage() {
   };
   
   const handleDeleteConfirm = async () => {
-    if (!variantToDelete) return;
+    if (!variantToDelete || !item) return;
+
     try {
-      await deleteDoc(doc(firestore, 'inventory', itemId, 'variants', variantToDelete.id));
+        const itemRef = doc(firestore, 'inventory', item.id);
+        const variantRef = doc(firestore, 'inventory', item.id, 'variants', variantToDelete.id);
+
+        await runTransaction(firestore, async (transaction: Transaction) => {
+            const itemDoc = await transaction.get(itemRef);
+            if (!itemDoc.exists()) {
+                throw new Error("Parent item not found.");
+            }
+            
+            const currentTotalStock = itemDoc.data().totalStock || 0;
+            const currentVariantCount = itemDoc.data().variantCount || 0;
+            const stockToDecrement = variantToDelete.quantity || 0;
+
+            transaction.delete(variantRef);
+            
+            transaction.update(itemRef, {
+                totalStock: Math.max(0, currentTotalStock - stockToDecrement),
+                variantCount: Math.max(0, currentVariantCount - 1),
+                updatedAt: serverTimestamp()
+            });
+        });
+
+      // Optimistically update UI
       setVariants(prev => prev.filter(v => v.id !== variantToDelete.id));
+      setItem(prev => prev ? {
+          ...prev,
+          totalStock: prev.totalStock - variantToDelete.quantity,
+          variantCount: prev.variantCount - 1,
+      } : null);
+
       toast({
         title: "Variant Deleted",
         description: `The variant has been removed from ${item?.name}.`,
       });
-      setVariantToDelete(null);
+      
     } catch (error) {
       console.error("Error deleting variant:", error);
       toast({
@@ -108,13 +148,17 @@ export default function ItemVariantsPage() {
         title: "Error",
         description: "Could not delete the variant. Please try again.",
       });
-      setVariantToDelete(null);
+    } finally {
+       setVariantToDelete(null);
     }
   };
 
-  const handleDialogClose = () => {
+  const handleDialogClose = (wasChanged: boolean) => {
     setIsAddDialogOpen(false);
     setVariantToEdit(null);
+    if (wasChanged) {
+        fetchAllData(); // Refetch all data if a change was made
+    }
   };
 
   const formatCurrency = (amount: number) => {

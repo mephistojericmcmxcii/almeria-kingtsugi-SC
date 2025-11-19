@@ -14,20 +14,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tag, Package, FileQuestion } from 'lucide-react';
 import { Button } from '../ui/button';
-import { ShoppingCart } from 'lucide-react';
-
-
-type CombinedVariant = InventoryVariant & {
-    parentName: string;
-    parentCategory: string;
-    parentItemId: string;
-};
 
 interface ViewProductModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  variant: CombinedVariant | null;
-  onAddToCart: (variant: CombinedVariant) => void;
+  variant: InventoryVariant | null;
+  onAddToCart: (variant: InventoryVariant) => void;
 }
 
 export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }: ViewProductModalProps) {
@@ -38,7 +30,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
     onAddToCart(variant);
   }
 
-  const getPlaceholderImage = (item: CombinedVariant) => {
+  const getPlaceholderImage = (item: InventoryVariant) => {
       if (item.imageUrl) {
           return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
       }
@@ -56,11 +48,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
 
   const placeholder = getPlaceholderImage(variant);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  };
-
-  const getStatusBadge = (variant: CombinedVariant) => {
+  const getStatusBadge = (variant: InventoryVariant) => {
     if (variant.quantity <= 0) {
       return <Badge variant="destructive">Out of Stock</Badge>;
     }

@@ -100,13 +100,18 @@ export function AddEditItemDialog({ isOpen, onOpenChange, itemToEdit }: AddEditI
 
     const finalCategory = values.category === 'Other' ? values.otherCategory! : values.category;
 
-    const dataToSave = {
+    const dataToSave: Partial<InventoryItem> = {
         name: values.name,
         category: finalCategory,
         description: values.description || '',
         updatedAt: serverTimestamp(),
-        ...( !itemToEdit && { createdAt: serverTimestamp() })
     };
+
+    if (!itemToEdit) {
+        dataToSave.createdAt = serverTimestamp();
+        dataToSave.variantCount = 0;
+        dataToSave.totalStock = 0;
+    }
 
     try {
       await setDoc(itemRef, dataToSave, { merge: true });

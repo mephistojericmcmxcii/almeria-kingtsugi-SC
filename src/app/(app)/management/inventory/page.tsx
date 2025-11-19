@@ -4,13 +4,13 @@
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, getDocs } from 'firebase/firestore';
-import type { InventoryItem, InventoryVariant } from '@/lib/types';
+import { collection, doc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
+import type { InventoryItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
 import { Boxes, PackageSearch, PackagePlus, DollarSign, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,11 +40,7 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
-  const [totalValue, setTotalValue] = useState(0);
-  const [isValueLoading, setIsValueLoading] = useState(true);
-  const [variantCounts, setVariantCounts] = useState<Record<string, number>>({});
-  const [areCountsLoading, setAreCountsLoading] = useState(true);
-
+  
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,47 +65,7 @@ export default function InventoryPage() {
       }
     };
     fetchItems();
-  }, [firestore, toast]);
-
-
-  useEffect(() => {
-    if (!inventoryItems) {
-      setIsValueLoading(false);
-      setAreCountsLoading(false);
-      return;
-    }
-
-    const fetchAllVariants = async () => {
-        setIsValueLoading(true);
-        setAreCountsLoading(true);
-        let accumulatedValue = 0;
-        const counts: Record<string, number> = {};
-        
-        try {
-            for (const item of inventoryItems) {
-                const variantsCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-                const variantsSnapshot = await getDocs(variantsCollectionRef);
-                counts[item.id] = variantsSnapshot.size;
-                variantsSnapshot.forEach(variantDoc => {
-                    const variant = variantDoc.data() as InventoryVariant;
-                    accumulatedValue += (variant.quantity || 0) * (variant.price || 0);
-                });
-            }
-            setTotalValue(accumulatedValue);
-            setVariantCounts(counts);
-        } catch (error) {
-            console.error("Error calculating total inventory value:", error);
-            setTotalValue(0);
-            setVariantCounts({});
-        } finally {
-            setIsValueLoading(false);
-            setAreCountsLoading(false);
-        }
-    };
-
-    fetchAllVariants();
-
-  }, [inventoryItems, firestore]);
+  }, [firestore, toast, isAddDialogOpen]); // Refetch when dialog closes
 
   const filteredItems = useMemo(() => {
     if (!inventoryItems) return [];
@@ -120,6 +76,7 @@ export default function InventoryPage() {
   }, [inventoryItems, searchTerm]);
 
   const totalItems = useMemo(() => inventoryItems?.length || 0, [inventoryItems]);
+  
   const categories = useMemo(() => {
     if (!inventoryItems) return [];
     return [...new Set(inventoryItems.map(item => item.category))];
@@ -132,23 +89,39 @@ export default function InventoryPage() {
   
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
+    
+    // In a real-world scenario with many variants, this operation should be
+    // handled by a Cloud Function to prevent client-side timeouts and ensure atomicity.
     try {
-      // Note: In a real app, you'd also want to delete all variants in the subcollection.
-      // This typically requires a Cloud Function for atomicity and efficiency.
-      await deleteDoc(doc(firestore, 'inventory', itemToDelete.id));
+      const variantsCollectionRef = collection(firestore, 'inventory', itemToDelete.id, 'variants');
+      const variantsSnapshot = await getDocs(variantsCollectionRef);
+      
+      const batch = writeBatch(firestore);
+      
+      // Delete all variants in the subcollection
+      variantsSnapshot.forEach(variantDoc => {
+        batch.delete(variantDoc.ref);
+      });
+      
+      // Delete the parent item
+      const parentItemRef = doc(firestore, 'inventory', itemToDelete.id);
+      batch.delete(parentItemRef);
+      
+      await batch.commit();
+
       setInventoryItems(prev => prev.filter(item => item.id !== itemToDelete.id));
       toast({
         title: "Item Deleted",
-        description: `${itemToDelete.name} has been removed from the inventory.`,
+        description: `${itemToDelete.name} and all its variants have been removed.`,
       });
-      setItemToDelete(null);
     } catch (error) {
-      console.error("Error deleting item:", error);
+      console.error("Error deleting item and its variants:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: "Could not delete the item. Please try again.",
       });
+    } finally {
       setItemToDelete(null);
     }
   };
@@ -157,11 +130,6 @@ export default function InventoryPage() {
     setIsAddDialogOpen(false);
     setItemToEdit(null);
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  };
-
 
   return (
     <div className="space-y-8">
@@ -199,8 +167,8 @@ export default function InventoryPage() {
             <div className="h-4 w-4 text-muted-foreground font-bold">₱</div>
           </CardHeader>
           <CardContent>
-            {isLoading || isValueLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>}
-             <p className="text-xs text-muted-foreground">Sum of all variant quantities and prices</p>
+            <div className="text-2xl font-bold opacity-50">N/A</div>
+            <p className="text-xs text-muted-foreground">Value calculation is now on the detail page.</p>
           </CardContent>
         </Card>
       </div>
@@ -230,6 +198,7 @@ export default function InventoryPage() {
                 <TableHead>Item Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead># Variants</TableHead>
+                <TableHead>Total Stock</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -240,6 +209,7 @@ export default function InventoryPage() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -253,7 +223,10 @@ export default function InventoryPage() {
                       <Badge variant="secondary">{item.category}</Badge>
                     </TableCell>
                     <TableCell>
-                        {areCountsLoading ? <Skeleton className="h-5 w-5" /> : variantCounts[item.id] ?? 0}
+                       {item.variantCount ?? 0}
+                    </TableCell>
+                     <TableCell>
+                       {item.totalStock ?? 0}
                     </TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-sm">{item.description || 'N/A'}</TableCell>
                     <TableCell className="text-right">
@@ -293,7 +266,7 @@ export default function InventoryPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No parent items found.
                   </TableCell>
                 </TableRow>
@@ -320,7 +293,7 @@ export default function InventoryPage() {
                 <AlertDialogDescription>
                     This action cannot be undone. This will permanently delete the item
                     <span className="font-bold"> {itemToDelete?.name} </span>
-                    and all of its variants.
+                    and all of its variants. This is an irreversible action.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -21,10 +21,18 @@ export type InventoryItem = {
     description?: string;
     createdAt: any; 
     updatedAt: any;
+    // Denormalized fields for cost optimization
+    variantCount: number;
+    totalStock: number;
 };
 
 export type InventoryVariant = {
   id: string;
+  // Denormalized fields from parent for query optimization
+  parentItemId: string; 
+  parentName: string;
+  parentCategory: string;
+  // Original fields
   brand: string;
   source: string;
   quantity: number;

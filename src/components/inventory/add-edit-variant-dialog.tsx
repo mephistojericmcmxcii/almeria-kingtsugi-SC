@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useFirebase } from '@/firebase';
-import { setDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { setDoc, doc, collection, serverTimestamp, runTransaction, Transaction } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { useState, useEffect } from 'react';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { Label } from '../ui/label';
 
-type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' | 'ref'>;
+type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' | 'ref' | 'parentItemId' | 'parentName' | 'parentCategory'>;
 
 interface AddEditVariantDialogProps {
   isOpen: boolean;
@@ -74,28 +74,55 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!item || !firestore) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Required services are not available.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Parent item is missing.' });
         return;
     }
 
     setIsSubmitting(true);
 
     try {
-        const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
-        const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
+        const itemRef = doc(firestore, 'inventory', item.id);
 
-        const variantRef = doc(variantCollectionRef, variantId);
-        const dataToSave = {
-            ...formState,
-            quantity: Number(formState.quantity) || 0,
-            price: Number(formState.price) || 0,
-            costPrice: Number(formState.costPrice) || 0,
-            warningLimit: Number(formState.warningLimit) || 0,
-            updatedAt: serverTimestamp(),
-            ...(!variantToEdit && { createdAt: serverTimestamp() }),
-        };
+        await runTransaction(firestore, async (transaction: Transaction) => {
+            const itemDoc = await transaction.get(itemRef);
+            if (!itemDoc.exists()) {
+                throw new Error("Parent item does not exist.");
+            }
 
-        await setDoc(variantRef, dataToSave, { merge: true });
+            const currentTotalStock = itemDoc.data().totalStock || 0;
+            const currentVariantCount = itemDoc.data().variantCount || 0;
+            const oldQuantity = variantToEdit ? variantToEdit.quantity : 0;
+            const newQuantity = Number(formState.quantity) || 0;
+
+            const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+            const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
+            const variantRef = doc(variantCollectionRef, variantId);
+
+            const dataToSave: Omit<InventoryVariant, 'id' | 'ref'> = {
+                ...formState,
+                parentItemId: item.id,
+                parentName: item.name,
+                parentCategory: item.category,
+                quantity: newQuantity,
+                price: Number(formState.price) || 0,
+                costPrice: Number(formState.costPrice) || 0,
+                warningLimit: Number(formState.warningLimit) || 0,
+                updatedAt: serverTimestamp(),
+                createdAt: variantToEdit ? variantToEdit.createdAt : serverTimestamp(),
+            };
+
+            transaction.set(variantRef, dataToSave, { merge: true });
+            
+            const stockDifference = newQuantity - oldQuantity;
+            const newTotalStock = currentTotalStock + stockDifference;
+            const newVariantCount = variantToEdit ? currentVariantCount : currentVariantCount + 1;
+
+            transaction.update(itemRef, {
+                totalStock: newTotalStock,
+                variantCount: newVariantCount,
+                updatedAt: serverTimestamp()
+            });
+        });
 
         toast({
             title: variantToEdit ? 'Variant Updated' : 'Variant Added',

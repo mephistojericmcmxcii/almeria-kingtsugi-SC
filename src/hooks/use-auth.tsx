@@ -20,12 +20,6 @@ interface ProfileUpdateData {
     contactNumber?: string;
 }
 
-type CombinedVariant = InventoryVariant & {
-    parentName: string;
-    parentCategory: string;
-    parentItemId: string;
-};
-
 interface AuthContextType {
   user: User | null;
   cart: CartItem[] | null;
@@ -40,7 +34,7 @@ interface AuthContextType {
   createAdminUser: (email: string, password: string, displayName: string) => Promise<boolean>;
   updateUserRole: (targetUserId: string, newRole: 'admin' | 'guest') => Promise<boolean>;
   updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
-  addToCart: (variant: CombinedVariant) => Promise<void>;
+  addToCart: (variant: InventoryVariant) => Promise<void>;
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string, notes?: string) => Promise<boolean>;
@@ -582,7 +576,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-    const getPlaceholderImage = (item: CombinedVariant) => {
+    const getPlaceholderImage = (item: InventoryVariant) => {
         if (item.imageUrl) {
             return { imageUrl: item.imageUrl, imageHint: 'product' };
         }
@@ -599,7 +593,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { imageUrl: fallback.imageUrl, imageHint: fallback.imageHint };
     };
 
-    const addToCart = async (variant: CombinedVariant) => {
+    const addToCart = async (variant: InventoryVariant) => {
         if (!user) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'Please log in to add items to your quotation.' });
             return;
@@ -737,14 +731,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
                 };
                 transaction.set(newOrderRef, newOrder);
-
-                // This logic is commented out as price is on request, but kept for future reference
-                // for (const item of cartItems) {
-                //     const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                //     transaction.update(variantRef, {
-                //         quantity: increment(-item.quantity)
-                //     });
-                // }
 
                 for (const item of cartItems) {
                     const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
@@ -908,7 +894,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const err = 'Firebase Storage is not available. Check your Firebase provider setup.';
             console.error(err);
             toast({ variant: 'destructive', title: 'Storage Error', description: err });
-            return Promise.reject(new Error(err));
+            return null;
         }
         
         const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
@@ -920,7 +906,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
             console.error("Upload failed:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-            return Promise.reject(error);
+            return null;
         }
     };
 
@@ -947,5 +933,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

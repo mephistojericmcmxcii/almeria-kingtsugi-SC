@@ -4,8 +4,8 @@
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, collectionGroup, getDoc, getDocs, doc } from 'firebase/firestore';
-import type { InventoryItem, InventoryVariant } from '@/lib/types';
+import { collectionGroup, getDocs } from 'firebase/firestore';
+import type { InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,24 +28,17 @@ import {
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
-type CombinedVariant = InventoryVariant & {
-    parentName: string;
-    parentCategory: string;
-    parentItemId: string;
-};
-
-
 export default function ProductsPage() {
   const { firestore } = useFirebase();
   const { addToCart } = useAuth();
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [combinedVariants, setCombinedVariants] = useState<CombinedVariant[]>([]);
+  const [allVariants, setAllVariants] = useState<InventoryVariant[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const [selectedVariant, setSelectedVariant] = useState<CombinedVariant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [variantToAddToCart, setVariantToAddToCart] = useState<CombinedVariant | null>(null);
+  const [variantToAddToCart, setVariantToAddToCart] = useState<InventoryVariant | null>(null);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -53,33 +46,16 @@ export default function ProductsPage() {
         setIsDataLoading(true);
 
         try {
+            // This single query is much more efficient than fetching parents individually.
             const variantsCollectionGroup = collectionGroup(firestore, 'variants');
             const variantsSnapshot = await getDocs(variantsCollectionGroup);
+            
             const variants = variantsSnapshot.docs.map(doc => ({
                 id: doc.id,
-                ref: doc.ref,
                 ...doc.data()
             } as InventoryVariant));
 
-            const parentPromises = variants.map(async (variant) => {
-                const parentDocRef = variant.ref?.parent.parent;
-                if (!parentDocRef) return null;
-
-                const parentSnap = await getDoc(parentDocRef);
-                if (parentSnap.exists()) {
-                    const parentData = parentSnap.data() as InventoryItem;
-                    return {
-                        ...variant,
-                        parentName: parentData.name,
-                        parentCategory: parentData.category,
-                        parentItemId: parentSnap.id,
-                    };
-                }
-                return null;
-            });
-
-            const settledVariants = await Promise.all(parentPromises);
-            setCombinedVariants(settledVariants.filter((v): v is CombinedVariant => v !== null));
+            setAllVariants(variants);
         } catch (error) {
             console.error("Error fetching product data:", error);
             toast({
@@ -97,14 +73,14 @@ export default function ProductsPage() {
 
 
   const filteredItems = useMemo(() => {
-    if (!combinedVariants) return [];
-    return combinedVariants.filter(item =>
+    if (!allVariants) return [];
+    return allVariants.filter(item =>
       item.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.parentCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [combinedVariants, searchTerm]);
+  }, [allVariants, searchTerm]);
   
   const handleAddToCartConfirm = () => {
     if (!variantToAddToCart) return;
@@ -112,17 +88,17 @@ export default function ProductsPage() {
     setVariantToAddToCart(null);
   };
 
-  const handleViewDetails = (variant: CombinedVariant) => {
+  const handleViewDetails = (variant: InventoryVariant) => {
     setSelectedVariant(variant);
     setIsModalOpen(true);
   }
 
-  const handleAddToCartRequest = (variant: CombinedVariant) => {
+  const handleAddToCartRequest = (variant: InventoryVariant) => {
     setIsModalOpen(false); // Close the view modal
     setVariantToAddToCart(variant); // Open the confirmation dialog
   };
 
-  const getPlaceholderImage = (item: CombinedVariant) => {
+  const getPlaceholderImage = (item: InventoryVariant) => {
       if (item.imageUrl) {
           return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
       }
@@ -138,11 +114,7 @@ export default function ProductsPage() {
       return PlaceHolderImages.find(p => p.id === 'product-fallback')!;
   }
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  };
-  
-    const getStatusBadge = (variant: CombinedVariant) => {
+    const getStatusBadge = (variant: InventoryVariant) => {
         if (variant.quantity <= 0) {
         return <Badge variant="destructive">Out of Stock</Badge>;
         }
