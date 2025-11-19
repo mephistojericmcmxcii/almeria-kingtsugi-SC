@@ -60,24 +60,24 @@ const formSchema = z.object({
   items: z.array(itemSchema).optional(),
   fileAttachment: z.any().optional(),
   additionalDetails: z.string().optional(),
-}).refine(data => {
-    if (data.requestType === 'list' && (!data.items || data.items.length === 0)) {
-        return false;
+}).superRefine((data, ctx) => {
+    if (data.requestType === 'list') {
+        if (!data.items || data.items.length === 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Please add at least one item to the list.',
+                path: ['items'],
+            });
+        }
+    } else if (data.requestType === 'attachment') {
+        if (!data.fileAttachment) {
+             ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Please attach a file for the quotation request.',
+                path: ['fileAttachment'],
+            });
+        }
     }
-    return true;
-}, {
-    message: 'Please add at least one item to the list.',
-    path: ['items'],
-}).refine(data => {
-    // This validation ensures that if the request type is attachment, a file must be uploaded.
-    // It's coupled with the form's `disabled` state logic.
-    if (data.requestType === 'attachment' && !data.fileAttachment) {
-        return false;
-    }
-    return true;
-}, {
-    message: 'Please attach a file.',
-    path: ['fileAttachment'],
 });
 
 
