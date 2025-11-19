@@ -31,6 +31,7 @@ import {
   User,
   Home,
   Package,
+  FileQuestion,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
@@ -62,6 +63,12 @@ const MainSidebar = () => {
       href: "/products",
       label: "Products",
       icon: Package,
+      adminOnly: false,
+    },
+    {
+      href: "/request-for-quotation",
+      label: "Request for Quotation",
+      icon: FileQuestion,
       adminOnly: false,
     },
      {
@@ -102,6 +109,21 @@ const MainSidebar = () => {
         {menuItems.map((item) => {
           if (item.adminOnly && user?.role !== 'admin') {
             return null;
+          }
+          if (item.href === "/request-for-quotation") {
+            return (
+              <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    disabled
+                    className="cursor-not-allowed opacity-50"
+                  >
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
           }
           return (
             <SidebarMenuItem key={item.href}>
