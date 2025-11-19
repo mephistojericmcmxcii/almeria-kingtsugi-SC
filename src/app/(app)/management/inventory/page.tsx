@@ -4,8 +4,8 @@
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
-import type { InventoryItem } from '@/lib/types';
+import { collection, doc, deleteDoc, getDocs, writeBatch, collectionGroup } from 'firebase/firestore';
+import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,7 +42,12 @@ export default function InventoryPage() {
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [allVariants, setAllVariants] = useState<InventoryVariant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+  };
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -53,6 +58,13 @@ export default function InventoryPage() {
         const snapshot = await getDocs(inventoryCollectionRef);
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
         setInventoryItems(items);
+
+        // Also fetch all variants for the total value calculation
+        const variantsCollectionGroup = collectionGroup(firestore, 'variants');
+        const variantsSnapshot = await getDocs(variantsCollectionGroup);
+        const variants = variantsSnapshot.docs.map(doc => doc.data() as InventoryVariant);
+        setAllVariants(variants);
+
       } catch (error) {
         console.error("Error fetching inventory items:", error);
         toast({
@@ -81,6 +93,13 @@ export default function InventoryPage() {
     if (!inventoryItems) return [];
     return [...new Set(inventoryItems.map(item => item.category))];
   }, [inventoryItems]);
+
+  const totalValue = useMemo(() => {
+    return allVariants.reduce((sum, variant) => {
+      return sum + (variant.price || 0) * (variant.quantity || 0);
+    }, 0);
+  }, [allVariants]);
+
 
   const handleEdit = (item: InventoryItem) => {
     setItemToEdit(item);
@@ -167,8 +186,8 @@ export default function InventoryPage() {
             <div className="h-4 w-4 text-muted-foreground font-bold">₱</div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold opacity-50">N/A</div>
-            <p className="text-xs text-muted-foreground">Value calculation is now on the detail page.</p>
+             {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>}
+            <p className="text-xs text-muted-foreground">Sum of all variant quantities and prices</p>
           </CardContent>
         </Card>
       </div>
