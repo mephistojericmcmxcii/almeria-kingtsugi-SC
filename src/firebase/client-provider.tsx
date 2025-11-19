@@ -1,8 +1,10 @@
+
 'use client';
 
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
+import { getStorage } from 'firebase/storage';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -11,7 +13,10 @@ interface FirebaseClientProviderProps {
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
     // Initialize Firebase on the client side, once per application lifecycle.
-    return initializeFirebase();
+    const services = initializeFirebase();
+    // NOW, initialize storage only on the client.
+    services.storage = getStorage(services.firebaseApp);
+    return services;
   }, []);
 
   return (

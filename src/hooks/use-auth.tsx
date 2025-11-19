@@ -920,35 +920,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const uploadImage = async (file: File, path: string): Promise<string | null> => {
         if (!storage) {
-            console.error("[uploadImage] Firebase Storage is not available. Connection check failed.");
             toast({
                 variant: 'destructive',
                 title: 'Storage Error',
-                description: 'Cannot connect to Firebase Storage. Please check your configuration.'
+                description: 'Storage service is not available. Cannot upload file.'
             });
             return null;
         }
-        console.log("[uploadImage] Firebase Storage service is available. Connection successful.");
 
-        console.log(`[uploadImage] Starting upload for: ${file.name} to path: ${path}`);
         const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
-        console.log(`[uploadImage] Created storage reference: ${storageRef.fullPath}`);
 
         try {
-            console.log('[uploadImage] Attempting to upload bytes...');
             const snapshot = await uploadBytes(storageRef, file);
-            console.log('[uploadImage] Upload successful. Snapshot:', snapshot);
-            
-            console.log('[uploadImage] Attempting to get download URL...');
             const downloadURL = await getDownloadURL(snapshot.ref);
-            console.log(`[uploadImage] Successfully got download URL: ${downloadURL}`);
-            
             return downloadURL;
         } catch (error: any) {
             console.error("[uploadImage] Upload failed:", error);
-            console.error("[uploadImage] Error Code:", error.code);
-            console.error("[uploadImage] Error Message:", error.message);
-            console.error("[uploadImage] Error Server Response:", error.serverResponse);
             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
             return null;
         }

@@ -5,14 +5,14 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
-import { FirebaseStorage, getStorage } from 'firebase/storage';
+import { FirebaseStorage } from 'firebase/storage';
 
 // This structure holds all initialized Firebase services.
 interface FirebaseServices {
   firebaseApp: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
-  storage: FirebaseStorage;
+  storage: FirebaseStorage | null; // Can be null on the server
 }
 
 // A singleton to hold the initialized services.
@@ -30,7 +30,7 @@ export function initializeFirebase(): FirebaseServices {
     firebaseApp: app,
     auth: getAuth(app),
     firestore: getFirestore(app),
-    storage: getStorage(app),
+    storage: null, // Set to null initially
   };
 
   return firebaseServices;

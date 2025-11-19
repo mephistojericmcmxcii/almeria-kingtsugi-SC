@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ interface FirebaseProviderProps {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-  storage: FirebaseStorage;
+  storage: FirebaseStorage | null;
 }
 
 // Internal state for user authentication
@@ -39,7 +40,7 @@ export interface FirebaseContextState {
 export interface FirebaseServicesAndUser {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
-  storage: FirebaseStorage;
+  storage: FirebaseStorage | null; // Storage can be null on the server
   auth: Auth;
   user: User | null;
   isUserLoading: boolean;
@@ -96,12 +97,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth && storage);
+    const servicesAvailable = !!(firebaseApp && firestore && auth); // Storage is optional on server
     return {
       areServicesAvailable: servicesAvailable,
       firebaseApp: servicesAvailable ? firebaseApp : null,
       firestore: servicesAvailable ? firestore : null,
-      storage: servicesAvailable ? storage : null,
+      storage: storage, // Can be null
       auth: servicesAvailable ? auth : null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
@@ -128,14 +129,14 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
+  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
+    throw new Error('Firebase core services (App, Firestore, Auth) not available. Check FirebaseProvider props.');
   }
 
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
-    storage: context.storage,
+    storage: context.storage, // This can be null
     auth: context.auth,
     user: context.user,
     isUserLoading: context.isUserLoading,
@@ -155,9 +156,15 @@ export const useFirestore = (): Firestore => {
   return firestore;
 };
 
-/** Hook to access Firebase Storage instance. */
+/**
+ * Hook to access Firebase Storage instance.
+ * Throws an error if used in an environment where Storage is not available (e.g., server-side).
+ */
 export const useStorage = (): FirebaseStorage => {
     const { storage } = useFirebase();
+    if (!storage) {
+        throw new Error('Firebase Storage is not available in this context. It can only be used on the client-side.');
+    }
     return storage;
 }
 
