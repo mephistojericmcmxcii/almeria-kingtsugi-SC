@@ -56,19 +56,20 @@ const baseSchema = z.object({
   additionalDetails: z.string().optional(),
 });
 
-const formSchema = z.discriminatedUnion('requestType', [
-    z.object({
-        requestType: z.literal('list'),
-        items: z.array(itemSchema).min(1, 'Please add at least one item.'),
-        fileAttachment: z.any().optional(),
-    }),
-    z.object({
-        requestType: z.literal('attachment'),
-        fileAttachment: z.any().refine(file => file instanceof File, 'Please attach a file.'),
-        items: z.array(itemSchema).optional(),
-    })
-]).and(baseSchema);
+const listSchema = baseSchema.extend({
+    requestType: z.literal('list'),
+    items: z.array(itemSchema).min(1, 'Please add at least one item.'),
+});
 
+const attachmentSchema = baseSchema.extend({
+    requestType: z.literal('attachment'),
+    fileAttachment: z.any().refine(file => file instanceof File, { message: 'Please attach a file.' }),
+});
+
+const formSchema = z.discriminatedUnion('requestType', [
+    listSchema,
+    attachmentSchema,
+]);
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -102,11 +103,11 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
   useEffect(() => {
     if (isOpen) {
       form.reset({
+        requestType: 'list',
         customerName: user?.displayName || '',
         contactNumber: user?.contactNumber || '',
         emailAddress: user?.email || '',
         companyName: '',
-        requestType: 'list',
         items: [{ name: '', quantity: 1, specs: '' }],
         additionalDetails: '',
         fileAttachment: undefined,
