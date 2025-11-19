@@ -88,8 +88,7 @@ export default function PoPage() {
     if (!purchaseOrders) return [];
     return purchaseOrders.filter(po => 
       po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.careOf.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.source.toLowerCase().includes(searchTerm.toLowerCase())
+      po.careOf.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [purchaseOrders, searchTerm]);
 
@@ -160,7 +159,7 @@ export default function PoPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input 
-                    placeholder="Search by PO #, Care Of, Source..."
+                    placeholder="Search by PO #, Care Of..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10"
@@ -179,7 +178,6 @@ export default function PoPage() {
                   <TableHead>PO #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Care Of</TableHead>
-                  <TableHead>Source / Supplier</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total Amount</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -192,7 +190,6 @@ export default function PoPage() {
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -204,7 +201,6 @@ export default function PoPage() {
                       <TableCell className="font-medium">{po.poNumber}</TableCell>
                       <TableCell>{format(po.date.toDate(), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{po.careOf}</TableCell>
-                      <TableCell>{po.source}</TableCell>
                       <TableCell>{getStatusBadge(po.status)}</TableCell>
                       <TableCell className="text-right font-medium">
                         {areTotalsLoading ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id] || 0)}
@@ -232,7 +228,7 @@ export default function PoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       No purchase orders found.
                     </TableCell>
                   </TableRow>
@@ -269,5 +265,3 @@ export default function PoPage() {
     </>
   );
 }
-
-    
