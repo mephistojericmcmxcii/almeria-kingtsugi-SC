@@ -1,5 +1,5 @@
 
-"use client";
+'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,13 +38,13 @@ import { UserNav } from "../auth/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { SendRfqForm } from "@/components/rfq/send-rfq-form";
+import { DialogTrigger } from "../ui/dialog";
 
 
 const MainSidebar = () => {
   const pathname = usePathname();
   const { user, logout, showAdminOrderBadge, showAdminRfqBadge } = useAuth();
   const [managementOpen, setManagementOpen] = React.useState(false);
-  const [isRfqOpen, setIsRfqOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (pathname.startsWith('/management')) {
@@ -72,7 +72,6 @@ const MainSidebar = () => {
       label: "Request for Quotation",
       icon: FileQuestion,
       adminOnly: false,
-      action: () => setIsRfqOpen(true),
     },
      {
       href: "/about",
@@ -114,10 +113,21 @@ const MainSidebar = () => {
           if (item.adminOnly && user?.role !== 'admin') {
             return null;
           }
-          if (item.href) {
+          if (item.id === 'rfq') {
             return (
+              <SidebarMenuItem key={item.id}>
+                <DialogTrigger asChild>
+                  <SidebarMenuButton tooltip={item.label}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </DialogTrigger>
+              </SidebarMenuItem>
+            )
+          }
+          return (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
+              <Link href={item.href!}>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
                   tooltip={item.label}
@@ -128,18 +138,6 @@ const MainSidebar = () => {
               </Link>
             </SidebarMenuItem>
             )
-          }
-          return (
-             <SidebarMenuItem key={item.id}>
-                <SidebarMenuButton
-                    onClick={item.action}
-                    tooltip={item.label}
-                >
-                    <item.icon />
-                    <span>{item.label}</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-          )
         })}
         
         {user?.role === 'admin' && (
@@ -181,11 +179,9 @@ const MainSidebar = () => {
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>
-    <SendRfqForm isOpen={isRfqOpen} onOpenChange={setIsRfqOpen} />
+    <SendRfqForm />
     </>
   );
 };
 
 export default MainSidebar;
-
-    

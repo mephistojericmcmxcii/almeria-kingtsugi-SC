@@ -73,14 +73,10 @@ const formSchema = z.discriminatedUnion('requestType', [
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface SendRfqFormProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
+export function SendRfqForm() {
   const { user, firestore, uploadFile } = useAuth();
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [formData, setFormData] = useState<FormValues | null>(null);
@@ -158,7 +154,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
             description: "Your Request for Quotation has been successfully submitted.",
         });
 
-        onOpenChange(false);
+        setIsOpen(false);
         form.reset();
 
     } catch (err: any) {
@@ -173,10 +169,15 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
         setFormData(null);
     }
   };
+  
+  const handleOpenChange = (open: boolean) => {
+    if (isSubmitting) return;
+    setIsOpen(open);
+  }
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={(o) => !isSubmitting && onOpenChange(o)}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">Request for Quotation</DialogTitle>
@@ -272,7 +273,7 @@ export function SendRfqForm({ isOpen, onOpenChange }: SendRfqFormProps) {
             )}/>
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
