@@ -4,7 +4,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { Firestore, initializeFirestore, memoryLocalCache } from 'firebase/firestore';
 import { FirebaseStorage } from 'firebase/storage';
 
 // This structure holds all initialized Firebase services.
@@ -17,7 +17,6 @@ interface FirebaseServices {
 
 // A singleton to hold the initialized services.
 let firebaseServices: FirebaseServices | null = null;
-let persistenceEnabled = false;
 
 // This is the main initialization function.
 export function initializeFirebase(): FirebaseServices {
@@ -26,21 +25,11 @@ export function initializeFirebase(): FirebaseServices {
   }
 
   const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  const firestore = getFirestore(app);
-
-  // Enable persistence only once
-  if (!persistenceEnabled) {
-    try {
-      enableIndexedDbPersistence(firestore);
-      persistenceEnabled = true;
-    } catch (error: any) {
-      if (error.code == 'failed-precondition') {
-        console.warn('Firestore persistence failed: Multiple tabs open. Persistence will only be enabled in one tab at a time.');
-      } else if (error.code == 'unimplemented') {
-        console.warn('Firestore persistence failed: The current browser does not support all of the features required to enable persistence.');
-      }
-    }
-  }
+  
+  // Use initializeFirestore to configure persistence
+  const firestore = initializeFirestore(app, {
+    localCache: memoryLocalCache({})
+  });
   
   firebaseServices = {
     firebaseApp: app,
