@@ -202,7 +202,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     displayName: userData.displayName,
                     email: userData.email,
                     role: userIsAdmin ? 'admin' : 'guest',
-                    profileImageUrl: userData.profileImageUrl || firebaseUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{firebaseUser.uid}/40/40`,
+                    profileImageUrl: userData.profileImageUrl || firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`,
                     address: userData.address || '',
                     contactNumber: userData.contactNumber || '',
                     lastViewedOrdersAt: userData.lastViewedOrdersAt,
@@ -216,7 +216,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     displayName: firebaseUser.displayName,
                     email: firebaseUser.email!,
                     role: 'guest',
-                    profileImageUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{firebaseUser.uid}/40/40`,
+                    profileImageUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`,
                     address: '',
                     contactNumber: firebaseUser.phoneNumber || '',
                 };
@@ -333,7 +333,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         displayName: displayName,
         email: fbUser.email!,
         role: 'guest',
-        profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
+        profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
         address: '',
         contactNumber: '',
       };
@@ -400,7 +400,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 displayName: fbUser.displayName || 'New User',
                 email: fbUser.email!,
                 role: 'guest',
-                profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
+                profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/40/40`,
                 address: '',
                 contactNumber: fbUser.phoneNumber || '',
             };
@@ -436,7 +436,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             displayName: displayName,
             email: email,
             role: "admin",
-            profileImageUrl: `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
+            profileImageUrl: `https://picsum.photos/seed/${fbUser.uid}/40/40`,
             address: "",
         };
         await setDoc(userRef, adminData);
@@ -445,7 +445,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         toast({
             title: "Admin User Created",
-            description: `${'\'\'\''}{displayName} has been added as an admin.`,
+            description: `${displayName} has been added as an admin.`,
         });
         return true;
     } catch (error: any) {
@@ -473,7 +473,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         toast({
             title: "User Role Updated",
-            description: `The user's role has been changed to ${'\'\'\''}{newRole}. The user must log out and log back in for this change to take effect.`,
+            description: `The user's role has been changed to ${newRole}. The user must log out and log back in for this change to take effect.`,
         });
         return true;
     } catch (error: any) {
@@ -553,7 +553,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const currentQuantityInCart = cartItemDoc.exists() ? cartItemDoc.data().quantity : 0;
                 
                 if (currentQuantityInCart >= variant.quantity) {
-                    toast({ variant: 'destructive', title: 'Stock Limit Reached', description: `You cannot add more of ${'\'\'\''}{variant.parentName} - ${'\'\'\''}{variant.brand}.` });
+                    toast({ variant: 'destructive', title: 'Stock Limit Reached', description: `You cannot add more of '${variant.parentName} - ${variant.brand}'.` });
                     return;
                 }
 
@@ -582,7 +582,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             toast({
                 title: "Item Added to Quotation",
-                description: `${'\'\'\''}{variant.parentName} - ${'\'\'\''}{variant.brand} has been added to your quotation list.`,
+                description: `${variant.parentName} - ${variant.brand} has been added to your quotation list.`,
             });
         } catch (error: any) {
             if (error.message.includes('Stock Limit Reached')) {
@@ -591,7 +591,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             console.error("Error adding to cart:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${'\'\'\''}{user.id}/cart/${'\'\'\''}{variant.id}`,
+                path: `users/${user.id}/cart/${variant.id}`,
                 operation: 'write',
                 requestResourceData: { variantId: variant.id },
             });
@@ -610,7 +610,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             toast({
                 variant: 'destructive',
                 title: 'Stock Limit Reached',
-                description: `Only ${'\'\'\''}{cartItem.stock} units available for ${'\'\'\''}{cartItem.parentName}.`,
+                description: `Only ${cartItem.stock} units available for ${cartItem.parentName}.`,
             });
             return;
         }
@@ -622,7 +622,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
              console.error("Error updating cart quantity:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${'\'\'\''}{user.id}/cart/${'\'\'\''}{cartItem.id}`,
+                path: `users/${user.id}/cart/${cartItem.id}`,
                 operation: 'update',
                 requestResourceData: { quantity: newQuantity },
             });
@@ -642,7 +642,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error: any) {
             console.error("Error removing cart item:", error);
             const permissionError = new FirestorePermissionError({
-                path: `users/${'\'\'\''}{user.id}/cart/${'\'\'\''}{cartItemId}`,
+                path: `users/${user.id}/cart/${cartItemId}`,
                 operation: 'delete',
             });
             errorEmitter.emit('permission-error', permissionError);
@@ -695,7 +695,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             if (error.code === 'permission-denied') {
                 const permissionError = new FirestorePermissionError({
-                    path: `users/${'\'\'\''}{user.id}/orders`,
+                    path: `users/${user.id}/orders`,
                     operation: 'write',
                     requestResourceData: { note: "Quotation request transaction" }
                 });
@@ -781,7 +781,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await fetchOrders(); // Refetch orders to show the update
             toast({
                 title: "Order Updated",
-                description: `Order #${'\'\'\''}{order.id.substring(0,8)}... has been updated to ${'\'\'\''}{newStatus}.`,
+                description: `Order #${order.id.substring(0,8)}... has been updated to ${newStatus}.`,
             });
             return true;
         } catch (error: any) {
@@ -812,7 +812,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             toast({
                 title: 'PO Status Updated',
-                description: `The purchase order has been marked as ${'\'\'\''}{newStatus}.`,
+                description: `The purchase order has been marked as ${newStatus}.`,
             });
             return true;
         } catch (error: any) {
