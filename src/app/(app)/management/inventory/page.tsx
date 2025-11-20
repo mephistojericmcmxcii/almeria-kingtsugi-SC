@@ -42,7 +42,6 @@ export default function InventoryPage() {
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [allVariants, setAllVariants] = useState<InventoryVariant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const formatCurrency = (amount: number) => {
@@ -58,12 +57,6 @@ export default function InventoryPage() {
         const snapshot = await getDocs(inventoryCollectionRef);
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
         setInventoryItems(items);
-
-        // Also fetch all variants for the total value calculation
-        const variantsCollectionGroup = collectionGroup(firestore, 'variants');
-        const variantsSnapshot = await getDocs(variantsCollectionGroup);
-        const variants = variantsSnapshot.docs.map(doc => doc.data() as InventoryVariant);
-        setAllVariants(variants);
 
       } catch (error) {
         console.error("Error fetching inventory items:", error);
@@ -93,13 +86,6 @@ export default function InventoryPage() {
     if (!inventoryItems) return [];
     return [...new Set(inventoryItems.map(item => item.category))];
   }, [inventoryItems]);
-
-  const totalValue = useMemo(() => {
-    return allVariants.reduce((sum, variant) => {
-      return sum + (variant.price || 0) * (variant.quantity || 0);
-    }, 0);
-  }, [allVariants]);
-
 
   const handleEdit = (item: InventoryItem) => {
     setItemToEdit(item);
@@ -186,8 +172,8 @@ export default function InventoryPage() {
             <div className="h-4 w-4 text-muted-foreground font-bold">₱</div>
           </CardHeader>
           <CardContent>
-             {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>}
-            <p className="text-xs text-muted-foreground">Sum of all variant quantities and prices</p>
+             <div className="text-2xl font-bold">N/A</div>
+            <p className="text-xs text-muted-foreground">Value calculation moved to Dashboard</p>
           </CardContent>
         </Card>
       </div>
