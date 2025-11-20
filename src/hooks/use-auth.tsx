@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -92,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [showAdminRfqBadge, setShowAdminRfqBadge] = useState(false);
 
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const maintenanceRef = useMemo(() => doc(firestore, 'system_settings', 'maintenance_mode'), [firestore]);
@@ -113,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-      if (!user) {
+      if (!user || pathname === '/') {
           setCart(null);
           return;
       };
@@ -122,40 +123,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const unsubscribe = onSnapshot(cartCollectionRef, (snapshot) => {
           const cartData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CartItem));
           setCart(cartData);
+      }, (error) => {
+          console.error("Cart listener error:", error);
+          // Optional: Handle read errors, e.g., for permissions
       });
 
       return () => unsubscribe();
-  }, [user, firestore]);
+  }, [user, firestore, pathname]);
   
   const fetchOrders = async () => {
-    if (!user) return;
-    try {
-        const ordersQuery = user.role === 'admin'
-            ? collectionGroup(firestore, 'orders')
-            : collection(firestore, 'users', user.id, 'orders');
+    if (!user || pathname === '/') {
+      setOrders(null);
+      return;
+    }
+    
+    // This is now handled by the real-time listener in the useEffect below
+    // This function can be kept for manual refreshing if needed, but the listener is primary
+    const ordersQuery = user.role === 'admin'
+        ? collectionGroup(firestore, 'orders')
+        : collection(firestore, 'users', user.id, 'orders');
 
+    try {
         const snapshot = await getDocs(ordersQuery);
         const fetchedOrders = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         } as Order));
         
-        // This sorting is important
         const sortedOrders = fetchedOrders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
-        
         setOrders(sortedOrders);
     } catch (error) {
-        console.error("Error fetching orders:", error);
+      console.error("Error fetching orders manually:", error);
     }
   };
 
   useEffect(() => {
-    if (user) {
-        fetchOrders();
-    } else {
-        setOrders(null);
+    if (!user || pathname === '/') {
+      setOrders(null);
+      return;
     }
-  }, [user, firestore]);
+
+    const ordersQuery = user.role === 'admin'
+        ? collectionGroup(firestore, 'orders')
+        : collection(firestore, 'users', user.id, 'orders');
+    
+    const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+        const fetchedOrders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Order));
+        
+        const sortedOrders = fetchedOrders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+        setOrders(sortedOrders);
+    }, (error) => {
+        console.error("Orders listener error:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user, firestore, pathname]);
 
   const prevOrders = usePrevious(orders);
 
