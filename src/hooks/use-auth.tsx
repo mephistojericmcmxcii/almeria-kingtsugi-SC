@@ -13,6 +13,7 @@ import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrde
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useBadgeManager } from '@/hooks/use-badge-manager';
 
 interface ProfileUpdateData {
     displayName: string;
@@ -69,27 +70,24 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const usePrevious = <T>(value: T): T | undefined => {
-    const ref = useRef<T>();
-    useEffect(() => {
-        ref.current = value;
-    });
-    return ref.current;
-}
-
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { user: firebaseUser, isUserLoading: isAuthLoading, auth, firestore, storage } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[] | null>(null);
   const [orders, setOrders] = useState<Order[] | null>(null);
-  const [showCartBadge, setShowCartBadge] = useState(false);
-  const [showQuoteReadyBadge, setShowQuoteReadyBadge] = useState(false);
-  const [showNewPurchaseBadge, setShowNewPurchaseBadge] = useState(false);
-  const [showNewHistoryBadge, setShowNewHistoryBadge] = useState(false);
-  const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
-  const [showAdminRfqBadge, setShowAdminRfqBadge] = useState(false);
+  
+  const {
+      showCartBadge,
+      showQuoteReadyBadge,
+      showNewPurchaseBadge,
+      showNewHistoryBadge,
+      showAdminOrderBadge,
+      showAdminRfqBadge,
+      dismissUserNotifications,
+      dismissAdminOrderBadge,
+      dismissAdminRfqBadge,
+  } = useBadgeManager(user, cart, firestore);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -125,7 +123,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCart(cartData);
       }, (error) => {
           console.error("Cart listener error:", error);
-          // Optional: Handle read errors, e.g., for permissions
       });
 
       return () => unsubscribe();
@@ -137,8 +134,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // This is now handled by the real-time listener in the useEffect below
-    // This function can be kept for manual refreshing if needed, but the listener is primary
     const ordersQuery = user.role === 'admin'
         ? collectionGroup(firestore, 'orders')
         : collection(firestore, 'users', user.id, 'orders');
@@ -182,167 +177,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [user, firestore, pathname]);
 
-  const prevOrders = usePrevious(orders);
-
   useEffect(() => {
-    const handleAuthChange = async (fbUser: FirebaseUser | null) => {
-      if (fbUser) {
-        const userDocRef = doc(firestore, 'users', fbUser.uid);
-        try {
-          const idTokenResult = await fbUser.getIdTokenResult();
-          const userIsAdmin = idTokenResult.claims.admin === true;
+    if (isAuthLoading) {
+        setIsLoading(true);
+        return;
+    }
 
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            const appUser: User = {
-              id: fbUser.uid,
-              displayName: userData.displayName,
-              email: userData.email,
-              role: userIsAdmin ? 'admin' : 'guest',
-              profileImageUrl: userData.profileImageUrl || fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
-              address: userData.address || '',
-              contactNumber: userData.contactNumber || '',
-              lastViewedOrdersAt: userData.lastViewedOrdersAt,
-              lastViewedAllOrdersAt: userData.lastViewedAllOrdersAt,
-              lastViewedAllRfqsAt: userData.lastViewedAllRfqsAt,
-            };
-            setUser(appUser);
-          } else {
-            // This case handles newly registered users whose doc might not exist yet.
-            // The register function will create it.
-            if (fbUser.displayName) { // From Google Sign-In
-                const newUser: User = {
-                    id: fbUser.uid,
-                    displayName: fbUser.displayName,
-                    email: fbUser.email!,
+    if (!firebaseUser) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+    }
+
+    const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+    const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
+        try {
+            if (docSnap.exists()) {
+                const idTokenResult = await firebaseUser.getIdTokenResult(true);
+                const userIsAdmin = idTokenResult.claims.admin === true;
+                const userData = docSnap.data();
+
+                const appUser: User = {
+                    id: firebaseUser.uid,
+                    displayName: userData.displayName,
+                    email: userData.email,
                     role: userIsAdmin ? 'admin' : 'guest',
-                    profileImageUrl: fbUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{fbUser.uid}/40/40`,
+                    profileImageUrl: userData.profileImageUrl || firebaseUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{firebaseUser.uid}/40/40`,
+                    address: userData.address || '',
+                    contactNumber: userData.contactNumber || '',
+                    lastViewedOrdersAt: userData.lastViewedOrdersAt,
+                    lastViewedAllOrdersAt: userData.lastViewedAllOrdersAt,
+                    lastViewedAllRfqsAt: userData.lastViewedAllRfqsAt,
+                };
+                setUser(appUser);
+            } else if (firebaseUser.displayName) { // New Google Sign-In user
+                const newUser: User = {
+                    id: firebaseUser.uid,
+                    displayName: firebaseUser.displayName,
+                    email: firebaseUser.email!,
+                    role: 'guest',
+                    profileImageUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${'\'\'\''}{firebaseUser.uid}/40/40`,
                     address: '',
-                    contactNumber: fbUser.phoneNumber || '',
+                    contactNumber: firebaseUser.phoneNumber || '',
                 };
                 await setDoc(userDocRef, newUser, { merge: true });
-                setUser(newUser);
+                setUser(newUser); // This will be updated by the listener anyway, but sets initial state
             }
-          }
         } catch (error) {
-          console.error("Error fetching user document or token:", error);
-          setUser(null);
+            console.error("Error handling user snapshot:", error);
+            setUser(null); // Clear user on error
+        } finally {
+            setIsLoading(false);
         }
-      } else {
+    }, (error) => {
+        console.error("User document listener error:", error);
         setUser(null);
-      }
-      setIsLoading(false);
-    };
+        setIsLoading(false);
+    });
 
-    if (!isAuthLoading) {
-      handleAuthChange(firebaseUser);
-    } else {
-      setIsLoading(true);
-    }
-
-  }, [firebaseUser, isAuthLoading, firestore]);
+    return () => unsubscribe(); // Cleanup the listener
+}, [firebaseUser, isAuthLoading, firestore]);
   
-    useEffect(() => {
-    if (cart && cart.length > 0) {
-      setShowCartBadge(true);
-    } else {
-      setShowCartBadge(false);
-    }
-  }, [cart]);
-  
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.role === 'admin') {
-        const ordersUnsub = onSnapshot(collectionGroup(firestore, 'orders'), (snapshot) => {
-            const lastViewedAdminOrders = user.lastViewedAllOrdersAt?.toMillis() || 0;
-            const hasNew = snapshot.docs.some(doc => (doc.data().updatedAt?.toMillis() || doc.data().orderDate.toMillis()) > lastViewedAdminOrders);
-            setShowAdminOrderBadge(hasNew);
-        });
-        
-        const rfqsUnsub = onSnapshot(collectionGroup(firestore, 'rfq'), (snapshot) => {
-            const lastViewedAdminRfqs = user.lastViewedAllRfqsAt?.toMillis() || 0;
-            const hasNew = snapshot.docs.some(doc => {
-                const createdAt = doc.data().createdAt;
-                return createdAt && createdAt.toMillis() > lastViewedAdminRfqs;
-            });
-            setShowAdminRfqBadge(hasNew);
-        });
-
-        return () => {
-            ordersUnsub();
-            rfqsUnsub();
-        };
-
-    } else {
-        const userOrdersQuery = query(collection(firestore, 'users', user.id, 'orders'));
-        const unsub = onSnapshot(userOrdersQuery, (snapshot) => {
-            let hasNewQuoteReady = false;
-            let hasNewPurchase = false;
-            let hasNewHistory = false;
-            const lastViewedUser = user.lastViewedOrdersAt?.toMillis() || 0;
-
-            snapshot.forEach(doc => {
-                const order = doc.data() as Order;
-                const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-                
-                if (updatedAt > lastViewedUser) {
-                    if (order.status === 'quote-ready') hasNewQuoteReady = true;
-                    if (['confirmed', 'delivering'].includes(order.status)) hasNewPurchase = true;
-                    if (['completed', 'cancelled', 'declined'].includes(order.status)) hasNewHistory = true;
-                }
-            });
-
-            setShowQuoteReadyBadge(hasNewQuoteReady);
-            setShowNewPurchaseBadge(hasNewPurchase);
-            setShowNewHistoryBadge(hasNewHistory);
-        });
-        return () => unsub();
-    }
-  }, [user, firestore]);
-
-
-  const dismissUserNotifications = async () => {
-    if (!user) return;
-    setShowQuoteReadyBadge(false);
-    setShowNewPurchaseBadge(false);
-    setShowNewHistoryBadge(false);
-    
-    try {
-        const userRef = doc(firestore, "users", user.id);
-        const newTimestamp = serverTimestamp();
-        await updateDoc(userRef, { lastViewedOrdersAt: newTimestamp });
-        setUser(prev => prev ? {...prev, lastViewedOrdersAt: Timestamp.now()} : null);
-    } catch (error) {
-        console.error("Error updating lastViewedOrdersAt:", error);
-    }
-  };
-
-  const dismissAdminOrderBadge = async () => {
-      if (!user || user.role !== 'admin') return;
-      setShowAdminOrderBadge(false);
-      try {
-          const userRef = doc(firestore, 'users', user.id);
-          await updateDoc(userRef, { lastViewedAllOrdersAt: serverTimestamp() });
-           setUser(prev => prev ? {...prev, lastViewedAllOrdersAt: Timestamp.now()} : null);
-      } catch (error) {
-          console.error("Error updating lastViewedAllOrdersAt:", error);
-      }
-  };
-
-  const dismissAdminRfqBadge = async () => {
-    if (!user || user.role !== 'admin') return;
-    setShowAdminRfqBadge(false);
-    try {
-        const userRef = doc(firestore, 'users', user.id);
-        await updateDoc(userRef, { lastViewedAllRfqsAt: serverTimestamp() });
-        setUser(prev => prev ? {...prev, lastViewedAllRfqsAt: Timestamp.now()} : null);
-    } catch (error) {
-        console.error("Error updating lastViewedAllRfqsAt:", error);
-    }
-  };
-
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -370,7 +265,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        // If we reach here, user is either an admin, or maintenance mode is off.
         router.push('/home');
 
     } catch (error: any) {
@@ -532,12 +426,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const fbUser = userCredential.user;
         
-        // Call the callable function to set the admin custom claim
         const functions = getFunctions();
         const setAdminRole = httpsCallable(functions, 'setAdminRole');
         await setAdminRole({ uid: fbUser.uid });
 
-        // Create the user document in Firestore
         const userRef = doc(firestore, "users", fbUser.uid);
         const adminData = {
             id: fbUser.uid,
@@ -549,7 +441,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         await setDoc(userRef, adminData);
 
-        // Force a token refresh on the new user to apply the custom claim immediately
         await fbUser.getIdToken(true);
         
         toast({

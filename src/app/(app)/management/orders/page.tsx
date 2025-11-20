@@ -87,6 +87,13 @@ export default function AllOrdersPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        if (user?.role === 'admin') {
+            dismissAdminOrderBadge();
+            dismissAdminRfqBadge();
+        }
+    }, [user, dismissAdminOrderBadge, dismissAdminRfqBadge]);
+
+    useEffect(() => {
         const fetchTransactions = async () => {
             if (!firestore || user?.role !== 'admin') {
                 setIsLoading(false);
@@ -128,12 +135,10 @@ export default function AllOrdersPage() {
 
         if (user) { 
             fetchTransactions();
-            dismissAdminOrderBadge();
-            dismissAdminRfqBadge();
         } else if (user === null) {
              setIsLoading(false);
         }
-    }, [firestore, user, toast, dismissAdminOrderBadge, dismissAdminRfqBadge]);
+    }, [firestore, user, toast]);
     
     useEffect(() => {
         if (selectedOrder) {
@@ -569,5 +574,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    
