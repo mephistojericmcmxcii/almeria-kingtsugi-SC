@@ -142,6 +142,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
             <table>
               <thead>
                 <tr>
+                  <th>Variation</th>
                   <th>Brand</th>
                   <th>Model</th>
                   <th>Source</th>
@@ -154,6 +155,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
                 {variants.length > 0 ? (
                   variants.map((variant) => (
                     <tr key={variant.id}>
+                      <td className="font-medium">{variant.variation}</td>
                       <td className="font-medium">{variant.brand}</td>
                       <td>{variant.model || 'N/A'}</td>
                       <td>{variant.source}</td>
@@ -164,7 +166,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} style={{textAlign: 'center', padding: '20px'}}>No variants found.</td>
+                    <td colSpan={7} style={{textAlign: 'center', padding: '20px'}}>No variants found.</td>
                   </tr>
                 )}
               </tbody>
@@ -180,3 +182,5 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
 };
 
 export default PrintLayout;
+
+    

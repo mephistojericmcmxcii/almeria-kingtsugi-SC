@@ -34,6 +34,7 @@ export type InventoryVariant = {
   parentName: string;
   parentCategory: string;
   // Original fields
+  variation: string;
   brand: string;
   model?: string;
   source: string;
@@ -156,9 +157,10 @@ export type QuotationRequest = {
 };
 
 export type CustomerFeedback = {
-  id: string; // Typically the orderId
   userName: string;
   rating: number;
   review?: string;
   createdAt: any;
 };
+
+    

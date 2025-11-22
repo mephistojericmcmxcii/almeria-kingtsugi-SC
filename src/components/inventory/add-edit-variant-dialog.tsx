@@ -81,6 +81,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialFormState: VariantFormData = {
+      variation: '',
       brand: '',
       model: '',
       source: '',
@@ -100,6 +101,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   useEffect(() => {
     if (isOpen) {
         const initialState = variantToEdit ? {
+            variation: variantToEdit.variation || '',
             brand: variantToEdit.brand || '',
             model: variantToEdit.model || '',
             source: variantToEdit.source || '',
@@ -146,6 +148,10 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     e.preventDefault();
     if (!item || !firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'Parent item is missing.' });
+        return;
+    }
+    if (!formState.variation) {
+        toast({ variant: 'destructive', title: 'Validation Error', description: 'Variation field is required.' });
         return;
     }
 
@@ -288,6 +294,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
               </div>
             )}
 
+            <div className="space-y-2"><Label htmlFor="variation">Variation</Label><Input id="variation" name="variation" placeholder="e.g., Red, XL, 500g" value={formState.variation} onChange={handleInputChange} disabled={isSubmitting} required /></div>
             <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand} onChange={handleInputChange} disabled={isSubmitting} /></div>
             <div className="space-y-2"><Label htmlFor="model">Model (Optional)</Label><Input id="model" name="model" placeholder="e.g., G2" value={formState.model} onChange={handleInputChange} disabled={isSubmitting} /></div>
             <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source} onChange={handleInputChange} disabled={isSubmitting} /></div>
@@ -305,7 +312,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || (imageSource === 'upload' && !fileToUpload && !variantToEdit?.imageUrl)}>
+            <Button type="submit" disabled={isSubmitting || (imageSource === 'upload' && !fileToUpload && !variantToEdit?.imageUrl) || !formState.variation}>
               {isSubmitting ? "Saving..." : (variantToEdit ? "Save Changes" : "Add Variant")}
             </Button>
           </DialogFooter>
@@ -314,3 +321,5 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
+
+    
