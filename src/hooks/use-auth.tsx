@@ -42,6 +42,7 @@ interface AuthContextType {
   updateCartItemQuantity: (cartItem: CartItem, newQuantity: number) => Promise<void>;
   removeCartItem: (cartItemId: string) => Promise<void>;
   placeOrder: (cartItems: CartItem[], totalAmount: number, shippingAddress: string, shippingContactNumber: string, paymentMethod: string, notes?: string) => Promise<boolean>;
+  respondToRfq: (rfq: QuotationRequest, responseData: any, fileUrl?: string) => Promise<boolean>;
   updateOrderStatus: (
     order: Order, 
     newStatus: OrderStatus, 
@@ -744,6 +745,90 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     };
+    
+    const respondToRfq = async (rfq: QuotationRequest, responseData: any, fileUrl?: string): Promise<boolean> => {
+        if (!user || user.role !== 'admin') {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You are not authorized to perform this action.' });
+            return false;
+        }
+
+        const newOrderRef = doc(collection(firestore, 'users', rfq.userId, 'orders'));
+        const originalRfqRef = doc(firestore, 'users', rfq.userId, 'rfq', rfq.id);
+
+        try {
+            await runTransaction(firestore, async (transaction) => {
+                let items: CartItem[] = [];
+                let totalAmount = 0;
+                let totalDiscount = 0;
+
+                if (responseData.responseType === 'priceList') {
+                    items = responseData.items.map((item: any) => ({
+                        id: doc(collection(firestore, 'dummy')).id, // Generate a random ID
+                        variantId: 'custom-rfq',
+                        parentItemId: 'custom-rfq',
+                        quantity: item.quantity,
+                        addedAt: serverTimestamp(),
+                        parentName: item.name,
+                        brand: item.specs || 'N/A',
+                        price: item.price,
+                        discount: item.discount,
+                        stock: item.quantity, // Assume stock is available
+                    }));
+
+                    const subtotal = items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
+                    totalDiscount = items.reduce((acc, item) => {
+                        const itemTotal = (item.price || 0) * item.quantity;
+                        const discountValue = itemTotal * ((item.discount || 0) / 100);
+                        return acc + discountValue;
+                    }, 0);
+                    totalAmount = subtotal - totalDiscount + (responseData.deliveryFee || 0) + (responseData.packagingFee || 0);
+                }
+
+                const newOrder: Omit<Order, 'id'> = {
+                    orderDate: serverTimestamp(),
+                    userId: rfq.userId,
+                    userDisplayName: rfq.customerName,
+                    userEmail: rfq.emailAddress,
+                    shippingContactNumber: rfq.contactNumber,
+                    shippingAddress: '', // To be confirmed by user
+                    items: items,
+                    totalAmount: totalAmount,
+                    discount: totalDiscount,
+                    deliveryFee: responseData.deliveryFee || 0,
+                    packagingFee: responseData.packagingFee || 0,
+                    status: 'quote-ready',
+                    paymentMethod: 'cod', // Default, to be confirmed by user
+                    notes: responseData.notes,
+                    updatedAt: serverTimestamp(),
+                    statusHistory: [
+                        { status: 'pending-quote', timestamp: rfq.createdAt },
+                        { status: 'quote-ready', timestamp: Timestamp.now() }
+                    ],
+                    cancellationReason: fileUrl // Repurposing this field to store the quote file URL
+                };
+
+                transaction.set(newOrderRef, newOrder);
+                transaction.delete(originalRfqRef);
+            });
+
+            toast({
+                title: 'Response Sent!',
+                description: 'A new "Quote Ready" order has been created for the customer.',
+            });
+            await fetchOrders();
+            return true;
+
+        } catch (error: any) {
+            console.error("Error responding to RFQ:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Response Failed',
+                description: error.message || "Could not create the quotation order.",
+            });
+            return false;
+        }
+    };
+
 
     const updateOrderStatus = async (
         order: Order, 
@@ -911,7 +996,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
+  const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
 
   return (
     <AuthContext.Provider value={value}>
