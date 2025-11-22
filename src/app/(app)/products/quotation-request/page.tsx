@@ -140,15 +140,22 @@ export default function RfqPage() {
         }
 
         const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
-        const { fileAttachment, ...restOfData } = formData;
         
-        const dataToSave = {
-            ...restOfData,
+        // This is the key fix: prepare data based on requestType
+        const dataToSave: any = {
+            ...baseSchema.parse(formData), // Save common fields
             userId: user.id,
             createdAt: serverTimestamp(),
-            fileAttachment: fileUrl,
-            items: formData.requestType === 'list' ? formData.items : [],
+            requestType: formData.requestType,
         };
+
+        if (formData.requestType === 'list') {
+            dataToSave.items = formData.items;
+            dataToSave.fileAttachment = '';
+        } else { // 'attachment'
+            dataToSave.fileAttachment = fileUrl;
+            dataToSave.items = [];
+        }
         
         await setDoc(rfqRef, dataToSave);
 
