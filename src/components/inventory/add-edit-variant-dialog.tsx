@@ -20,6 +20,8 @@ import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useFirebase } from '@/firebase';
+import { cn } from '@/lib/utils';
+
 
 type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' | 'ref' | 'parentItemId' | 'parentName' | 'parentCategory'>;
 
@@ -272,19 +274,17 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                     </div>
                 </RadioGroup>
             </div>
-
-            {imageSource === 'url' ? (
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl || ''} onChange={handleInputChange} disabled={isSubmitting} />
-                </div>
-            ) : (
-                <div className="space-y-2">
-                    <Label htmlFor="imageUpload">Upload File</Label>
-                    <Input id="imageUpload" name="imageUpload" type="file" accept="image/*" onChange={handleFileChange} disabled={isSubmitting} />
-                </div>
-            )}
             
+            <div className={cn("space-y-2", imageSource !== 'url' && 'hidden')}>
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl ?? ''} onChange={handleInputChange} disabled={isSubmitting} />
+            </div>
+
+            <div className={cn("space-y-2", imageSource !== 'upload' && 'hidden')}>
+              <Label htmlFor="imageUpload">Upload File</Label>
+              <Input id="imageUpload" name="imageUpload" type="file" accept="image/*" onChange={handleFileChange} disabled={isSubmitting} />
+            </div>
+
             {previewUrl && (
               <div className="space-y-2">
                 <Label>Image Preview</Label>
