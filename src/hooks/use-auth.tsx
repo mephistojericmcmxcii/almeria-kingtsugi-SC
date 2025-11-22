@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef } from 'react';
@@ -25,6 +26,8 @@ interface AuthContextType {
   user: User | null;
   cart: CartItem[] | null;
   orders: Order[] | null;
+  products: InventoryVariant[] | null; // <-- Add products to context
+  isProductsLoading: boolean; // <-- Add loading state for products
   firestore: Firestore;
   toast: ({...props}: any) => void;
   login: (email: string, password: string) => Promise<void>;
@@ -76,7 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[] | null>(null);
   const [orders, setOrders] = useState<Order[] | null>(null);
-  
+  const [products, setProducts] = useState<InventoryVariant[] | null>(null); // <-- Add state for products
+  const [isProductsLoading, setIsProductsLoading] = useState(true); // <-- Add loading state
+
   const {
       showCartBadge,
       showQuoteReadyBadge,
@@ -128,6 +133,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return () => unsubscribe();
   }, [user, firestore, pathname]);
   
+  // Fetch all product variants once and cache them
+  useEffect(() => {
+    if (!user || pathname === '/') {
+      setProducts(null);
+      setIsProductsLoading(false);
+      return;
+    }
+    
+    // Only fetch if products haven't been loaded yet
+    if (products === null) {
+      setIsProductsLoading(true);
+      const variantsQuery = query(collectionGroup(firestore, 'variants'));
+      getDocs(variantsQuery).then(variantsSnapshot => {
+        const variants = variantsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          ref: doc.ref,
+        } as InventoryVariant));
+        setProducts(variants);
+      }).catch(error => {
+        console.error("Error fetching product data:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Error Fetching Products',
+          description: 'Could not load the product catalog.'
+        });
+      }).finally(() => {
+        setIsProductsLoading(false);
+      });
+    } else {
+        // If products are already loaded, just ensure loading is false.
+        setIsProductsLoading(false);
+    }
+  }, [user, firestore, pathname, products, toast]);
+
   const fetchOrders = async () => {
     if (!user || pathname === '/') {
       setOrders(null);
@@ -871,7 +911,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
+  const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
 
   return (
     <AuthContext.Provider value={value}>

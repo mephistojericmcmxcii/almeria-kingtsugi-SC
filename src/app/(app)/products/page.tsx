@@ -2,12 +2,9 @@
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
-import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collectionGroup, getDocs, query } from 'firebase/firestore';
 import type { InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,53 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
 export default function ProductsPage() {
-  const { firestore } = useFirebase();
-  const { addToCart } = useAuth();
-  const { toast } = useToast();
-
+  const { products: allVariants, isProductsLoading: isDataLoading, addToCart } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [allVariants, setAllVariants] = useState<InventoryVariant[]>([]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      if (!firestore) return;
-      setIsDataLoading(true);
-
-      try {
-        const variantsQuery = query(collectionGroup(firestore, 'variants'));
-        const variantsSnapshot = await getDocs(variantsQuery);
-        
-        const variants = variantsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          ref: doc.ref,
-        } as InventoryVariant));
-
-        setAllVariants(variants);
-      } catch (error) {
-        console.error("Error fetching product data:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Error Fetching Products',
-          description: 'Could not load the product catalog.'
-        });
-      } finally {
-        setIsDataLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, [firestore, toast]);
-  
   const categories = useMemo(() => {
+    if (!allVariants) return [];
     const uniqueCategories = new Set(allVariants.map(v => v.parentCategory));
     return ['All Categories', ...Array.from(uniqueCategories).sort()];
   }, [allVariants]);
 
   const filteredItems = useMemo(() => {
+    if (!allVariants) return [];
     return allVariants.filter(variant => {
       const lowercasedTerm = searchTerm.toLowerCase();
       const inCategory = selectedCategory === 'all' || variant.parentCategory === selectedCategory;
@@ -120,7 +83,7 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="w-full md:w-1/2">
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isDataLoading}>
                       <SelectTrigger className="w-full">
                           <SelectValue placeholder="Filter by category..." />
                       </SelectTrigger>
