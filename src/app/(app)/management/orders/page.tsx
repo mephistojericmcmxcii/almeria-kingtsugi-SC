@@ -286,6 +286,16 @@ export default function AllOrdersPage() {
     const { subtotal, totalDiscount, finalTotal, totalDiscountPercentage } = useMemo(() => {
         if (!selectedOrder) return { subtotal: 0, totalDiscount: 0, finalTotal: 0, totalDiscountPercentage: 0 };
         
+        if (selectedOrder.quotationFileUrl && selectedOrder.items.length === 0) {
+            // For file-based quotes, the finalTotal IS the total amount. Discount is separate.
+            return {
+                subtotal: 0,
+                totalDiscount: selectedOrder.discount || 0,
+                finalTotal: selectedOrder.totalAmount || 0,
+                totalDiscountPercentage: 0,
+            };
+        }
+
         const currentSubtotal = selectedOrder.items.reduce((acc, item) => {
             const price = itemPrices[item.id] || item.price || 0;
             return acc + (price * item.quantity);
@@ -528,14 +538,18 @@ export default function AllOrdersPage() {
                                         <Label htmlFor="packagingFee">Packaging Fee</Label>
                                         <Input id="packagingFee" type="number" className="h-8 w-24 text-right" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
                                     </div>
-                                     <div className="flex justify-between items-center font-medium">
-                                        <p>Subtotal</p>
-                                        <p>{formatCurrency(subtotal)}</p>
-                                    </div>
+                                    { (selectedOrder.items.length > 0) &&
+                                        <div className="flex justify-between items-center font-medium">
+                                            <p>Subtotal</p>
+                                            <p>{formatCurrency(subtotal)}</p>
+                                        </div>
+                                    }
                                     {totalDiscount > 0 && (
                                         <div className="flex justify-between items-center text-green-600">
-                                            <span>Total Item Discounts</span>
-                                            <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
+                                            <span>Total Discount</span>
+                                            <span>- {formatCurrency(totalDiscount)}
+                                                { (selectedOrder.items.length > 0) && ` (${totalDiscountPercentage.toFixed(1)}%)` }
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -607,5 +621,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    
