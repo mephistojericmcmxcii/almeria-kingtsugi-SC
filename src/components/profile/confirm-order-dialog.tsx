@@ -36,6 +36,8 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
     const [contactNumber, setContactNumber] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'bank'>('cod');
 
+    const isFileBasedQuote = !!order.quotationFileUrl && order.items.length === 0;
+
     useEffect(() => {
         if (order) {
             setItems(order.items);
@@ -63,6 +65,10 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
     };
     
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
+        if (isFileBasedQuote) {
+            return { subtotal: order.totalAmount, totalDiscount: 0, finalTotal: order.totalAmount };
+        }
+        
         const currentSubtotal = items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
         
         const currentTotalDiscount = items.reduce((acc, item) => {
@@ -75,7 +81,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
         
         return { subtotal: currentSubtotal, totalDiscount: currentTotalDiscount, finalTotal: currentFinalTotal };
 
-    }, [items, order.deliveryFee, order.packagingFee]);
+    }, [items, order.deliveryFee, order.packagingFee, order.totalAmount, isFileBasedQuote]);
     
 
     const handleConfirm = async () => {
@@ -88,7 +94,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
             return;
         }
         
-        if (items.length === 0) {
+        if (items.length === 0 && !isFileBasedQuote) {
             toast({
                 variant: 'destructive',
                 title: 'No Items',
@@ -119,6 +125,8 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
         }
         setIsSubmitting(false);
     };
+    
+    const isConfirmDisabled = isSubmitting || (!isFileBasedQuote && items.length === 0);
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -131,30 +139,32 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                 </DialogHeader>
                 <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 py-4">
                     {/* Items List */}
-                    <div className="space-y-4">
-                        <h3 className="font-semibold">Items</h3>
-                        {items.map(item => (
-                            <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
-                                <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-16 h-16 rounded-md object-cover" />
-                                <div className="flex-grow">
-                                    <p className="font-medium">{item.parentName} ({item.brand})</p>
-                                    <p className="text-sm text-muted-foreground">{formatCurrency(item.price || 0)} each</p>
-                                    {(item.discount || 0) > 0 && <p className="text-xs text-green-600">({item.discount}% off)</p>}
+                    {!isFileBasedQuote && (
+                        <div className="space-y-4">
+                            <h3 className="font-semibold">Items</h3>
+                            {items.map(item => (
+                                <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
+                                    <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-16 h-16 rounded-md object-cover" />
+                                    <div className="flex-grow">
+                                        <p className="font-medium">{item.parentName} ({item.brand})</p>
+                                        <p className="text-sm text-muted-foreground">{formatCurrency(item.price || 0)} each</p>
+                                        {(item.discount || 0) > 0 && <p className="text-xs text-green-600">({item.discount}% off)</p>}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
+                                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                        <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
+                                    </div>
+                                    <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => handleQuantityChange(item.id, 0)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                     <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
-                                    <span className="w-8 text-center font-medium">{item.quantity}</span>
-                                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
-                                </div>
-                                <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => handleQuantityChange(item.id, 0)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
-                         {items.length === 0 && (
-                            <p className="text-center text-muted-foreground py-4">No items in this order.</p>
-                        )}
-                    </div>
+                            ))}
+                            {items.length === 0 && (
+                                <p className="text-center text-muted-foreground py-4">No items in this order.</p>
+                            )}
+                        </div>
+                    )}
                     
                     {/* Billing Information */}
                     <div className="space-y-4 border-t pt-6">
@@ -172,7 +182,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                     <div className="space-y-4 border-t pt-6">
                         <h3 className="font-semibold">Payment Method</h3>
                         <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="flex gap-4">
-                            <Label htmlFor="cod" className="flex items-center gap-2 border p-3 rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                            <Label htmlFor="cod" className="flex items-center gap-2 border p-3 rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all cursor-pointer">
                                 <RadioGroupItem value="cod" id="cod" />
                                 Cash on Delivery (COD)
                             </Label>
@@ -190,29 +200,33 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                     {/* Order Summary */}
                      <div className="space-y-2 pt-6 border-t">
                         <h3 className="font-semibold">Order Summary</h3>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Subtotal</span>
-                            <span>{formatCurrency(subtotal)}</span>
-                        </div>
-                         {totalDiscount > 0 && (
-                            <div className="flex justify-between text-sm text-green-600">
-                                <span className="text-muted-foreground">Total Item Discounts</span>
-                                <span>- {formatCurrency(totalDiscount)}</span>
-                            </div>
+                         {!isFileBasedQuote && (
+                            <>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Subtotal</span>
+                                    <span>{formatCurrency(subtotal)}</span>
+                                </div>
+                                {totalDiscount > 0 && (
+                                    <div className="flex justify-between text-sm text-green-600">
+                                        <span className="text-muted-foreground">Total Item Discounts</span>
+                                        <span>- {formatCurrency(totalDiscount)}</span>
+                                    </div>
+                                )}
+                                {(order.deliveryFee || 0) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Delivery Fee</span>
+                                        <span>{formatCurrency(order.deliveryFee!)}</span>
+                                    </div>
+                                )}
+                                {(order.packagingFee || 0) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Packaging Fee</span>
+                                        <span>{formatCurrency(order.packagingFee!)}</span>
+                                    </div>
+                                )}
+                                <Separator />
+                            </>
                         )}
-                        {(order.deliveryFee || 0) > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Delivery Fee</span>
-                                <span>{formatCurrency(order.deliveryFee!)}</span>
-                            </div>
-                        )}
-                        {(order.packagingFee || 0) > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Packaging Fee</span>
-                                <span>{formatCurrency(order.packagingFee!)}</span>
-                            </div>
-                        )}
-                        <Separator />
                         <div className="flex justify-between font-bold text-lg">
                             <span>Total</span>
                             <span>{formatCurrency(finalTotal)}</span>
@@ -221,7 +235,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-                    <Button onClick={handleConfirm} disabled={isSubmitting || items.length === 0}>
+                    <Button onClick={handleConfirm} disabled={isConfirmDisabled}>
                         {isSubmitting ? 'Confirming...' : 'Confirm & Finalize Purchase'}
                     </Button>
                 </DialogFooter>
