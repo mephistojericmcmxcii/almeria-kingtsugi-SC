@@ -7,6 +7,8 @@ import { useFirebase } from '@/firebase';
 import { collection, collectionGroup, getDocs } from 'firebase/firestore';
 import type { Order, OrderStatus, CartItem, QuotationRequest } from '@/lib/types';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
+
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info, FileText } from 'lucide-react';
+import { ShoppingCart, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info, FileText, Send } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -67,6 +69,7 @@ export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge, dismissAdminRfqBadge } = useAuth();
     const { firestore } = useFirebase();
     const { toast } = useToast();
+    const router = useRouter();
     
     const [isUpdating, setIsUpdating] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -236,6 +239,10 @@ export default function AllOrdersPage() {
         }
     };
     
+    const handleRespondToRfq = (rfq: QuotationRequest) => {
+      router.push(`/management/orders/rfq-response/${rfq.id}?userId=${rfq.userId}`);
+    };
+    
     const isStatusUpdateDisabled = (order: Order | null): boolean => {
         if (!order) return true;
         return ['completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
@@ -374,9 +381,15 @@ export default function AllOrdersPage() {
                                 <TableCell>{t.transactionType === 'order' ? formatCurrency((t as Order).totalAmount) : <span className="text-muted-foreground">N/A</span>}</TableCell>
                                 <TableCell>{t.transactionType === 'order' ? getStatusBadge((t as Order).status) : <Badge variant="outline">Submitted</Badge>}</TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(t)}>
-                                        <Eye className="mr-2 h-4 w-4" /> View
-                                    </Button>
+                                    {t.transactionType === 'order' ? (
+                                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(t)}>
+                                            <Eye className="mr-2 h-4 w-4" /> View
+                                        </Button>
+                                    ) : (
+                                        <Button variant="default" size="sm" onClick={() => handleRespondToRfq(t as QuotationRequest)}>
+                                            <Send className="mr-2 h-4 w-4" /> Respond
+                                        </Button>
+                                    )}
                                 </TableCell>
                             </TableRow>
                             ))
