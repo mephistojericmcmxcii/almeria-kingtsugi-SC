@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -164,13 +164,28 @@ export default function PoPage() {
   const handleDeleteConfirm = async () => {
       if (!poToDelete) return;
       try {
-        await deleteDoc(doc(firestore, 'purchase_orders', poToDelete.id));
+        const poRef = doc(firestore, 'purchase_orders', poToDelete.id);
+        const itemsRef = collection(poRef, 'items');
+        const itemsSnapshot = await getDocs(itemsRef);
+        
+        const batch = writeBatch(firestore);
+        
+        // Delete all items in the subcollection
+        itemsSnapshot.forEach((itemDoc) => {
+            batch.delete(itemDoc.ref);
+        });
+
+        // Delete the parent PO document
+        batch.delete(poRef);
+
+        await batch.commit();
+
         setPurchaseOrders(prev => prev.filter(po => po.id !== poToDelete.id));
         toast({
             title: "PO Deleted",
-            description: `Purchase Order ${poToDelete.poNumber} has been deleted.`,
+            description: `Purchase Order ${poToDelete.poNumber} and all its items have been deleted.`,
         });
-        setPoToDelete(null);
+        
       } catch (error) {
         console.error("Error deleting PO:", error);
         toast({
@@ -178,8 +193,9 @@ export default function PoPage() {
             title: "Error",
             description: "Could not delete the purchase order.",
         });
+      } finally {
+        setPoToDelete(null);
       }
-      setPoToDelete(null);
   }
   
   const handleDialogClose = (open: boolean) => {
@@ -353,7 +369,7 @@ export default function PoPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete PO #<span className="font-bold">{poToDelete?.poNumber}</span>. This action cannot be undone.
+                    This will permanently delete PO #<span className="font-bold">{poToDelete?.poNumber}</span> and all of its associated items. This action cannot be undone.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -367,3 +383,4 @@ export default function PoPage() {
     </>
   );
 }
+
