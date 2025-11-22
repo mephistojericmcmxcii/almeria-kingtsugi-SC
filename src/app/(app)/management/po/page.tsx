@@ -39,7 +39,7 @@ export type DisplayPurchaseOrder = PurchaseOrder & {
 
 export default function PoPage() {
   const { firestore } = useFirebase();
-  const { user } = useAuth();
+  const { user, deleteFileByUrl } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   
@@ -164,6 +164,14 @@ export default function PoPage() {
   const handleDeleteConfirm = async () => {
       if (!poToDelete) return;
       try {
+        // Delete associated files from storage first
+        if (poToDelete.salesInvoiceUrl) {
+            await deleteFileByUrl(poToDelete.salesInvoiceUrl);
+        }
+        if (poToDelete.deliveryReceiptUrl) {
+            await deleteFileByUrl(poToDelete.deliveryReceiptUrl);
+        }
+
         const poRef = doc(firestore, 'purchase_orders', poToDelete.id);
         const itemsRef = collection(poRef, 'items');
         const itemsSnapshot = await getDocs(itemsRef);
@@ -369,7 +377,7 @@ export default function PoPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete PO #<span className="font-bold">{poToDelete?.poNumber}</span> and all of its associated items. This action cannot be undone.
+                    This will permanently delete PO #<span className="font-bold">{poToDelete?.poNumber}</span> and all of its associated items and uploaded files. This action cannot be undone.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -383,4 +391,5 @@ export default function PoPage() {
     </>
   );
 }
+
 

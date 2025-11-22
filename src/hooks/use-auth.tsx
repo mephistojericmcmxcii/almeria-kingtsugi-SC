@@ -8,7 +8,7 @@ import { useFirebase, errorEmitter } from '@/firebase';
 import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +63,7 @@ interface AuthContextType {
 ) => Promise<boolean>;
   updatePoStatus: (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null }) => Promise<boolean>;
   uploadFile: (file: File, path: string, fileName?: string) => Promise<string | null>;
+  deleteFileByUrl: (url: string) => Promise<void>;
   showCartBadge: boolean;
   showQuoteReadyBadge: boolean;
   showNewPurchaseBadge: boolean;
@@ -1049,6 +1050,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return null;
         }
     };
+    
+    const deleteFileByUrl = async (url: string): Promise<void> => {
+        if (!storage) {
+            console.error("Storage service is not available. Cannot delete file.");
+            return;
+        }
+        try {
+            const fileRef = ref(storage, url);
+            await deleteObject(fileRef);
+        } catch (error: any) {
+             // It's okay if the file doesn't exist (e.g., already deleted), so we only log other errors.
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Error deleting file from storage:", error);
+                toast({
+                    variant: "destructive",
+                    title: "File Deletion Failed",
+                    description: "Could not delete an associated file from storage. It may need to be removed manually."
+                });
+            }
+        }
+    };
 
 
   const logout = async () => {
@@ -1057,7 +1079,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
   
-  const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
+  const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, deleteFileByUrl, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
 
   return (
     <AuthContext.Provider value={value}>
