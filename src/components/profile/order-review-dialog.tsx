@@ -26,15 +26,17 @@ interface OrderReviewDialogProps {
 
 export function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: OrderReviewDialogProps) {
     const [review, setReview] = useState('');
-    const [rating, setRating] = useState(1);
+    const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async () => {
         setIsSubmitting(true);
-        await onSubmit({ review: review || undefined, rating: rating > 0 ? rating : undefined });
+        // Only submit review and rating if a rating has been given.
+        const reviewDetails = rating > 0 ? { review: review || undefined, rating } : {};
+        await onSubmit(reviewDetails);
         setIsSubmitting(false);
-        setRating(1);
+        setRating(0);
         setReview('');
         onOpenChange(false);
     };
@@ -50,7 +52,7 @@ export function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: Ord
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <div className="space-y-2">
-                        <Label>Rating</Label>
+                        <Label>Rating (required to submit a review)</Label>
                          <div className="flex items-center gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <Star
@@ -76,6 +78,7 @@ export function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: Ord
                             value={review}
                             onChange={(e) => setReview(e.target.value)}
                             rows={4}
+                            disabled={rating === 0}
                         />
                     </div>
                 </div>
