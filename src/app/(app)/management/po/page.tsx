@@ -31,7 +31,7 @@ type PoTotals = {
     itemCount: number;
 }
 
-type DisplayPurchaseOrder = PurchaseOrder & {
+export type DisplayPurchaseOrder = PurchaseOrder & {
     displayStatus: PurchaseOrder['status'];
 };
 
@@ -46,7 +46,7 @@ export default function PoPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
-  const [poToView, setPoToView] = useState<PurchaseOrder | null>(null);
+  const [poToView, setPoToView] = useState<DisplayPurchaseOrder | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const [purchaseOrders, setPurchaseOrders] = useState<DisplayPurchaseOrder[]>([]);
@@ -142,7 +142,7 @@ export default function PoPage() {
     setIsAddDialogOpen(true);
   };
   
-  const handleView = (po: PurchaseOrder) => {
+  const handleView = (po: DisplayPurchaseOrder) => {
     setPoToView(po);
     setIsViewDialogOpen(true);
   }

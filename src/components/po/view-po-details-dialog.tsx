@@ -4,6 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { PurchaseOrder } from '@/lib/types';
+import type { DisplayPurchaseOrder } from '@/app/(app)/management/po/page';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
@@ -11,7 +12,7 @@ import { useState } from 'react';
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (changed: boolean) => void;
-  po: PurchaseOrder;
+  po: DisplayPurchaseOrder;
   totals: { allocated: number; utilized: number; itemCount: number; } | undefined;
 }
 
@@ -64,7 +65,7 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-muted-foreground">Status</p>
-                    <p>{po.status}</p>
+                    <p>{po.displayStatus}</p>
                 </div>
             </div>
             
@@ -81,7 +82,7 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
         </div>
         <DialogFooter className="sm:justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
-          {po.status === 'Completed' && (
+          {po.displayStatus === 'Completed' && (
             <Button onClick={handleUpdateStatus} disabled={isUpdating}>
                 {isUpdating ? 'Updating...' : 'Mark as Delivered'}
             </Button>
