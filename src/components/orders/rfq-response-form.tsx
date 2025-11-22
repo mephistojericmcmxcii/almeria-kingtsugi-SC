@@ -52,12 +52,16 @@ const priceListSchema = baseSchema.extend({
   responseType: z.literal('priceList'),
   items: z.array(itemPricingSchema).min(1, 'At least one item must have a price.'),
   quotationFile: z.any().optional(),
+  totalAmount: z.coerce.number().optional(),
+  discount: z.coerce.number().optional(),
 });
 
 const uploadFileSchema = baseSchema.extend({
   responseType: z.literal('uploadFile'),
   quotationFile: z.any().refine(fileList => fileList instanceof FileList && fileList.length > 0, { message: 'A file is required for this response type.' }),
   items: z.array(itemPricingSchema).optional(),
+  totalAmount: z.coerce.number({invalid_type_error: "Total amount is required."}).min(0.01, "Total amount must be greater than zero."),
+  discount: z.coerce.number().min(0).optional().default(0),
 });
 
 const formSchema = z.discriminatedUnion('responseType', [priceListSchema, uploadFileSchema]);
@@ -80,6 +84,8 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
       packagingFee: 0,
       notes: '',
       quotationFile: undefined,
+      totalAmount: 0,
+      discount: 0,
     },
   });
 
@@ -245,20 +251,30 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                  {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>}
               </div>
             ) : (
-                <FormField
-                  control={form.control}
-                  name="quotationFile"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Quotation File</FormLabel>
-                      <FormControl>
-                        <Input type="file" accept=".pdf" {...quotationFileRegistration} />
-                      </FormControl>
-                      <FormDescription>Upload your official quotation document (PDF only).</FormDescription>
-                      <FormMessage>{form.formState.errors.quotationFile?.message?.toString()}</FormMessage>
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-4">
+                    <FormField
+                    control={form.control}
+                    name="quotationFile"
+                    render={() => (
+                        <FormItem>
+                        <FormLabel>Quotation File</FormLabel>
+                        <FormControl>
+                            <Input type="file" accept=".pdf" {...quotationFileRegistration} />
+                        </FormControl>
+                        <FormDescription>Upload your official quotation document (PDF only).</FormDescription>
+                        <FormMessage>{form.formState.errors.quotationFile?.message?.toString()}</FormMessage>
+                        </FormItem>
+                    )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={form.control} name="totalAmount" render={({ field }) => (
+                            <FormItem><FormLabel>Total Amount (from file)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="discount" render={({ field }) => (
+                            <FormItem><FormLabel>Total Discount (from file, optional)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">

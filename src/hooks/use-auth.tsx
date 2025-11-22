@@ -796,6 +796,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         return acc + discountValue;
                     }, 0);
                     totalAmount = subtotal - totalDiscount + (responseData.deliveryFee || 0) + (responseData.packagingFee || 0);
+                } else { // 'uploadFile'
+                    totalAmount = responseData.totalAmount || 0;
+                    totalDiscount = responseData.discount || 0;
                 }
 
                 const newOrder: Omit<Order, 'id'> = {
@@ -898,27 +901,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 transaction.update(orderRef, dataToUpdate);
 
                 // --- STOCK LOGIC ---
+                const stockShouldBeDeducted = newStatus === 'confirmed' && order.status !== 'confirmed';
+                const stockShouldBeRestored = (newStatus === 'cancelled' || newStatus === 'declined') && (order.status === 'confirmed' || order.status === 'delivering');
 
-                // 1. DEDUCT stock when moving TO 'confirmed' FROM a non-confirmed state
-                if (newStatus === 'confirmed' && order.status !== 'confirmed') {
-                    const itemsToUpdate = details?.items || order.items;
-                    for (const item of itemsToUpdate) {
-                        if (item.parentItemId === 'custom-rfq') continue;
-                        const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                        transaction.update(variantRef, {
-                            quantity: increment(-item.quantity)
-                        });
-                    }
+                let itemsForStockUpdate: CartItem[] = [];
+
+                if (stockShouldBeDeducted) {
+                    itemsForStockUpdate = details?.items || order.items;
+                } else if (stockShouldBeRestored) {
+                    itemsForStockUpdate = order.items;
                 }
-                
-                // 2. RESTORE stock when moving TO 'cancelled' or 'declined' FROM a state where stock was already deducted
-                if ((newStatus === 'cancelled' || newStatus === 'declined') && (order.status === 'confirmed' || order.status === 'delivering')) {
-                     for (const item of order.items) {
-                        if (item.parentItemId === 'custom-rfq') continue;
+
+                if (itemsForStockUpdate.length > 0) {
+                    for (const item of itemsForStockUpdate) {
+                        if (item.parentItemId === 'custom-rfq') {
+                            continue; // Skip stock updates for custom RFQ items
+                        }
                         const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                        transaction.update(variantRef, {
-                            quantity: increment(item.quantity)
-                        });
+                        const stockChange = stockShouldBeDeducted ? -item.quantity : item.quantity;
+                         try {
+                            transaction.update(variantRef, {
+                                quantity: increment(stockChange)
+                            });
+                         } catch (e: any) {
+                             if (e.code === 'not-found') {
+                                console.warn(`Tried to update stock for a non-existent item: ${variantRef.path}. This might be a custom RFQ item.`);
+                                // This is okay, we just skip it.
+                             } else {
+                                throw e; // Re-throw other errors
+                             }
+                         }
                     }
                 }
             });
@@ -1028,6 +1040,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
 
 
