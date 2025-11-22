@@ -22,17 +22,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const PO_STATUSES: PurchaseOrderStatus[] = ['Completed', 'Lacking', 'Delivered', 'Cancelled'];
-
 const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
-  status: z.enum(PO_STATUSES),
   totalAllocation: z.preprocess(
     (val) => (val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val)),
     z.number().optional()
   ),
+  // Status is removed from the form schema but will be handled in submission
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -54,7 +52,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
     defaultValues: {
       poNumber: '',
       careOf: '',
-      status: 'Lacking',
       totalAllocation: 0,
     },
   });
@@ -66,7 +63,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           poNumber: poToEdit.poNumber,
           date: poToEdit.date.toDate(),
           careOf: poToEdit.careOf,
-          status: poToEdit.status,
           totalAllocation: poToEdit.totalAllocation || 0,
         });
       } else {
@@ -74,7 +70,6 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           poNumber: '',
           date: new Date(),
           careOf: '',
-          status: 'Lacking',
           totalAllocation: 0,
         });
       }
@@ -96,6 +91,10 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
     if (!poToEdit) {
       dataToSave.createdAt = serverTimestamp();
       dataToSave.paymentStatus = 'Unpaid';
+      dataToSave.status = 'Lacking'; // Default status for new POs
+    } else {
+      // Preserve existing status if editing
+      dataToSave.status = poToEdit.status;
     }
 
 
@@ -186,24 +185,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
                     <FormMessage />
                 </FormItem>
             )} />
-            <FormField control={form.control} name="status" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {PO_STATUSES.map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+            
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
