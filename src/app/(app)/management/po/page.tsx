@@ -1,8 +1,8 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -17,13 +17,16 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2, Edit, PackagePlus } from "lucide-react";
+import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2, Edit, PackagePlus, Printer, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+
 
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
 const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog').then(module => ({ default: module.ViewPoDetailsDialog })));
 const ViewPoItemsDialog = lazy(() => import('@/components/po/view-po-items-dialog').then(module => ({ default: module.ViewPoItemsDialog })));
+const PrintPoListLayout = lazy(() => import('@/components/po/print-po-list-layout').then(module => ({ default: module.PrintPoListLayout })));
 
 
 type PoTotals = {
@@ -52,12 +55,15 @@ export default function PoPage() {
   const [poItemsToView, setPoItemsToView] = useState<DisplayPurchaseOrder | null>(null);
   const [isViewItemsDialogOpen, setIsViewItemsDialogOpen] = useState(false);
 
-
   const [purchaseOrders, setPurchaseOrders] = useState<DisplayPurchaseOrder[]>([]);
   const [arePOsLoading, setArePOsLoading] = useState(true);
 
   const [totalAmounts, setTotalAmounts] = useState<Record<string, PoTotals>>({});
   const [areTotalsLoading, setAreTotalsLoading] = useState(true);
+  
+  const [isPrintMode, setIsPrintMode] = useState(false);
+  const [selectedPoIds, setSelectedPoIds] = useState<Set<string>>(new Set());
+
 
   const fetchPOs = async () => {
     if (!firestore) return;
@@ -220,6 +226,57 @@ export default function PoPage() {
           fetchPOs();
       }
   }
+  
+  const handleCheckboxChange = (poId: string, checked: boolean | 'indeterminate') => {
+      setSelectedPoIds(prev => {
+          const newSet = new Set(prev);
+          if (checked) {
+              newSet.add(poId);
+          } else {
+              newSet.delete(poId);
+          }
+          return newSet;
+      });
+  };
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if (checked) {
+          setSelectedPoIds(new Set(filteredPos.map(po => po.id)));
+      } else {
+          setSelectedPoIds(new Set());
+      }
+  }
+  
+  const handlePrintSelected = () => {
+    if (selectedPoIds.size === 0) {
+      toast({
+        variant: "destructive",
+        title: "No POs Selected",
+        description: "Please select at least one purchase order to print.",
+      });
+      return;
+    }
+
+    const selectedPOs = purchaseOrders.filter(po => selectedPoIds.has(po.id));
+    const selectedTotals = selectedPOs.map(po => ({ ...totalAmounts[po.id], poNumber: po.poNumber }));
+
+    const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+    const printWindow = window.open('', '_blank', features);
+    if (printWindow) {
+      printWindow.document.write('<div id="print-root"></div>');
+      printWindow.document.close();
+      
+      const printRoot = printWindow.document.getElementById('print-root');
+      if (printRoot) {
+        const root = createRoot(printRoot);
+        root.render(
+          <Suspense fallback={<div>Loading print view...</div>}>
+            <PrintPoListLayout pos={selectedPOs} totals={totalAmounts} />
+          </Suspense>
+        );
+      }
+    }
+  };
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
@@ -243,6 +300,8 @@ export default function PoPage() {
         </div>
     );
   }
+  
+  const isAllSelected = selectedPoIds.size > 0 && selectedPoIds.size === filteredPos.length;
 
   return (
     <>
@@ -265,15 +324,40 @@ export default function PoPage() {
                   />
                 </div>
               </div>
-              <Button onClick={handleAddNew}>
-                <Plus className="mr-2 h-4 w-4" /> Add New PO
-              </Button>
+              <div className="flex gap-2">
+                 {isPrintMode ? (
+                     <>
+                        <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedPoIds(new Set()); }}>
+                            <X className="mr-2 h-4 w-4" /> Cancel
+                        </Button>
+                        <Button onClick={handlePrintSelected} disabled={selectedPoIds.size === 0}>
+                            <Printer className="mr-2 h-4 w-4" /> Print Selected POs
+                        </Button>
+                     </>
+                 ) : (
+                    <Button variant="outline" onClick={() => setIsPrintMode(true)}>
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
+                 )}
+                <Button onClick={handleAddNew}>
+                  <Plus className="mr-2 h-4 w-4" /> Add New PO
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isPrintMode && (
+                    <TableHead className="w-[50px]">
+                      <Checkbox 
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>PO #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Care Of</TableHead>
@@ -287,6 +371,7 @@ export default function PoPage() {
                 {arePOsLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
+                      {isPrintMode && <TableCell><Skeleton className="h-5 w-5" /></TableCell>}
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
@@ -298,7 +383,16 @@ export default function PoPage() {
                   ))
                 ) : filteredPos.length > 0 ? (
                   filteredPos.map((po) => (
-                    <TableRow key={po.id}>
+                    <TableRow key={po.id} data-state={selectedPoIds.has(po.id) && "selected"}>
+                       {isPrintMode && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedPoIds.has(po.id)}
+                            onCheckedChange={(checked) => handleCheckboxChange(po.id, checked)}
+                            aria-label={`Select PO ${po.poNumber}`}
+                          />
+                        </TableCell>
+                       )}
                       <TableCell className="font-medium">{po.poNumber}</TableCell>
                       <TableCell>{format(po.date.toDate(), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{po.careOf}</TableCell>
@@ -339,7 +433,7 @@ export default function PoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={isPrintMode ? 8 : 7} className="h-24 text-center">
                       No purchase orders found.
                     </TableCell>
                   </TableRow>
@@ -391,5 +485,3 @@ export default function PoPage() {
     </>
   );
 }
-
-
