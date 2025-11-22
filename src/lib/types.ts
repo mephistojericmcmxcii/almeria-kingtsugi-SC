@@ -94,6 +94,7 @@ export type Order = {
   packagingFee?: number;
   notes?: string;
   statusHistory?: StatusHistory[];
+  review?: string;
 };
 
 export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled';

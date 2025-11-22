@@ -28,6 +28,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ConfirmOrderDialog = lazy(() => import('@/components/profile/confirm-order-dialog').then(module => ({ default: module.ConfirmOrderDialog })));
+const OrderReviewDialog = lazy(() => import('@/components/profile/order-review-dialog').then(module => ({ default: module.OrderReviewDialog })));
+
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: 'Display name must be at least 2 characters.' }),
@@ -132,11 +134,12 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
     const { user, updateOrderStatus } = useAuth();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
     const [orderToConfirm, setOrderToConfirm] = useState<Order | null>(null);
+    const [orderToReview, setOrderToReview] = useState<Order | null>(null);
     const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
-    const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
+    const handleUpdateStatus = async (order: Order, status: OrderStatus, details?: { review?: string }) => {
         setIsUpdating(order.id);
-        await updateOrderStatus(order, status);
+        await updateOrderStatus(order, status, details);
         setIsUpdating(null);
         if (status === 'cancelled' || status === 'completed') {
             setViewingOrder(prev => prev ? {...prev, status: status} : null);
@@ -350,9 +353,9 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                         </Button>
                     )}
                     {order.status === 'delivering' && user?.id === order.userId && (
-                        <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                         <Button size="sm" onClick={() => { setViewingOrder(null); setOrderToReview(order); }} disabled={isUpdating === order.id}>
                             <CheckCircle className="mr-2 h-4 w-4"/>
-                            {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                            Mark as Received
                         </Button>
                     )}
                      <Button variant="secondary" onClick={() => setViewingOrder(null)}>Close</Button>
@@ -410,6 +413,20 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                         isOpen={!!orderToConfirm}
                         onOpenChange={() => setOrderToConfirm(null)}
                         order={orderToConfirm}
+                    />
+                </Suspense>
+            )}
+
+            {orderToReview && (
+                 <Suspense fallback={<div>Loading...</div>}>
+                    <OrderReviewDialog
+                        isOpen={!!orderToReview}
+                        onOpenChange={() => setOrderToReview(null)}
+                        order={orderToReview}
+                        onSubmit={async (review) => {
+                            await handleUpdateStatus(orderToReview, 'completed', { review });
+                            setOrderToReview(null);
+                        }}
                     />
                 </Suspense>
             )}
@@ -826,6 +843,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
 
 

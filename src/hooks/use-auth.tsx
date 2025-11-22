@@ -57,6 +57,7 @@ interface AuthContextType {
       shippingContactNumber?: string;
       paymentMethod?: string;
       customerRevisionUrl?: string;
+      review?: string;
     }
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
@@ -863,6 +864,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           shippingContactNumber?: string;
           paymentMethod?: string;
           customerRevisionUrl?: string;
+          review?: string;
         }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
@@ -877,10 +879,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 ]
             };
 
-            if (details?.reason && (newStatus === 'cancelled' || newStatus === 'declined')) {
+            if (details?.reason && (newStatus === 'cancelled' || newStatus === 'declined' || newStatus === 'rescheduled')) {
                 dataToUpdate.cancellationReason = details.reason;
             }
             
+            if (details?.review) {
+                dataToUpdate.review = details.review;
+            }
+
             if (details?.customerRevisionUrl) {
                 dataToUpdate.customerRevisionUrl = details.customerRevisionUrl;
             }
@@ -920,10 +926,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                             continue; // Skip stock updates for custom RFQ items
                         }
                         const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                        const stockChange = stockShouldBeDeducted ? -item.quantity : item.quantity;
                          try {
                             transaction.update(variantRef, {
-                                quantity: increment(stockChange)
+                                quantity: increment(stockShouldBeDeducted ? -item.quantity : item.quantity)
                             });
                          } catch (e: any) {
                              if (e.code === 'not-found') {
