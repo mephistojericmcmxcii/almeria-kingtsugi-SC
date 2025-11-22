@@ -25,8 +25,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
 
-const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
-const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog').then(module => ({ default: module.ViewPoDetailsDialog })));
+const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog'));
+const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog'));
 const ViewPoItemsDialog = lazy(() => import('@/components/po/view-po-items-dialog'));
 const PrintPoListLayout = lazy(() => import('@/components/po/print-po-list-layout'));
 
@@ -44,7 +44,7 @@ export type DisplayPurchaseOrder = PurchaseOrder & {
 
 export default function PoPage() {
   const { firestore } = useFirebase();
-  const { user, deleteFileByUrl } = useAuth();
+  const { user, deleteFileByUrl, updatePoStatus } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   
@@ -512,5 +512,7 @@ export default function PoPage() {
     </>
   );
 }
+
+    
 
     

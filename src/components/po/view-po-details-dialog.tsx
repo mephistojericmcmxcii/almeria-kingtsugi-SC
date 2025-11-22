@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,7 @@ const formatCurrency = (amount: number) => {
 };
 
 
-export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
+export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
   const { updatePoStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const [salesInvoice, setSalesInvoice] = useState(po.salesInvoice || '');
@@ -126,3 +125,5 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
     </Dialog>
   );
 }
+
+    
