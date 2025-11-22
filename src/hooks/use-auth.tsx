@@ -772,7 +772,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await runTransaction(firestore, async (transaction) => {
                 let items: CartItem[] = [];
-                let totalAmount = 0;
+                let finalTotalAmount = 0;
                 let totalDiscount = 0;
 
                 if (responseData.responseType === 'priceList') {
@@ -795,12 +795,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         const discountValue = itemTotal * ((item.discount || 0) / 100);
                         return acc + discountValue;
                     }, 0);
-                    totalAmount = subtotal - totalDiscount + (responseData.deliveryFee || 0) + (responseData.packagingFee || 0);
+                    finalTotalAmount = subtotal - totalDiscount + (responseData.deliveryFee || 0) + (responseData.packagingFee || 0);
                 } else { // 'uploadFile'
-                    totalAmount = responseData.totalAmount || 0;
-                    // For file upload, `responseData.discount` is a percentage
+                    const grossAmount = responseData.totalAmount || 0;
                     const discountPercent = responseData.discount || 0;
-                    totalDiscount = totalAmount * (discountPercent / 100);
+                    totalDiscount = grossAmount * (discountPercent / 100);
+                    finalTotalAmount = grossAmount - totalDiscount + (responseData.deliveryFee || 0) + (responseData.packagingFee || 0);
                 }
 
                 const newOrder: Omit<Order, 'id'> = {
@@ -811,7 +811,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     shippingContactNumber: rfq.contactNumber,
                     shippingAddress: '', // To be confirmed by user
                     items: items,
-                    totalAmount: totalAmount,
+                    totalAmount: finalTotalAmount, // Store the final net amount
                     discount: totalDiscount,
                     deliveryFee: responseData.deliveryFee || 0,
                     packagingFee: responseData.packagingFee || 0,
