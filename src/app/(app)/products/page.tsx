@@ -116,10 +116,10 @@ export default function ProductsPage() {
                         return (
                             <Card 
                                 key={variant.ref?.path || variant.id} 
-                                className="overflow-hidden group cursor-pointer"
+                                className="overflow-hidden group cursor-pointer flex flex-col"
                                 onClick={() => setSelectedVariant(variant)}
                             >
-                                <div className="aspect-square relative">
+                                <div className="aspect-square relative w-full">
                                     <img
                                         src={placeholder.imageUrl}
                                         alt={placeholder.description}
@@ -132,15 +132,20 @@ export default function ProductsPage() {
                                       </div>
                                     )}
                                 </div>
-                                <CardHeader className="p-4 pb-2">
+                                <CardHeader className="p-4 pb-2 flex-grow">
                                     <CardTitle className="font-headline text-lg leading-tight truncate" title={variant.parentName}>
                                         {variant.parentName}
                                     </CardTitle>
                                     <CardDescription className="truncate" title={variant.brand}>
                                         {variant.brand}
                                     </CardDescription>
+                                    {variant.description && (
+                                        <p className="text-xs text-muted-foreground pt-1 truncate" title={variant.description}>
+                                            {variant.description}
+                                        </p>
+                                    )}
                                 </CardHeader>
-                                <CardContent className="p-4 pt-0">
+                                <CardContent className="p-4 pt-0 mt-auto">
                                     <Button variant="outline" size="sm" className="w-full">
                                         <FileQuestion className="mr-2 h-4 w-4" /> Get a Quote
                                     </Button>
