@@ -874,13 +874,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 dataToUpdate.cancellationReason = details.reason;
             }
             
-            if (newStatus === 'quote-ready' || newStatus === 'confirmed') {
+            // This block handles updates from the admin's quote-ready response or user's confirmation
+            if ((newStatus === 'quote-ready' || newStatus === 'confirmed')) {
                 if (details?.items !== undefined) dataToUpdate.items = details.items;
                 if (details?.totalAmount !== undefined) dataToUpdate.totalAmount = details.totalAmount;
                 if (details?.discount !== undefined) dataToUpdate.discount = details.discount;
                 if (details?.deliveryFee !== undefined) dataToUpdate.deliveryFee = details.deliveryFee;
                 if (details?.packagingFee !== undefined) dataToUpdate.packagingFee = details.packagingFee;
-                if (details?.shippingAddress !== undefined) dataToUpdate.shippingAddress = details.shippingContactNumber;
+                if (details?.shippingAddress !== undefined) dataToUpdate.shippingAddress = details.shippingAddress;
+                if (details?.shippingContactNumber !== undefined) dataToUpdate.shippingContactNumber = details.shippingContactNumber;
                 if (details?.paymentMethod !== undefined) dataToUpdate.paymentMethod = details.paymentMethod;
             }
 
@@ -888,10 +890,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 await runTransaction(firestore, async (transaction: Transaction) => {
                     transaction.update(orderRef, dataToUpdate);
 
-                    // Only restock items if the order was confirmed or in delivery before cancellation
                     if (order.status === 'confirmed' || order.status === 'delivering') {
                         for (const item of order.items) {
-                            if (item.parentItemId === 'custom-rfq') continue; // Do not restock custom RFQ items
+                            if (item.parentItemId === 'custom-rfq') continue;
                             const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
                             transaction.update(variantRef, {
                                 quantity: increment(item.quantity)
@@ -899,21 +900,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         }
                     }
                 });
-            } else if (newStatus === 'confirmed' || newStatus === 'completed') {
+            } else if (newStatus === 'confirmed' && order.status !== 'confirmed') {
+                // This block specifically handles the transition TO 'confirmed'
                 await runTransaction(firestore, async (transaction: Transaction) => {
                     transaction.update(orderRef, dataToUpdate);
 
-                    // Deduct stock for confirmed/completed items if it's the first time this status is set.
-                    // This prevents double-deduction.
-                    if (order.status !== 'confirmed' && order.status !== 'completed') {
-                        const itemsToUpdate = details?.items || order.items;
-                        for (const item of itemsToUpdate) {
-                            if (item.parentItemId === 'custom-rfq') continue; // Do not deduct stock for custom RFQ items
-                            const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                            transaction.update(variantRef, {
-                                quantity: increment(-item.quantity)
-                            });
-                        }
+                    const itemsToUpdate = details?.items || order.items;
+                    for (const item of itemsToUpdate) {
+                        if (item.parentItemId === 'custom-rfq') continue;
+                        const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                        transaction.update(variantRef, {
+                            quantity: increment(-item.quantity)
+                        });
                     }
                 });
             } else {
@@ -1029,6 +1027,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
 
 
