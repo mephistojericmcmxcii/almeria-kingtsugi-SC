@@ -164,7 +164,8 @@ export default function ItemVariantsPage() {
   };
   
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
+    const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+    const printWindow = window.open('', '_blank', features);
     if (printWindow) {
       printWindow.document.write('<html><head><title>Print Variants</title></head><body><div id="print-root"></div></body></html>');
       printWindow.document.close();
