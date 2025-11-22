@@ -767,7 +767,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         variantId: 'custom-rfq',
                         parentItemId: 'custom-rfq',
                         quantity: item.quantity,
-                        addedAt: serverTimestamp(),
+                        addedAt: Timestamp.now(), // Use client-side timestamp
                         parentName: item.name,
                         brand: item.specs || 'N/A',
                         price: item.price,
@@ -1012,3 +1012,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
