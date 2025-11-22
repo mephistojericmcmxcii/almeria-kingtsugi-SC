@@ -276,7 +276,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             {imageSource === 'url' ? (
                 <div className="space-y-2">
                   <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl} onChange={handleInputChange} disabled={isSubmitting} />
+                  <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl || ''} onChange={handleInputChange} disabled={isSubmitting} />
                 </div>
             ) : (
                 <div className="space-y-2">
@@ -294,21 +294,21 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
               </div>
             )}
 
-            <div className="space-y-2"><Label htmlFor="variation">Variation</Label><Input id="variation" name="variation" placeholder="e.g., Red, XL, 500g" value={formState.variation} onChange={handleInputChange} disabled={isSubmitting} required /></div>
-            <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand} onChange={handleInputChange} disabled={isSubmitting} /></div>
-            <div className="space-y-2"><Label htmlFor="model">Model (Optional)</Label><Input id="model" name="model" placeholder="e.g., G2" value={formState.model} onChange={handleInputChange} disabled={isSubmitting} /></div>
-            <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="variation">Variation</Label><Input id="variation" name="variation" placeholder="e.g., Red, XL, 500g" value={formState.variation || ''} onChange={handleInputChange} disabled={isSubmitting} required /></div>
+            <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="model">Model (Optional)</Label><Input id="model" name="model" placeholder="e.g., G2" value={formState.model || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
           
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label htmlFor="quantity">Quantity</Label><Input id="quantity" name="quantity" type="number" value={formState.quantity} onChange={handleInputChange} disabled={isSubmitting} /></div>
-             <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="quantity">Quantity</Label><Input id="quantity" name="quantity" type="number" value={formState.quantity || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
+             <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label htmlFor="costPrice">Cost Price (₱)</Label><Input id="costPrice" name="costPrice" type="number" step="0.01" value={formState.costPrice} onChange={handleInputChange} disabled={isSubmitting} /></div>
-            <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="costPrice">Cost Price (₱)</Label><Input id="costPrice" name="costPrice" type="number" step="0.01" value={formState.costPrice || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           
-          <div className="space-y-2"><Label htmlFor="description">Description / Specifications (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., 0.5mm, Black Ink" value={formState.description} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="description">Description / Specifications (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., 0.5mm, Black Ink" value={formState.description || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
