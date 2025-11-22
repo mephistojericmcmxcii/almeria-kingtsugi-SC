@@ -7,7 +7,7 @@ import type { PurchaseOrder } from '@/lib/types';
 
 interface PrintPoListLayoutProps {
   pos: PurchaseOrder[];
-  totals: Record<string, { allocated: number; utilized: number; }>;
+  totals: Record<string, { allocated: number; utilized: number; itemCount: number; }>;
 }
 
 const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) => {
@@ -138,28 +138,28 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
                   <th>PO #</th>
                   <th>Date</th>
                   <th>Care Of</th>
-                  <th>Status</th>
                   <th className="text-right">Total Allocation</th>
                   <th className="text-right">Amount Utilized</th>
-                  <th className="text-right">Variance</th>
+                  <th className="text-right"># of Items</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {pos.length > 0 ? (
                   pos.map((po) => {
                     const total = totals[po.id];
-                    const variance = (total?.allocated || 0) - (total?.utilized || 0);
+                    const itemCount = total?.itemCount || 0;
                     return (
                         <tr key={po.id}>
                             <td className="font-medium">{po.poNumber}</td>
                             <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
                             <td>{po.careOf}</td>
-                            <td>{(po as any).displayStatus || po.status}</td>
                             <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>
                             <td className="text-right">{formatCurrency(total?.utilized || 0)}</td>
-                            <td className="text-right font-medium" style={{color: variance < 0 ? 'red' : 'green'}}>
-                                {formatCurrency(variance)}
+                            <td className="text-right font-medium">
+                                {itemCount}
                             </td>
+                            <td>{(po as any).displayStatus || po.status}</td>
                         </tr>
                     );
                   })
