@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock, RefreshCw, Send, Link as LinkIcon, Download } from 'lucide-react';
+import { ShoppingCart, History, User, Package, Plus, Minus, Trash2, CheckCircle, XCircle, Truck, Info, FileQuestion, CreditCard, Clock, RefreshCw, Send, Link as LinkIcon, Download, Eye } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,11 +21,11 @@ import type { CartItem, Order, OrderStatus, StatusHistory, QuotationRequest } fr
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ConfirmOrderDialog = lazy(() => import('@/components/profile/confirm-order-dialog').then(module => ({ default: module.ConfirmOrderDialog })));
 
@@ -131,11 +131,15 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
     const { user, updateOrderStatus } = useAuth();
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
     const [orderToConfirm, setOrderToConfirm] = useState<Order | null>(null);
+    const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
     const handleUpdateStatus = async (order: Order, status: OrderStatus) => {
         setIsUpdating(order.id);
         await updateOrderStatus(order, status);
         setIsUpdating(null);
+        if (newStatus === 'cancelled' || newStatus === 'completed') {
+            setViewingOrder(prev => prev ? {...prev, status: newStatus} : null);
+        }
     };
 
     const getStatusBadge = (status: OrderStatus) => {
@@ -165,203 +169,224 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
             </Card>
         );
     }
+    
+    // Modal Content
+    const renderOrderDetailsModal = () => {
+        if (!viewingOrder) return null;
+
+        const order = viewingOrder;
+        const isQuoteReady = order.status === 'quote-ready';
+        const isFileQuote = !!order.quotationFileUrl;
+        const showPricing = order.status !== 'pending-quote' && !isFileQuote;
+        const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
+        const totalDiscount = order.discount || 0;
+        const finalTotal = order.totalAmount;
+        const totalDiscountPercentage = subtotal > 0 ? (totalDiscount / subtotal) * 100 : 0;
+
+        return (
+             <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle className="font-headline text-2xl">Order Details</DialogTitle>
+                    <DialogDescription>
+                        Order ID: <span className="font-mono">{order.id}</span>
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 py-4">
+                     {order.notes && (
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Notes from you</AlertTitle>
+                            <AlertDescription className="whitespace-pre-wrap">{order.notes}</AlertDescription>
+                        </Alert>
+                    )}
+                    
+                    {isFileQuote && (
+                        <div className="pt-4 border-t">
+                            <h4 className="font-semibold mb-2">Quotation File</h4>
+                                <a href={order.quotationFileUrl} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm">
+                                    <Download className="mr-2 h-4 w-4" /> View Quotation
+                                </Button>
+                            </a>
+                        </div>
+                    )}
+
+                    {order.items && order.items.length > 0 && !isFileQuote && (
+                        <div>
+                            <h4 className="font-semibold mb-2">Items</h4>
+                            <div className="space-y-2">
+                            {order.items.map(item => {
+                                const itemTotal = (item.price || 0) * item.quantity;
+                                const discountValue = itemTotal * ((item.discount || 0) / 100);
+                                const finalItemPrice = itemTotal - discountValue;
+
+                                return (
+                                <div key={item.id} className="flex justify-between items-center text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" data-ai-hint={item.imageHint} />
+                                        <div>
+                                            <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
+                                            {showPricing && (item.discount || 0) > 0 && (
+                                                <p className="text-xs text-green-600">Discount: {item.discount}% (-{formatCurrency(discountValue)})</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {showPricing && <span>{formatCurrency(finalItemPrice)}</span>}
+                                </div>
+                                )
+                            })}
+                            </div>
+                        </div>
+                    )}
+
+                    {showPricing && (
+                        <>
+                            <div className="space-y-2 pt-4 border-t">
+                                <h4 className="font-semibold mb-2">Billing Summary</h4>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Subtotal</span>
+                                    <span>{formatCurrency(subtotal)}</span>
+                                </div>
+                                {(totalDiscount) > 0 && (
+                                    <div className="flex justify-between text-sm text-green-600">
+                                        <span>Total Item Discounts</span>
+                                        <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
+                                    </div>
+                                )}
+                                {(order.deliveryFee || 0) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Delivery Fee</span>
+                                        <span>{formatCurrency(order.deliveryFee!)}</span>
+                                    </div>
+                                )}
+                                {(order.packagingFee || 0) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Packaging Fee</span>
+                                        <span>{formatCurrency(order.packagingFee!)}</span>
+                                    </div>
+                                )}
+                                <Separator />
+                                <div className="flex justify-between font-bold">
+                                    <span>Total</span>
+                                    <span>{formatCurrency(finalTotal)}</span>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                <div>
+                                    <h4 className="font-semibold mb-2">Shipping Information</h4>
+                                    <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                                    <p className="text-sm text-muted-foreground">{order.shippingContactNumber}</p>
+                                </div>
+                                {order.status !== 'pending-quote' && (
+                                    <div>
+                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4"/>Payment Method</h4>
+                                        <p className="text-sm text-muted-foreground">{order.paymentMethod.toUpperCase()}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                    
+                    {order.statusHistory && order.statusHistory.length > 0 && (
+                        <div className="pt-4 border-t">
+                            <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4"/>Status History</h4>
+                            <ul className="space-y-1 text-sm text-muted-foreground">
+                                {order.statusHistory.map((h: StatusHistory, index: number) => (
+                                    <li key={index} className="flex items-center justify-between">
+                                        <span className="font-medium capitalize">{statusDisplayMap[h.status] || h.status.replace('-', ' ')}</span>
+                                        <span>{format(h.timestamp.toDate(), 'MMM d, yyyy, h:mm a')}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    
+                    {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
+                        <Alert variant="destructive">
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Reason for {order.status === 'cancelled' ? 'Cancellation' : 'Decline'}</AlertTitle>
+                            <AlertDescription>{order.cancellationReason}</AlertDescription>
+                        </Alert>
+                    )}
+                </div>
+                <DialogFooter>
+                    {order.status === 'quote-ready' && (
+                        <Button size="sm" onClick={() => { setViewingOrder(null); setOrderToConfirm(order); }} disabled={isUpdating === order.id}>
+                            <CheckCircle className="mr-2 h-4 w-4"/>
+                            Confirm Order & Purchase
+                        </Button>
+                    )}
+                    {order.status === 'pending-quote' && user?.id === order.userId && (
+                        <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
+                            <XCircle className="mr-2 h-4 w-4"/>
+                            {isUpdating === order.id ? 'Cancelling...' : 'Cancel Request'}
+                        </Button>
+                    )}
+                    {order.status === 'delivering' && user?.id === order.userId && (
+                        <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
+                            <CheckCircle className="mr-2 h-4 w-4"/>
+                            {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
+                        </Button>
+                    )}
+                     <Button variant="secondary" onClick={() => setViewingOrder(null)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        );
+    }
 
     return (
         <>
-        <Card>
-            <CardHeader>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Accordion type="single" collapsible className="w-full space-y-4">
-                    {orders.map(order => {
-                        const isQuoteReady = order.status === 'quote-ready';
-                        const isFileQuote = !!order.quotationFileUrl;
-                        const showPricing = order.status !== 'pending-quote' && !isFileQuote;
-                        const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-                        const totalDiscount = order.discount || 0;
-                        const finalTotal = order.totalAmount;
-                        const totalDiscountPercentage = subtotal > 0 ? (totalDiscount / subtotal) * 100 : 0;
+            <Card>
+                <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[25%]">Order ID</TableHead>
+                                <TableHead className="w-[20%]">Date</TableHead>
+                                <TableHead className="w-[20%]">Status</TableHead>
+                                <TableHead className="w-[20%] text-right">Total</TableHead>
+                                <TableHead className="w-[15%] text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {orders.map(order => (
+                                <TableRow key={order.id}>
+                                    <TableCell className="font-mono text-xs">{order.id}</TableCell>
+                                    <TableCell>{format(order.orderDate.toDate(), 'MMM d, yyyy')}</TableCell>
+                                    <TableCell>{getStatusBadge(order.status)}</TableCell>
+                                    <TableCell className="text-right font-medium">
+                                        {order.status !== 'pending-quote' ? formatCurrency(order.totalAmount) : 'N/A'}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="outline" size="sm" onClick={() => setViewingOrder(order)}>
+                                            <Eye className="mr-2 h-4 w-4" /> View
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
 
-                        return (
-                        <AccordionItem value={order.id} key={order.id} className="border rounded-lg px-4">
-                            <AccordionTrigger>
-                                <div className="flex justify-between w-full items-center">
-                                    <div className="flex flex-col text-left">
-                                        <span className="font-semibold text-sm font-mono break-all">{order.id}</span>
-                                        <span className="text-sm text-muted-foreground">{format(order.orderDate.toDate(), 'MMMM d, yyyy')}</span>
-                                        {user?.role === 'admin' && order.userId !== user?.id && <span className="text-xs text-muted-foreground pt-1">{order.userDisplayName} ({order.userEmail})</span>}
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                    {showPricing ? <span className="font-bold text-lg text-primary">{formatCurrency(finalTotal)}</span> : null}
-                                    {getStatusBadge(order.status)}
-                                    </div>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pt-4">
-                                <div className="space-y-6">
-                                    {order.notes && (
-                                        <Alert>
-                                            <Info className="h-4 w-4" />
-                                            <AlertTitle>Notes from you</AlertTitle>
-                                            <AlertDescription className="whitespace-pre-wrap">{order.notes}</AlertDescription>
-                                        </Alert>
-                                    )}
-                                    
-                                    {order.quotationFileUrl && (
-                                        <div className="pt-4 border-t">
-                                            <h4 className="font-semibold mb-2">Quotation File</h4>
-                                             <a href={order.quotationFileUrl} target="_blank" rel="noopener noreferrer">
-                                                <Button variant="outline" size="sm">
-                                                    <Download className="mr-2 h-4 w-4" /> View Quotation
-                                                </Button>
-                                            </a>
-                                        </div>
-                                    )}
+            <Dialog open={!!viewingOrder} onOpenChange={() => setViewingOrder(null)}>
+                {renderOrderDetailsModal()}
+            </Dialog>
 
-                                    {order.items && order.items.length > 0 && (
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Items</h4>
-                                            <div className="space-y-2">
-                                            {order.items.map(item => {
-                                                const itemTotal = (item.price || 0) * item.quantity;
-                                                const discountValue = itemTotal * ((item.discount || 0) / 100);
-                                                const finalItemPrice = itemTotal - discountValue;
-
-                                                return (
-                                                <div key={item.id} className="flex justify-between items-center text-sm">
-                                                    <div className="flex items-center gap-2">
-                                                        <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" data-ai-hint={item.imageHint} />
-                                                        <div>
-                                                            <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
-                                                            {showPricing && (item.discount || 0) > 0 && (
-                                                                <p className="text-xs text-green-600">Discount: {item.discount}% (-{formatCurrency(discountValue)})</p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {showPricing && <span>{formatCurrency(finalItemPrice)}</span>}
-                                                </div>
-                                                )
-                                            })}
-                                            </div>
-                                        </div>
-                                    )}
-
-
-                                    {showPricing && (
-                                        <>
-                                            <div className="space-y-2 pt-4 border-t">
-                                                <h4 className="font-semibold mb-2">Billing Summary</h4>
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-muted-foreground">Subtotal</span>
-                                                    <span>{formatCurrency(subtotal)}</span>
-                                                </div>
-                                                {(totalDiscount) > 0 && (
-                                                    <div className="flex justify-between text-sm text-green-600">
-                                                        <span>Total Item Discounts</span>
-                                                        <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
-                                                    </div>
-                                                )}
-                                                {(order.deliveryFee || 0) > 0 && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground">Delivery Fee</span>
-                                                        <span>{formatCurrency(order.deliveryFee!)}</span>
-                                                    </div>
-                                                )}
-                                                {(order.packagingFee || 0) > 0 && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground">Packaging Fee</span>
-                                                        <span>{formatCurrency(order.packagingFee!)}</span>
-                                                    </div>
-                                                )}
-                                                <Separator />
-                                                <div className="flex justify-between font-bold">
-                                                    <span>Total</span>
-                                                    <span>{formatCurrency(finalTotal)}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                                                <div>
-                                                    <h4 className="font-semibold mb-2">Shipping Information</h4>
-                                                    <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
-                                                    <p className="text-sm text-muted-foreground">{order.shippingContactNumber}</p>
-                                                </div>
-                                                {order.status !== 'pending-quote' && (
-                                                    <div>
-                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4"/>Payment Method</h4>
-                                                        <p className="text-sm text-muted-foreground">{order.paymentMethod.toUpperCase()}</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
-                                    
-                                    {order.statusHistory && order.statusHistory.length > 0 && (
-                                        <div className="pt-4 border-t">
-                                            <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4"/>Status History</h4>
-                                            <ul className="space-y-1 text-sm text-muted-foreground">
-                                                {order.statusHistory.map((h: StatusHistory, index: number) => (
-                                                    <li key={index} className="flex items-center justify-between">
-                                                        <span className="font-medium capitalize">{statusDisplayMap[h.status] || h.status.replace('-', ' ')}</span>
-                                                        <span>{format(h.timestamp.toDate(), 'MMM d, yyyy, h:mm a')}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                    
-                                    {(order.status === 'cancelled' || order.status === 'declined') && order.cancellationReason && (
-                                        <Alert variant="destructive">
-                                            <Info className="h-4 w-4" />
-                                            <AlertTitle>Reason for {order.status === 'cancelled' ? 'Cancellation' : 'Decline'}</AlertTitle>
-                                            <AlertDescription>{order.cancellationReason}</AlertDescription>
-                                        </Alert>
-                                    )}
-                                
-                                    {/* User action buttons */}
-                                    <div className="flex gap-2 justify-end pt-4">
-                                        {order.status === 'quote-ready' && (
-                                            <>
-                                                <Button variant="outline" size="sm" onClick={() => { /* Does nothing but close parent */ }}>
-                                                    Close
-                                                </Button>
-                                                <Button size="sm" onClick={() => setOrderToConfirm(order)} disabled={isUpdating === order.id}>
-                                                    <CheckCircle className="mr-2 h-4 w-4"/>
-                                                    Confirm Order & Purchase
-                                                </Button>
-                                            </>
-                                        )}
-                                        {order.status === 'pending-quote' && user?.id === order.userId && (
-                                            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(order, 'cancelled')} disabled={isUpdating === order.id}>
-                                                <XCircle className="mr-2 h-4 w-4"/>
-                                                {isUpdating === order.id ? 'Cancelling...' : 'Cancel Request'}
-                                            </Button>
-                                        )}
-                                        {order.status === 'delivering' && user?.id === order.userId && (
-                                            <Button size="sm" onClick={() => handleUpdateStatus(order, 'completed')} disabled={isUpdating === order.id}>
-                                                <CheckCircle className="mr-2 h-4 w-4"/>
-                                                {isUpdating === order.id ? 'Updating...' : 'Mark as Received'}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    )})}
-                </Accordion>
-            </CardContent>
-        </Card>
-        {orderToConfirm && (
-            <Suspense fallback={<div>Loading...</div>}>
-                <ConfirmOrderDialog
-                    isOpen={!!orderToConfirm}
-                    onOpenChange={() => setOrderToConfirm(null)}
-                    order={orderToConfirm}
-                />
-            </Suspense>
-        )}
+            {orderToConfirm && (
+                <Suspense fallback={<div>Loading...</div>}>
+                    <ConfirmOrderDialog
+                        isOpen={!!orderToConfirm}
+                        onOpenChange={() => setOrderToConfirm(null)}
+                        order={orderToConfirm}
+                    />
+                </Suspense>
+            )}
         </>
     );
 }
@@ -370,6 +395,7 @@ function RfqList() {
     const { user, firestore } = useAuth();
     const [rfqs, setRfqs] = useState<QuotationRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [viewingRfq, setViewingRfq] = useState<QuotationRequest | null>(null);
 
     useEffect(() => {
         const fetchRfqs = async () => {
@@ -392,6 +418,67 @@ function RfqList() {
         };
         fetchRfqs();
     }, [user, firestore]);
+    
+     const renderRfqDetailsModal = () => {
+        if (!viewingRfq) return null;
+        const rfq = viewingRfq;
+        return (
+            <DialogContent className="sm:max-w-2xl">
+                 <DialogHeader>
+                    <DialogTitle className="font-headline text-2xl">Quotation Request Details</DialogTitle>
+                    <DialogDescription>
+                        Request ID: <span className="font-mono">{rfq.id}</span>
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 py-4">
+                     <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div><span className="font-semibold">Name:</span> {rfq.customerName}</div>
+                        <div><span className="font-semibold">Contact:</span> {rfq.contactNumber}</div>
+                        <div><span className="font-semibold">Email:</span> {rfq.emailAddress}</div>
+                        {rfq.companyName && <div><span className="font-semibold">Company:</span> {rfq.companyName}</div>}
+                    </div>
+                     {rfq.requestType === 'list' && rfq.items && (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Item Name</TableHead>
+                                    <TableHead className="text-center">Quantity</TableHead>
+                                    <TableHead>Specifications</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {rfq.items.map((item, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{item.name}</TableCell>
+                                        <TableCell className="text-center">{item.quantity}</TableCell>
+                                        <TableCell>{item.specs || 'N/A'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                    {rfq.requestType === 'attachment' && rfq.fileAttachment && (
+                            <a href={rfq.fileAttachment} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm">
+                                <Download className="mr-2 h-4 w-4" /> View Attachment
+                            </Button>
+                        </a>
+                    )}
+                    {rfq.additionalDetails && (
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Additional Message</AlertTitle>
+                            <AlertDescription className="whitespace-pre-wrap">{rfq.additionalDetails}</AlertDescription>
+                        </Alert>
+                    )}
+                </div>
+                 <DialogFooter>
+                    <Button variant="secondary" onClick={() => setViewingRfq(null)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        );
+    }
+
 
     if (isLoading) {
         return <div className="text-center py-12 text-muted-foreground">Loading your quotation requests...</div>;
@@ -411,73 +498,47 @@ function RfqList() {
     }
 
     return (
+         <>
          <Card>
             <CardHeader>
                 <CardTitle>Custom Quotation Requests</CardTitle>
                 <CardDescription>A history of your special quotation requests sent to the seller.</CardDescription>
             </CardHeader>
             <CardContent>
-                 <Accordion type="single" collapsible className="w-full space-y-4">
-                    {rfqs.map(rfq => (
-                        <AccordionItem value={rfq.id} key={rfq.id} className="border rounded-lg px-4">
-                            <AccordionTrigger>
-                                <div className="flex justify-between w-full items-center">
-                                    <div className="flex flex-col text-left">
-                                        <span className="font-semibold text-sm">Request from {format(rfq.createdAt.toDate(), 'MMMM d, yyyy')}</span>
-                                        <span className="text-xs text-muted-foreground">Ref: {rfq.id.substring(0, 8)}...</span>
-                                    </div>
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Request ID</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rfqs.map(rfq => (
+                            <TableRow key={rfq.id}>
+                                <TableCell className="font-mono text-xs">{rfq.id}</TableCell>
+                                <TableCell>{format(rfq.createdAt.toDate(), 'MMM d, yyyy')}</TableCell>
+                                <TableCell>
                                     <Badge variant={rfq.requestType === 'list' ? 'secondary' : 'default'}>
                                         {rfq.requestType === 'list' ? 'Listed Items' : 'File Attachment'}
                                     </Badge>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pt-4 space-y-4">
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div><span className="font-semibold">Name:</span> {rfq.customerName}</div>
-                                    <div><span className="font-semibold">Contact:</span> {rfq.contactNumber}</div>
-                                    <div><span className="font-semibold">Email:</span> {rfq.emailAddress}</div>
-                                    {rfq.companyName && <div><span className="font-semibold">Company:</span> {rfq.companyName}</div>}
-                                </div>
-                                {rfq.requestType === 'list' && rfq.items && (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Item Name</TableHead>
-                                                <TableHead className="text-center">Quantity</TableHead>
-                                                <TableHead>Specifications</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {rfq.items.map((item, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell>{item.name}</TableCell>
-                                                    <TableCell className="text-center">{item.quantity}</TableCell>
-                                                    <TableCell>{item.specs || 'N/A'}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                )}
-                                {rfq.requestType === 'attachment' && rfq.fileAttachment && (
-                                     <a href={rfq.fileAttachment} target="_blank" rel="noopener noreferrer">
-                                        <Button variant="outline" size="sm">
-                                            <Download className="mr-2 h-4 w-4" /> View Attachment
-                                        </Button>
-                                    </a>
-                                )}
-                                {rfq.additionalDetails && (
-                                    <Alert>
-                                        <Info className="h-4 w-4" />
-                                        <AlertTitle>Additional Message</AlertTitle>
-                                        <AlertDescription className="whitespace-pre-wrap">{rfq.additionalDetails}</AlertDescription>
-                                    </Alert>
-                                )}
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
-                 </Accordion>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="outline" size="sm" onClick={() => setViewingRfq(rfq)}>
+                                        <Eye className="mr-2 h-4 w-4" /> View
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
             </CardContent>
          </Card>
+         <Dialog open={!!viewingRfq} onOpenChange={() => setViewingRfq(null)}>
+            {renderRfqDetailsModal()}
+         </Dialog>
+         </>
     );
 }
 
@@ -741,6 +802,3 @@ export default function ProfilePage() {
 }
 
     
-
-    
-
