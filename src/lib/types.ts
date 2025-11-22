@@ -95,6 +95,7 @@ export type Order = {
   notes?: string;
   statusHistory?: StatusHistory[];
   review?: string;
+  rating?: number;
 };
 
 export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled';

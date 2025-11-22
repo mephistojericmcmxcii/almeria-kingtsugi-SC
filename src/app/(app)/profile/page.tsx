@@ -137,7 +137,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
     const [orderToReview, setOrderToReview] = useState<Order | null>(null);
     const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
-    const handleUpdateStatus = async (order: Order, status: OrderStatus, details?: { review?: string }) => {
+    const handleUpdateStatus = async (order: Order, status: OrderStatus, details?: { review?: string; rating?: number; }) => {
         setIsUpdating(order.id);
         await updateOrderStatus(order, status, details);
         setIsUpdating(null);
@@ -180,7 +180,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         if (!viewingOrder) return null;
 
         const order = viewingOrder;
-        const isFileBasedOrder = !!order.quotationFileUrl;
+        const isFileBasedOrder = !!order.quotationFileUrl && order.items.length === 0;
         const showPricing = order.status !== 'pending-quote';
 
         let subtotal = 0;
@@ -189,7 +189,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         let totalDiscountPercentage = 0;
 
         if (isFileBasedOrder) {
-            subtotal = order.totalAmount - (order.deliveryFee || 0) - (order.packagingFee || 0) + totalDiscount;
+            // For file-based orders, derive the original subtotal from the final amount.
+             subtotal = finalTotal + totalDiscount - (order.deliveryFee || 0) - (order.packagingFee || 0);
             if(subtotal > 0) {
                 totalDiscountPercentage = (totalDiscount / subtotal) * 100;
             }
@@ -423,8 +424,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                         isOpen={!!orderToReview}
                         onOpenChange={() => setOrderToReview(null)}
                         order={orderToReview}
-                        onSubmit={async (review) => {
-                            await handleUpdateStatus(orderToReview, 'completed', { review });
+                        onSubmit={async (details) => {
+                            await handleUpdateStatus(orderToReview, 'completed', details);
                             setOrderToReview(null);
                         }}
                     />
@@ -843,3 +844,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

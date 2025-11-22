@@ -58,6 +58,7 @@ interface AuthContextType {
       paymentMethod?: string;
       customerRevisionUrl?: string;
       review?: string;
+      rating?: number;
     }
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
@@ -812,7 +813,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     shippingContactNumber: rfq.contactNumber,
                     shippingAddress: '', // To be confirmed by user
                     items: items,
-                    totalAmount: finalTotalAmount, // Store the final net amount
+                    totalAmount: finalTotalAmount,
                     discount: totalDiscount,
                     deliveryFee: responseData.deliveryFee || 0,
                     packagingFee: responseData.packagingFee || 0,
@@ -865,6 +866,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           paymentMethod?: string;
           customerRevisionUrl?: string;
           review?: string;
+          rating?: number;
         }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
@@ -885,6 +887,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             if (details?.review) {
                 dataToUpdate.review = details.review;
+            }
+            
+            if (details?.rating) {
+                dataToUpdate.rating = details.rating;
             }
 
             if (details?.customerRevisionUrl) {
