@@ -26,7 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
 const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog').then(module => ({ default: module.ViewPoDetailsDialog })));
 const ViewPoItemsDialog = lazy(() => import('@/components/po/view-po-items-dialog').then(module => ({ default: module.ViewPoItemsDialog })));
-const PrintPoListLayout = lazy(() => import('@/components/po/print-po-list-layout').then(module => ({ default: module.PrintPoListLayout })));
+const PrintPoListLayout = lazy(() => import('@/components/po/print-po-list-layout'));
 
 
 type PoTotals = {
