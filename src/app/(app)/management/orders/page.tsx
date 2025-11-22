@@ -454,66 +454,68 @@ export default function AllOrdersPage() {
                             </div>
                         )}
 
-                        <div>
-                            <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
-                            {selectedOrder.items.length > 0 ? (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-2/5">Item</TableHead>
-                                            <TableHead className="text-right">Price</TableHead>
-                                            <TableHead className="text-right">Qty</TableHead>
-                                            <TableHead className="text-right">Discount (%)</TableHead>
-                                            <TableHead className="text-right">Total Price</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {selectedOrder.items.map((item) => {
-                                            const price = itemPrices[item.id] || 0;
-                                            const discountPercent = itemDiscounts[item.id] || 0;
-                                            const itemTotal = price * item.quantity;
-                                            const discountValue = itemTotal * (discountPercent / 100);
-                                            const totalPrice = itemTotal - discountValue;
-
-                                            return (
-                                            <TableRow key={item.id}>
-                                                <TableCell>
-                                                    <p className="font-medium">{item.parentName}</p>
-                                                    <p className="text-xs text-muted-foreground">{item.brand}</p>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Input 
-                                                        type="number" 
-                                                        className="h-8 w-24 ml-auto text-right"
-                                                        value={price}
-                                                        onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
-                                                        onWheel={handleNumberInputOnWheel}
-                                                        onFocus={(e) => e.target.select()}
-                                                        disabled={isUpdating || !isPricingEditable}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-right">{item.quantity}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Input 
-                                                        type="number" 
-                                                        className="h-8 w-20 ml-auto text-right"
-                                                        value={discountPercent}
-                                                        onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
-                                                        onWheel={handleNumberInputOnWheel}
-                                                        onFocus={(e) => e.target.select()}
-                                                        disabled={isUpdating || !isPricingEditable}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium">{formatCurrency(totalPrice)}</TableCell>
+                        {!(selectedOrder.quotationFileUrl && selectedOrder.items.length === 0) && (
+                            <div>
+                                <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
+                                {selectedOrder.items.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-2/5">Item</TableHead>
+                                                <TableHead className="text-right">Price</TableHead>
+                                                <TableHead className="text-right">Qty</TableHead>
+                                                <TableHead className="text-right">Discount (%)</TableHead>
+                                                <TableHead className="text-right">Total Price</TableHead>
                                             </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                             ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">No items were listed. This order is likely based on an attached file.</p>
-                            )}
-                        </div>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {selectedOrder.items.map((item) => {
+                                                const price = itemPrices[item.id] || 0;
+                                                const discountPercent = itemDiscounts[item.id] || 0;
+                                                const itemTotal = price * item.quantity;
+                                                const discountValue = itemTotal * (discountPercent / 100);
+                                                const totalPrice = itemTotal - discountValue;
+
+                                                return (
+                                                <TableRow key={item.id}>
+                                                    <TableCell>
+                                                        <p className="font-medium">{item.parentName}</p>
+                                                        <p className="text-xs text-muted-foreground">{item.brand}</p>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Input 
+                                                            type="number" 
+                                                            className="h-8 w-24 ml-auto text-right"
+                                                            value={price}
+                                                            onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
+                                                            onWheel={handleNumberInputOnWheel}
+                                                            onFocus={(e) => e.target.select()}
+                                                            disabled={isUpdating || !isPricingEditable}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{item.quantity}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Input 
+                                                            type="number" 
+                                                            className="h-8 w-20 ml-auto text-right"
+                                                            value={discountPercent}
+                                                            onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
+                                                            onWheel={handleNumberInputOnWheel}
+                                                            onFocus={(e) => e.target.select()}
+                                                            disabled={isUpdating || !isPricingEditable}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-medium">{formatCurrency(totalPrice)}</TableCell>
+                                                </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">No items were listed. This order is likely based on an attached file.</p>
+                                )}
+                            </div>
+                        )}
                         
                          <div className="space-y-4 pt-4 border-t">
                             <div className="flex justify-end text-sm">
