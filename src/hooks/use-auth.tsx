@@ -899,13 +899,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         }
                     }
                 });
-            } else if (newStatus === 'confirmed') {
+            } else if (newStatus === 'confirmed' || newStatus === 'completed') {
                 await runTransaction(firestore, async (transaction: Transaction) => {
                     transaction.update(orderRef, dataToUpdate);
 
-                    // Deduct stock for confirmed items
-                    if (details?.items) {
-                        for (const item of details.items) {
+                    // Deduct stock for confirmed/completed items if it's the first time this status is set.
+                    // This prevents double-deduction.
+                    if (order.status !== 'confirmed' && order.status !== 'completed') {
+                        const itemsToUpdate = details?.items || order.items;
+                        for (const item of itemsToUpdate) {
                             if (item.parentItemId === 'custom-rfq') continue; // Do not deduct stock for custom RFQ items
                             const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
                             transaction.update(variantRef, {
@@ -1027,6 +1029,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
 
 
