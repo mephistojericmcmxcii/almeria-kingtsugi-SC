@@ -37,6 +37,9 @@ type PoFinancialSummary = {
   paymentStatus?: PoPaymentStatus;
 };
 
+const PesoIcon = () => <span className="font-bold">₱</span>;
+
+
 export default function PoPaymentPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
@@ -228,14 +231,14 @@ export default function PoPaymentPage() {
             title="Paid POs"
             value={isLoading ? <Skeleton className="h-8 w-1/4" /> : paidCount}
             description="Total purchase orders marked as paid."
-            icon={CircleDollarSign}
+            icon={PesoIcon}
             isLoading={isLoading}
         />
         <StatsCard
             title="Unpaid POs"
             value={isLoading ? <Skeleton className="h-8 w-1/4" /> : unpaidCount}
             description="Total purchase orders awaiting payment."
-            icon={BadgeDollarSign}
+            icon={PesoIcon}
             isLoading={isLoading}
         />
         <StatsCard
