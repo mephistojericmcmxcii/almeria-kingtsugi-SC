@@ -52,18 +52,24 @@ service cloud.firestore {
       allow write: if request.auth != null;
 
       // All users: read only for parent item
-      allow read: if request.auth != null;
+      allow read: if true;
 
       // --- Variants subcollection ---
       match /variants/{variantId} {
         // Allow reads for authenticated users (for dashboard)
-        allow read: if request.auth != null;
+        allow read: if true;
         
         // Allow full writes for any authenticated user
         allow write: if request.auth != null;
       }
     }
     
+    // --- System Settings (Public Read) ---
+    match /system_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // --- Admin Roles collection ---
     match /roles_admin/{userId} {
       // Admins can read this to check other admins, but never write.
@@ -77,5 +83,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
