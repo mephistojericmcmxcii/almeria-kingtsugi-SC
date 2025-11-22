@@ -90,6 +90,10 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
 
   const responseType = form.watch('responseType');
 
+  useEffect(() => {
+    form.clearErrors();
+  }, [responseType, form]);
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     
@@ -140,7 +144,7 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                     )}
                      {rfq.requestType === 'attachment' && rfq.fileAttachment && (
                         <a href={rfq.fileAttachment} target="_blank" rel="noopener noreferrer">
-                            <Button variant="secondary" size="sm"><Download className="mr-2 h-4 w-4"/>View Customer Attachment</Button>
+                            <Button type="button" variant="secondary" size="sm"><Download className="mr-2 h-4 w-4"/>View Customer Attachment</Button>
                         </a>
                     )}
                     {rfq.additionalDetails && (
@@ -193,12 +197,12 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                         <TableCell>{field.quantity}</TableCell>
                         <TableCell>
                           <FormField control={form.control} name={`items.${index}.price`} render={({ field }) => (
-                            <Input type="number" className="text-right" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} value={field.value === undefined ? '' : String(field.value)} />
+                            <Input type="number" className="text-right" placeholder="0.00" {...field} />
                           )} />
                         </TableCell>
                         <TableCell>
                           <FormField control={form.control} name={`items.${index}.discount`} render={({ field }) => (
-                             <Input type="number" className="text-right" placeholder="0" {...field} onChange={e => field.onChange(e.target.value)} value={field.value === undefined ? '' : String(field.value)} />
+                             <Input type="number" className="text-right" placeholder="0" {...field} />
                           )} />
                         </TableCell>
                          <TableCell>
