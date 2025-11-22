@@ -175,9 +175,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         if (!viewingOrder) return null;
 
         const order = viewingOrder;
-        const isQuoteReady = order.status === 'quote-ready';
-        const isFileQuote = !!order.quotationFileUrl;
-        const showPricing = order.status !== 'pending-quote' && !isFileQuote;
+        const showPricing = order.status !== 'pending-quote' && !(order.quotationFileUrl && order.items.length === 0);
         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
         const totalDiscount = order.discount || 0;
         const finalTotal = order.totalAmount;
@@ -200,18 +198,30 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                         </Alert>
                     )}
                     
-                    {isFileQuote && (
-                        <div className="pt-4 border-t">
-                            <h4 className="font-semibold mb-2">Quotation File</h4>
-                                <a href={order.quotationFileUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm">
-                                    <Download className="mr-2 h-4 w-4" /> View Quotation
-                                </Button>
-                            </a>
+                    {(order.quotationFileUrl || order.customerRevisionUrl) && (
+                        <div className="pt-4 border-t space-y-4">
+                            <h4 className="font-semibold">Attached Files</h4>
+                            <div className="flex gap-4">
+                                {order.quotationFileUrl && (
+                                    <a href={order.quotationFileUrl} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="outline" size="sm">
+                                            <Download className="mr-2 h-4 w-4" /> View Original Quotation
+                                        </Button>
+                                    </a>
+                                )}
+                                {order.customerRevisionUrl && (
+                                    <a href={order.customerRevisionUrl} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="secondary" size="sm">
+                                            <Download className="mr-2 h-4 w-4" /> View Your Revision
+                                        </Button>
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     )}
 
-                    {order.items && order.items.length > 0 && !isFileQuote && (
+
+                    {order.items && order.items.length > 0 && (
                         <div>
                             <h4 className="font-semibold mb-2">Items</h4>
                             <div className="space-y-2">
@@ -437,7 +447,7 @@ function RfqList() {
                         <div><span className="font-semibold">Email:</span> {rfq.emailAddress}</div>
                         {rfq.companyName && <div><span className="font-semibold">Company:</span> {rfq.companyName}</div>}
                     </div>
-                     {rfq.requestType === 'list' && rfq.items && (
+                     {rfq.requestType === 'list' && rfq.items && rfq.items.length > 0 && (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -800,3 +810,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
