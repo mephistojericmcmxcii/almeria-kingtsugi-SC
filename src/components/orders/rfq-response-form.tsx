@@ -283,10 +283,10 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                     />
                     <div className="grid grid-cols-2 gap-4">
                         <FormField control={form.control} name="totalAmount" render={({ field }) => (
-                            <FormItem><FormLabel>Total Amount (from file)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Total Amount</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="discount" render={({ field }) => (
-                            <FormItem><FormLabel>Total Discount (from file, optional)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Total Discount (%)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                 </div>

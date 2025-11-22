@@ -798,7 +798,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     totalAmount = subtotal - totalDiscount + (responseData.deliveryFee || 0) + (responseData.packagingFee || 0);
                 } else { // 'uploadFile'
                     totalAmount = responseData.totalAmount || 0;
-                    totalDiscount = responseData.discount || 0;
+                    // For file upload, `responseData.discount` is a percentage
+                    const discountPercent = responseData.discount || 0;
+                    totalDiscount = totalAmount * (discountPercent / 100);
                 }
 
                 const newOrder: Omit<Order, 'id'> = {
@@ -1040,10 +1042,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-
-
-
-
-
-

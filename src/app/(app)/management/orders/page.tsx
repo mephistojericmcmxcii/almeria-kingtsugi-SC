@@ -289,14 +289,15 @@ export default function AllOrdersPage() {
         const isFileBased = !!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0;
 
         if (isFileBased) {
-            const baseAmount = selectedOrder.totalAmount || 0;
-            const discount = selectedOrder.discount || 0;
-            const final = baseAmount - discount + deliveryFee + packagingFee;
+            const baseAmount = selectedOrder.totalAmount || 0; // In file-based, totalAmount is the base
+            const discountAmount = selectedOrder.discount || 0;
+            const final = baseAmount - discountAmount + (selectedOrder.deliveryFee || 0) + (selectedOrder.packagingFee || 0);
+            const discountPercentage = baseAmount > 0 ? (discountAmount / baseAmount) * 100 : 0;
             return {
-                subtotal: baseAmount, // For file-based, subtotal is the base amount
-                totalDiscount: discount,
+                subtotal: baseAmount,
+                totalDiscount: discountAmount,
                 finalTotal: final,
-                totalDiscountPercentage: 0, // Not applicable
+                totalDiscountPercentage: discountPercentage,
             };
         }
 
@@ -535,14 +536,14 @@ export default function AllOrdersPage() {
                             <div className="flex justify-end text-sm">
                                 <div className="w-1/2 space-y-2">
                                      <div className="flex justify-between items-center font-medium">
-                                        <p>{!!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0 ? 'Base Amount' : 'Subtotal'}</p>
+                                        <p>Subtotal</p>
                                         <p>{formatCurrency(subtotal)}</p>
                                     </div>
                                     {totalDiscount > 0 && (
                                         <div className="flex justify-between items-center text-green-600">
                                             <span>Total Discount</span>
                                             <span>- {formatCurrency(totalDiscount)}
-                                                { (selectedOrder.items.length > 0) && ` (${totalDiscountPercentage.toFixed(1)}%)` }
+                                                { (totalDiscountPercentage > 0) && ` (${totalDiscountPercentage.toFixed(1)}%)` }
                                             </span>
                                         </div>
                                     )}
