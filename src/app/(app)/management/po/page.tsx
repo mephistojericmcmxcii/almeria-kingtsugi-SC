@@ -17,11 +17,13 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2 } from "lucide-react";
+import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2, Edit, PackagePlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
+const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog').then(module => ({ default: module.ViewPoDetailsDialog })));
+
 
 type PoTotals = {
     allocated: number;
@@ -43,6 +45,9 @@ export default function PoPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
+  const [poToView, setPoToView] = useState<PurchaseOrder | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
   const [purchaseOrders, setPurchaseOrders] = useState<DisplayPurchaseOrder[]>([]);
   const [arePOsLoading, setArePOsLoading] = useState(true);
 
@@ -125,9 +130,19 @@ export default function PoPage() {
     );
   }, [purchaseOrders, searchTerm]);
 
-  const handleView = (po: PurchaseOrder) => {
+  const handleAddItem = (po: PurchaseOrder) => {
     router.push(`/management/po/${po.id}`);
   };
+
+  const handleEdit = (po: PurchaseOrder) => {
+    setPoToEdit(po);
+    setIsAddDialogOpen(true);
+  };
+  
+  const handleView = (po: PurchaseOrder) => {
+    setPoToView(po);
+    setIsViewDialogOpen(true);
+  }
   
   const handleAddNew = () => {
     setPoToEdit(null);
@@ -159,6 +174,7 @@ export default function PoPage() {
       if (!open) {
           fetchPOs(); // Refetch POs when the dialog closes
       }
+      setPoToEdit(null);
       setIsAddDialogOpen(open);
   }
 
@@ -260,8 +276,14 @@ export default function PoPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                             <DropdownMenuItem onSelect={() => handleView(po)}>
-                              <Eye className="mr-2 h-4 w-4" /> View/Add Items
+                            <DropdownMenuItem onSelect={() => handleView(po)}>
+                                <Eye className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => handleAddItem(po)}>
+                              <PackagePlus className="mr-2 h-4 w-4" /> Add/Manage Items
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleEdit(po)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit PO
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => setPoToDelete(po)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
@@ -290,6 +312,14 @@ export default function PoPage() {
                 onOpenChange={handleDialogClose}
                 poToEdit={poToEdit}
             />
+            {poToView && (
+                 <ViewPoDetailsDialog
+                    isOpen={isViewDialogOpen}
+                    onOpenChange={setIsViewDialogOpen}
+                    po={poToView}
+                    totals={totalAmounts[poToView.id]}
+                />
+            )}
         </Suspense>
      
        <AlertDialog open={!!poToDelete} onOpenChange={(open) => !open && setPoToDelete(null)}>
