@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
 const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog').then(module => ({ default: module.ViewPoDetailsDialog })));
+const ViewPoItemsDialog = lazy(() => import('@/components/po/view-po-items-dialog').then(module => ({ default: module.ViewPoItemsDialog })));
 
 
 type PoTotals = {
@@ -48,6 +49,9 @@ export default function PoPage() {
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
   const [poToView, setPoToView] = useState<DisplayPurchaseOrder | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [poItemsToView, setPoItemsToView] = useState<DisplayPurchaseOrder | null>(null);
+  const [isViewItemsDialogOpen, setIsViewItemsDialogOpen] = useState(false);
+
 
   const [purchaseOrders, setPurchaseOrders] = useState<DisplayPurchaseOrder[]>([]);
   const [arePOsLoading, setArePOsLoading] = useState(true);
@@ -133,8 +137,13 @@ export default function PoPage() {
     );
   }, [purchaseOrders, searchTerm]);
 
-  const handleAddItem = (po: PurchaseOrder) => {
-    router.push(`/management/po/${po.id}`);
+  const handleItemsAction = (po: DisplayPurchaseOrder) => {
+    if (po.displayStatus === 'Delivered') {
+        setPoItemsToView(po);
+        setIsViewItemsDialogOpen(true);
+    } else {
+        router.push(`/management/po/${po.id}`);
+    }
   };
 
   const handleEdit = (po: PurchaseOrder) => {
@@ -288,8 +297,9 @@ export default function PoPage() {
                             <DropdownMenuItem onSelect={() => handleView(po)}>
                                 <Eye className="mr-2 h-4 w-4" /> View Details
                             </DropdownMenuItem>
-                             <DropdownMenuItem onSelect={() => handleAddItem(po)}>
-                              <PackagePlus className="mr-2 h-4 w-4" /> Add/Manage Items
+                             <DropdownMenuItem onSelect={() => handleItemsAction(po)}>
+                              <PackagePlus className="mr-2 h-4 w-4" /> 
+                              {po.displayStatus === 'Delivered' ? 'View Items' : 'Add/Manage Items'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleEdit(po)}>
                               <Edit className="mr-2 h-4 w-4" /> Edit PO
@@ -327,6 +337,13 @@ export default function PoPage() {
                     onOpenChange={handleViewDialogClose}
                     po={poToView}
                     totals={totalAmounts[poToView.id]}
+                />
+            )}
+             {poItemsToView && (
+                <ViewPoItemsDialog
+                    isOpen={isViewItemsDialogOpen}
+                    onOpenChange={setIsViewItemsDialogOpen}
+                    po={poItemsToView}
                 />
             )}
         </Suspense>
