@@ -175,7 +175,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         if (!viewingOrder) return null;
 
         const order = viewingOrder;
-        const showPricing = order.status !== 'pending-quote' && !(order.quotationFileUrl && order.items.length === 0);
+        const isFileBasedOrder = !!order.quotationFileUrl;
+        const showPricing = order.status !== 'pending-quote' && !isFileBasedOrder;
         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
         const totalDiscount = order.discount || 0;
         const finalTotal = order.totalAmount;
@@ -211,7 +212,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                 )}
                                 {order.customerRevisionUrl && (
                                     <a href={order.customerRevisionUrl} target="_blank" rel="noopener noreferrer">
-                                        <Button variant="secondary" size="sm">
+                                        <Button variant="outline" size="sm">
                                             <Download className="mr-2 h-4 w-4" /> View Your Revision
                                         </Button>
                                     </a>
@@ -810,4 +811,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
