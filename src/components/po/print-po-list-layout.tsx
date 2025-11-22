@@ -138,11 +138,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                 padding: 8px 6px;
             }
             .po-block {
-                border: none;
-                padding: 0;
+                border: 1px solid #ccc;
+                padding: 0.5rem;
                 margin-bottom: 1rem;
-                border-bottom: 1px solid #ccc;
-                padding-bottom: 1rem;
+                border-radius: 0;
             }
           }
         `}</style>
@@ -259,3 +258,4 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
 };
 
 export default PrintPoListLayout;
+
