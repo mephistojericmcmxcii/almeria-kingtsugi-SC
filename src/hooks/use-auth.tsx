@@ -149,7 +149,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Fetch all product variants once and cache them
   useEffect(() => {
-    // Only fetch if products haven't been loaded yet. Fire regardless of auth state.
     if (products === null) {
       setIsProductsLoading(true);
       const variantsQuery = query(collectionGroup(firestore, 'variants'));
@@ -179,7 +178,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsProductsLoading(false);
       });
     } else {
-        // If products are already loaded, just ensure loading is false.
         setIsProductsLoading(false);
     }
   }, [firestore, products, toast]);
@@ -1027,4 +1025,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
