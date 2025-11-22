@@ -239,10 +239,6 @@ export default function AllOrdersPage() {
         }
     };
     
-    const handleRespondToRfq = (rfq: QuotationRequest) => {
-      router.push(`/management/orders/rfq-response/${rfq.id}?userId=${rfq.userId}`);
-    };
-    
     const isStatusUpdateDisabled = (order: Order | null): boolean => {
         if (!order) return true;
         return ['completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
@@ -381,15 +377,9 @@ export default function AllOrdersPage() {
                                 <TableCell>{t.transactionType === 'order' ? formatCurrency((t as Order).totalAmount) : <span className="text-muted-foreground">N/A</span>}</TableCell>
                                 <TableCell>{t.transactionType === 'order' ? getStatusBadge((t as Order).status) : <Badge variant="outline">Submitted</Badge>}</TableCell>
                                 <TableCell className="text-right">
-                                    {t.transactionType === 'order' ? (
-                                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(t)}>
-                                            <Eye className="mr-2 h-4 w-4" /> View
-                                        </Button>
-                                    ) : (
-                                        <Button variant="default" size="sm" onClick={() => handleRespondToRfq(t as QuotationRequest)}>
-                                            <Send className="mr-2 h-4 w-4" /> Respond
-                                        </Button>
-                                    )}
+                                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(t)}>
+                                        <Eye className="mr-2 h-4 w-4" /> View
+                                    </Button>
                                 </TableCell>
                             </TableRow>
                             ))
@@ -581,6 +571,10 @@ export default function AllOrdersPage() {
                     isOpen={isRfqModalOpen}
                     onOpenChange={setIsRfqModalOpen}
                     rfq={selectedRfq}
+                    onRespond={() => {
+                        setIsRfqModalOpen(false);
+                        router.push(`/management/orders/rfq-response/${selectedRfq.id}?userId=${selectedRfq.userId}`);
+                    }}
                 />
             </Suspense>
         )}

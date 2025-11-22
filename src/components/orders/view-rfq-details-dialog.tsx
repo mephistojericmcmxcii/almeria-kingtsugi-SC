@@ -7,16 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Download, Info, Mail, Phone, Building } from 'lucide-react';
+import { Download, Info, Mail, Phone, Building, Send } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
 interface ViewRfqDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   rfq: QuotationRequest | null;
+  onRespond: () => void;
 }
 
-export function ViewRfqDetailsDialog({ isOpen, onOpenChange, rfq }: ViewRfqDetailsDialogProps) {
+export function ViewRfqDetailsDialog({ isOpen, onOpenChange, rfq, onRespond }: ViewRfqDetailsDialogProps) {
   if (!rfq) return null;
 
   return (
@@ -98,12 +99,14 @@ export function ViewRfqDetailsDialog({ isOpen, onOpenChange, rfq }: ViewRfqDetai
                 </Alert>
             )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+           <Button onClick={onRespond}>
+            <Send className="mr-2 h-4 w-4" />
+            Respond to Quotation
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
