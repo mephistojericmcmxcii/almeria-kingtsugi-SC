@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -32,20 +31,17 @@ import {
   Home,
   Package,
   FileQuestion,
+  Send,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { SendRfqForm } from "@/components/rfq/send-rfq-form";
-import { Dialog, DialogTrigger } from "../ui/dialog";
-
 
 const MainSidebar = () => {
   const pathname = usePathname();
   const { user, logout, showAdminOrderBadge, showAdminRfqBadge } = useAuth();
   const [managementOpen, setManagementOpen] = React.useState(false);
-  const [isRfqOpen, setIsRfqOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (pathname.startsWith('/management')) {
@@ -69,9 +65,9 @@ const MainSidebar = () => {
       adminOnly: false,
     },
     {
-      id: "rfq",
+      href: "/products/quotation-request",
       label: "Request for Quotation",
-      icon: FileQuestion,
+      icon: Send,
       adminOnly: false,
     },
      {
@@ -104,80 +100,64 @@ const MainSidebar = () => {
   );
 
   return (
-    <>
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2">
             <KintsugiLogo />
         </div>
       </SidebarHeader>
-       <Dialog open={isRfqOpen} onOpenChange={setIsRfqOpen}>
-          <SidebarMenu className="flex-1">
-            {menuItems.map((item) => {
-              if (item.adminOnly && user?.role !== 'admin') {
-                return null;
-              }
-              if (item.id === 'rfq') {
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <DialogTrigger asChild>
-                      <SidebarMenuButton tooltip={item.label}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </DialogTrigger>
-                  </SidebarMenuItem>
-                )
-              }
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href!}>
-                    <SidebarMenuButton
-                      isActive={pathname === item.href}
-                      tooltip={item.label}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
+      <SidebarMenu className="flex-1">
+        {menuItems.map((item) => {
+          if (item.adminOnly && user?.role !== 'admin') {
+            return null;
+          }
+          return (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href!}>
+                <SidebarMenuButton
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+            )
+        })}
+        
+        {user?.role === 'admin' && (
+            <Collapsible open={managementOpen} onOpenChange={setManagementOpen} asChild>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Management" isActive={isManagementActive}>
+                            <Briefcase />
+                            <span>Management</span>
+                            <ChevronDown className={cn("ml-auto transition-transform", managementOpen && "rotate-180")} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent asChild>
+                        <SidebarMenuSub>
+                            {managementMenuItems.map(item => (
+                                <SidebarMenuItem key={item.href}>
+                                    <Link href={item.href}>
+                                        <SidebarMenuSubButton isActive={pathname.startsWith(item.href)} className="relative">
+                                            <item.icon />
+                                            <span>{item.label}</span>
+                                            {item.notification && (
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
+                                            )}
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
                 </SidebarMenuItem>
-                )
-            })}
-            
-            {user?.role === 'admin' && (
-                <Collapsible open={managementOpen} onOpenChange={setManagementOpen} asChild>
-                    <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                            <SidebarMenuButton tooltip="Management" isActive={isManagementActive}>
-                                <Briefcase />
-                                <span>Management</span>
-                                <ChevronDown className={cn("ml-auto transition-transform", managementOpen && "rotate-180")} />
-                            </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent asChild>
-                            <SidebarMenuSub>
-                                {managementMenuItems.map(item => (
-                                    <SidebarMenuItem key={item.href}>
-                                        <Link href={item.href}>
-                                            <SidebarMenuSubButton isActive={pathname.startsWith(item.href)} className="relative">
-                                                <item.icon />
-                                                <span>{item.label}</span>
-                                                {item.notification && (
-                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
-                                                )}
-                                            </SidebarMenuSubButton>
-                                        </Link>
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenuSub>
-                        </CollapsibleContent>
-                    </SidebarMenuItem>
-                </Collapsible>
-            )}
-            
-          </SidebarMenu>
-          <SendRfqForm onOpenChange={setIsRfqOpen} />
-       </Dialog>
+            </Collapsible>
+        )}
+        
+      </SidebarMenu>
       <SidebarFooter>
         <SidebarMenuButton onClick={logout}>
             <LogOut />
@@ -185,7 +165,6 @@ const MainSidebar = () => {
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>
-    </>
   );
 };
 
