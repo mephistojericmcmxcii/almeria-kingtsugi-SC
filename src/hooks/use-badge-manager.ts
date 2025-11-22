@@ -75,6 +75,9 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
                 return updatedAt > lastViewedAdminOrders;
             });
             setShowAdminOrderBadge(hasNew);
+        }, (error) => {
+            console.error("Admin order listener error:", error);
+            setShowAdminOrderBadge(false); // Clear badge on error
         });
 
         // --- Admin RFQs Listener ---
@@ -85,6 +88,9 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
                 return rfq.createdAt && rfq.createdAt.toMillis() > lastViewedAdminRfqs;
             });
             setShowAdminRfqBadge(hasNew);
+        }, (error) => {
+            console.error("Admin RFQ listener error:", error);
+            setShowAdminRfqBadge(false); // Clear badge on error
         });
 
         return () => {
