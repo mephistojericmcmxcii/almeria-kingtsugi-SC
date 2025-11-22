@@ -24,14 +24,23 @@ const itemPricingSchema = z.object({
   quantity: z.number(),
   specs: z.string().optional(),
   price: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null) ? 0 : (typeof val === 'string' ? parseFloat(val) : val),
+    (val) => {
+        if (val === "" || val === undefined || val === null) return 0;
+        const processed = typeof val === 'string' ? parseFloat(val) : val;
+        return isNaN(processed) ? 0 : processed;
+    },
     z.coerce.number().min(0, 'Price must be a positive number.')
   ),
   discount: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null) ? 0 : (typeof val === 'string' ? parseFloat(val) : val),
+    (val) => {
+        if (val === "" || val === undefined || val === null) return 0;
+        const processed = typeof val === 'string' ? parseFloat(val) : val;
+        return isNaN(processed) ? 0 : processed;
+    },
     z.coerce.number().min(0).max(100).optional().default(0)
   ),
 });
+
 
 const baseSchema = z.object({
   deliveryFee: z.coerce.number().min(0).default(0),
@@ -184,12 +193,12 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                         <TableCell>{field.quantity}</TableCell>
                         <TableCell>
                           <FormField control={form.control} name={`items.${index}.price`} render={({ field }) => (
-                            <Input type="number" className="text-right" placeholder="0.00" {...field} value={field.value ?? ''}/>
+                            <Input type="number" className="text-right" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.value)} value={field.value === undefined ? '' : String(field.value)} />
                           )} />
                         </TableCell>
                         <TableCell>
                           <FormField control={form.control} name={`items.${index}.discount`} render={({ field }) => (
-                            <Input type="number" className="text-right" placeholder="0" {...field} value={field.value ?? ''} />
+                             <Input type="number" className="text-right" placeholder="0" {...field} onChange={e => field.onChange(e.target.value)} value={field.value === undefined ? '' : String(field.value)} />
                           )} />
                         </TableCell>
                          <TableCell>
