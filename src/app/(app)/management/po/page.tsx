@@ -23,6 +23,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
 
+type PoTotals = {
+    allocated: number;
+    utilized: number;
+}
+
 export default function PoPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
@@ -36,7 +41,7 @@ export default function PoPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [arePOsLoading, setArePOsLoading] = useState(true);
 
-  const [totalAmounts, setTotalAmounts] = useState<Record<string, number>>({});
+  const [totalAmounts, setTotalAmounts] = useState<Record<string, PoTotals>>({});
   const [areTotalsLoading, setAreTotalsLoading] = useState(true);
 
   const fetchPOs = async () => {
@@ -68,19 +73,28 @@ export default function PoPage() {
 
     const fetchTotals = async () => {
         setAreTotalsLoading(true);
-        const totals: Record<string, number> = {};
+        const totals: Record<string, PoTotals> = {};
         for (const po of purchaseOrders) {
-            if (po.totalAllocation) {
-                totals[po.id] = po.totalAllocation;
-                continue;
+            
+            if (po.totalAllocation !== undefined) {
+                 totals[po.id] = {
+                    allocated: po.totalAllocation,
+                    utilized: po.totalExpenses || 0
+                 };
+                 continue;
             }
+
             const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
             const itemsSnapshot = await getDocs(itemsCollectionRef);
-            const total = itemsSnapshot.docs.reduce((sum, doc) => {
+            
+            const poTotals = itemsSnapshot.docs.reduce((acc, doc) => {
                 const item = doc.data() as PurchaseOrderItem;
-                return sum + ((item.amount || 0) * (item.quantity || 0));
-            }, 0);
-            totals[po.id] = total;
+                acc.allocated += (item.amount || 0) * (item.quantity || 0);
+                acc.utilized += (item.actualAmount || 0) * (item.quantity || 0);
+                return acc;
+            }, { allocated: 0, utilized: 0 });
+
+            totals[po.id] = poTotals;
         }
         setTotalAmounts(totals);
         setAreTotalsLoading(false);
@@ -193,7 +207,8 @@ export default function PoPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Care Of</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead className="text-right">Total Allocation</TableHead>
+                  <TableHead className="text-right">Amount Utilized</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -206,6 +221,7 @@ export default function PoPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                     </TableRow>
                   ))
@@ -216,8 +232,11 @@ export default function PoPage() {
                       <TableCell>{format(po.date.toDate(), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{po.careOf}</TableCell>
                       <TableCell>{getStatusBadge(po.status)}</TableCell>
+                       <TableCell className="text-right font-medium">
+                        {areTotalsLoading ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id]?.allocated || 0)}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
-                        {areTotalsLoading ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id] || 0)}
+                        {areTotalsLoading ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id]?.utilized || 0)}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -242,7 +261,7 @@ export default function PoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No purchase orders found.
                     </TableCell>
                   </TableRow>
