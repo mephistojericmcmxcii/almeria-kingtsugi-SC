@@ -177,7 +177,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                 <Accordion type="single" collapsible className="w-full space-y-4">
                     {orders.map(order => {
                         const isQuoteReady = order.status === 'quote-ready';
-                        const showPricing = order.status !== 'pending-quote';
+                        const isFileQuote = !!order.quotationFileUrl;
+                        const showPricing = order.status !== 'pending-quote' && !isFileQuote;
                         const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
                         const totalDiscount = order.discount || 0;
                         const finalTotal = order.totalAmount;
@@ -249,52 +250,54 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
 
 
                                     {showPricing && (
-                                        <div className="space-y-2 pt-4 border-t">
-                                            <h4 className="font-semibold mb-2">Billing Summary</h4>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Subtotal</span>
-                                                <span>{formatCurrency(subtotal)}</span>
-                                            </div>
-                                            {(totalDiscount) > 0 && (
-                                                <div className="flex justify-between text-sm text-green-600">
-                                                    <span>Total Item Discounts</span>
-                                                    <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
-                                                </div>
-                                            )}
-                                            {(order.deliveryFee || 0) > 0 && (
+                                        <>
+                                            <div className="space-y-2 pt-4 border-t">
+                                                <h4 className="font-semibold mb-2">Billing Summary</h4>
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-muted-foreground">Delivery Fee</span>
-                                                    <span>{formatCurrency(order.deliveryFee!)}</span>
+                                                    <span className="text-muted-foreground">Subtotal</span>
+                                                    <span>{formatCurrency(subtotal)}</span>
                                                 </div>
-                                            )}
-                                            {(order.packagingFee || 0) > 0 && (
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-muted-foreground">Packaging Fee</span>
-                                                    <span>{formatCurrency(order.packagingFee!)}</span>
+                                                {(totalDiscount) > 0 && (
+                                                    <div className="flex justify-between text-sm text-green-600">
+                                                        <span>Total Item Discounts</span>
+                                                        <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
+                                                    </div>
+                                                )}
+                                                {(order.deliveryFee || 0) > 0 && (
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-muted-foreground">Delivery Fee</span>
+                                                        <span>{formatCurrency(order.deliveryFee!)}</span>
+                                                    </div>
+                                                )}
+                                                {(order.packagingFee || 0) > 0 && (
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-muted-foreground">Packaging Fee</span>
+                                                        <span>{formatCurrency(order.packagingFee!)}</span>
+                                                    </div>
+                                                )}
+                                                <Separator />
+                                                <div className="flex justify-between font-bold">
+                                                    <span>Total</span>
+                                                    <span>{formatCurrency(finalTotal)}</span>
                                                 </div>
-                                            )}
-                                            <Separator />
-                                            <div className="flex justify-between font-bold">
-                                                <span>Total</span>
-                                                <span>{formatCurrency(finalTotal)}</span>
                                             </div>
-                                        </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                                <div>
+                                                    <h4 className="font-semibold mb-2">Shipping Information</h4>
+                                                    <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                                                    <p className="text-sm text-muted-foreground">{order.shippingContactNumber}</p>
+                                                </div>
+                                                {order.status !== 'pending-quote' && (
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4"/>Payment Method</h4>
+                                                        <p className="text-sm text-muted-foreground">{order.paymentMethod.toUpperCase()}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
                                     )}
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Shipping Information</h4>
-                                            <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
-                                            <p className="text-sm text-muted-foreground">{order.shippingContactNumber}</p>
-                                        </div>
-                                         {order.status !== 'pending-quote' && (
-                                            <div>
-                                                <h4 className="font-semibold mb-2 flex items-center gap-2"><CreditCard className="w-4 h-4"/>Payment Method</h4>
-                                                <p className="text-sm text-muted-foreground">{order.paymentMethod.toUpperCase()}</p>
-                                            </div>
-                                        )}
-                                    </div>
-
                                     {order.statusHistory && order.statusHistory.length > 0 && (
                                         <div className="pt-4 border-t">
                                             <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4"/>Status History</h4>
@@ -740,3 +743,4 @@ export default function ProfilePage() {
     
 
     
+
