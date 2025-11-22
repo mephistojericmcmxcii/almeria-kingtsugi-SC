@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 function AppContent({ children }: { children: React.ReactNode }) {
   const { setOpen } = useSidebar();
   const pathname = usePathname();
-  const isHomePage = pathname === '/home';
+  const isHomePage = pathname === '/';
 
   return (
     <div className="flex flex-col w-full">
@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // If the authentication check is complete and there's still no user,
     // then it's safe to redirect to the login page.
     if (!isLoading && !user) {
-      router.push('/');
+      router.push('/login');
     }
   }, [user, isLoading, router]);
 

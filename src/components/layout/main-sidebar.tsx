@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -53,7 +54,7 @@ const MainSidebar = () => {
 
   const menuItems = [
     {
-      href: "/home",
+      href: "/",
       label: "Home",
       icon: Home,
       adminOnly: false,
@@ -159,10 +160,19 @@ const MainSidebar = () => {
         
       </SidebarMenu>
       <SidebarFooter>
-        <SidebarMenuButton onClick={logout}>
-            <LogOut />
-            <span>Logout</span>
-        </SidebarMenuButton>
+        {user ? (
+            <SidebarMenuButton onClick={logout}>
+                <LogOut />
+                <span>Logout</span>
+            </SidebarMenuButton>
+        ) : (
+             <Link href="/login">
+                <SidebarMenuButton>
+                    <LogOut className="rotate-180" />
+                    <span>Login</span>
+                </SidebarMenuButton>
+             </Link>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

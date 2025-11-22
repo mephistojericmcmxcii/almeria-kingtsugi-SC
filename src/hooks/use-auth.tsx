@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-      if (!user || pathname === '/') {
+      if (!user || pathname === '/login') {
           setCart(null);
           return;
       };
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Fetch all product variants once and cache them
   useEffect(() => {
-    if (!user || pathname === '/') {
+    if (!user || pathname === '/login') {
       setProducts(null);
       setIsProductsLoading(false);
       return;
@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, firestore, pathname, products, toast]);
 
   const fetchOrders = async () => {
-    if (!user || pathname === '/') {
+    if (!user || pathname === '/login') {
       setOrders(null);
       return;
     }
@@ -194,7 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (!user || pathname === '/') {
+    if (!user || pathname === '/login') {
       setOrders(null);
       return;
     }
@@ -306,7 +306,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        router.push('/home');
+        router.push('/');
 
     } catch (error: any) {
         console.error("Firebase login failed", error);
@@ -329,7 +329,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     role: "admin"
                 });
 
-                router.push('/home');
+                router.push('/');
              } catch (creationError: any) {
                  toast({ variant: "destructive", title: "Admin Creation Failed", description: creationError.message });
              }
@@ -384,7 +384,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Account Created!",
         description: "You have been successfully registered.",
       });
-      router.push('/home');
+      router.push('/');
 
     } catch (error: any) {
        console.error("Firebase registration failed", error);
@@ -447,7 +447,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             await setDoc(userRef, newUser);
         }
-        router.push('/home');
+        router.push('/');
 
     } catch (error: any) {
         console.error("Google Sign-In failed", error);
@@ -993,7 +993,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     await signOut(auth);
     setUser(null);
-    router.push('/');
+    router.push('/login');
   };
   
   const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
@@ -1012,4 +1012,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
