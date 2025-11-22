@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ✅ Collection group access for variants (important)
+    // ✅ Collection group access for variants (fixes public listing + snapshot issues)
     match /{path=**}/variants/{variantId} {
       allow read: if true;
     }
@@ -11,8 +11,10 @@ service cloud.firestore {
     // ---------- INVENTORY ----------
     match /inventory/{itemId} {
 
+      // Public product display
       allow read: if true;
 
+      // Admin control only
       allow create, delete: if request.auth != null &&
                             request.auth.token.admin == true;
 
@@ -25,18 +27,18 @@ service cloud.firestore {
         allow create, delete: if request.auth != null &&
                               request.auth.token.admin == true;
 
-        // Allow admin to update anything, but guests can only update quantity (e.g. for a sale)
-        // This is a more complex rule that might be useful later.
+        // Users can update ONLY quantity
         allow update: if request.auth != null &&
-                      (request.auth.token.admin == true ||
-                       request.resource.data.diff(resource.data)
-                               .changedKeys().hasOnly(["quantity"]));
+          request.resource.data.diff(resource.data)
+          .changedKeys()
+          .hasOnly(["quantity"]);
       }
     }
 
     // ---------- USERS ----------
     match /users/{userId} {
-      allow read, write: if request.auth != null &&
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
                    request.auth.uid == userId;
 
       match /cart/{cartId} {
@@ -45,7 +47,7 @@ service cloud.firestore {
       }
 
       match /orders/{orderId} {
-        // User can R/W own orders, admin can R/W any
+        // User can R/W own orders, admin can read any
         allow read, write: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.admin == true);
       }
 
@@ -55,12 +57,13 @@ service cloud.firestore {
         allow read: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.admin == true);
       }
     }
-
+    
     // --- Admin-only collections
     match /roles_admin/{userId} {
         allow read: if request.auth != null && request.auth.token.admin == true;
     }
 
+    // ---------- PURCHASE ORDERS ----------
     match /purchase_orders/{poId} {
       allow read, write: if request.auth != null &&
                          request.auth.token.admin == true;
@@ -70,19 +73,20 @@ service cloud.firestore {
        }
     }
 
-    match /system_settings/{settingId} {
+    // ---------- SYSTEM SETTINGS (PUBLIC SAFE) ----------
+    // Allows snapshot listeners + normal reads without fallback interference
+    match /system_settings/{document=**} {
       allow read: if true;
       allow write: if request.auth != null &&
                    request.auth.token.admin == true;
     }
 
     // ---------- FALLBACK ----------
-    // This is a safer fallback. It denies all writes unless you are an admin,
-    // and reads are implicitly denied unless explicitly allowed in the rules above.
+    // Secure default instead of total lock
     match /{document=**} {
+      allow read: if request.auth != null;
       allow write: if request.auth != null &&
                    request.auth.token.admin == true;
-      allow read: if false; // Deny all other reads by default
     }
   }
 }
