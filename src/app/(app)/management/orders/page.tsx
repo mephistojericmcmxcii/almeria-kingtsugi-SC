@@ -242,7 +242,7 @@ export default function AllOrdersPage() {
     
     const isStatusUpdateDisabled = (order: Order | null): boolean => {
         if (!order) return true;
-        return ['completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
+        return ['completed', 'cancelled', 'declined', 'quote-ready'].includes(order.status) || isUpdating;
     };
     
     const availableActions = selectedOrder ? STATUS_TRANSITIONS[selectedOrder.status] : [];
@@ -286,7 +286,7 @@ export default function AllOrdersPage() {
     const { subtotal, totalDiscount, finalTotal, totalDiscountPercentage } = useMemo(() => {
         if (!selectedOrder) return { subtotal: 0, totalDiscount: 0, finalTotal: 0, totalDiscountPercentage: 0 };
         
-        const isFileBased = !!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0;
+        const isFileBased = !!selectedOrder.quotationFileUrl;
 
         if (isFileBased) {
             // For file-based orders, derive the original subtotal from the stored final values.
@@ -477,7 +477,7 @@ export default function AllOrdersPage() {
                             </div>
                         )}
 
-                        {!(!!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0) && (
+                        {!(!!selectedOrder.quotationFileUrl) && (
                             <div>
                                 <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
                                 {selectedOrder.items.length > 0 ? (
@@ -632,5 +632,3 @@ export default function AllOrdersPage() {
         </>
     );
 }
-
-    
