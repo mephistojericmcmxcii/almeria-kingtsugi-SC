@@ -31,6 +31,7 @@ import {
 
 const AddEditVariantDialog = lazy(() => import('@/components/inventory/add-edit-variant-dialog').then(module => ({ default: module.AddEditVariantDialog })));
 const PrintLayout = lazy(() => import('@/components/inventory/print-layout'));
+const PrintBrochureLayout = lazy(() => import('@/components/inventory/print-brochure-layout').then(module => ({ default: module.PrintBrochureLayout })));
 
 export default function ItemVariantsPage() {
   const { firestore } = useFirebase();
@@ -163,11 +164,11 @@ export default function ItemVariantsPage() {
     }
   };
   
-  const handlePrint = () => {
+  const handlePrintList = () => {
     const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
     const printWindow = window.open('', '_blank', features);
     if (printWindow) {
-      printWindow.document.write('<html><head><title>Print Variants</title></head><body><div id="print-root"></div></body></html>');
+      printWindow.document.write('<div id="print-root"></div>');
       printWindow.document.close();
       
       const printRoot = printWindow.document.getElementById('print-root');
@@ -176,6 +177,25 @@ export default function ItemVariantsPage() {
         root.render(
           <Suspense fallback={<div>Loading print view...</div>}>
             <PrintLayout item={item} variants={variants} />
+          </Suspense>
+        );
+      }
+    }
+  };
+  
+  const handlePrintItem = (variant: InventoryVariant) => {
+    const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+    const printWindow = window.open('', '_blank', features);
+    if (printWindow) {
+      printWindow.document.write('<div id="print-root"></div>');
+      printWindow.document.close();
+      
+      const printRoot = printWindow.document.getElementById('print-root');
+      if (printRoot && variant) {
+        const root = createRoot(printRoot);
+        root.render(
+          <Suspense fallback={<div>Loading print view...</div>}>
+            <PrintBrochureLayout variant={variant} />
           </Suspense>
         );
       }
@@ -263,7 +283,7 @@ export default function ItemVariantsPage() {
                             <PackagePlus className="mr-2 h-4 w-4" /> Add Variant
                         </Button>
                     )}
-                    <Button variant="outline" onClick={handlePrint} disabled={isLoading || variants.length === 0}>
+                    <Button variant="outline" onClick={handlePrintList} disabled={isLoading || variants.length === 0}>
                         <Printer className="mr-2 h-4 w-4" /> Print List
                     </Button>
                  </div>
@@ -331,6 +351,10 @@ export default function ItemVariantsPage() {
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handlePrintItem(variant)}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Print Item
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => setVariantToDelete(variant)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -387,5 +411,3 @@ export default function ItemVariantsPage() {
     </div>
   );
 }
-
-    
