@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDoc, getDocs, runTransaction, Transaction, serverTimestamp } from 'firebase/firestore';
@@ -10,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useParams, useRouter } from 'next/navigation';
 
-import { ChevronLeft, PackagePlus, MoreHorizontal, Trash2, Edit, Package, Boxes, Tag } from "lucide-react";
+import { ChevronLeft, PackagePlus, MoreHorizontal, Trash2, Edit, Package, Boxes, Tag, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const AddEditVariantDialog = lazy(() => import('@/components/inventory/add-edit-variant-dialog').then(module => ({ default: module.AddEditVariantDialog })));
+const PrintLayout = lazy(() => import('@/components/inventory/print-layout').then(module => ({ default: module.PrintLayout })));
 
 export default function ItemVariantsPage() {
   const { firestore } = useFirebase();
@@ -160,6 +162,30 @@ export default function ItemVariantsPage() {
         fetchAllData(); // Refetch all data if a change was made
     }
   };
+  
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Print Variants</title></head><body><div id="print-root"></div></body></html>');
+      printWindow.document.close();
+      
+      const printRoot = printWindow.document.getElementById('print-root');
+      if (printRoot && item && variants) {
+        const root = createRoot(printRoot);
+        root.render(
+          <Suspense fallback={<div>Loading print view...</div>}>
+            <PrintLayout item={item} variants={variants} />
+          </Suspense>
+        );
+        
+        // Timeout to allow content to render before printing
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      }
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -236,11 +262,16 @@ export default function ItemVariantsPage() {
                     <CardTitle>Variants List</CardTitle>
                     <CardDescription>All specific product variants under {item?.name || 'this item'}.</CardDescription>
                 </div>
-                 {user?.role === 'admin' && (
-                    <Button onClick={() => setIsAddDialogOpen(true)}>
-                        <PackagePlus className="mr-2 h-4 w-4" /> Add Variant
+                 <div className="flex items-center gap-2">
+                    {user?.role === 'admin' && (
+                        <Button onClick={() => setIsAddDialogOpen(true)}>
+                            <PackagePlus className="mr-2 h-4 w-4" /> Add Variant
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={handlePrint} disabled={isLoading || variants.length === 0}>
+                        <Printer className="mr-2 h-4 w-4" /> Print List
                     </Button>
-                 )}
+                 </div>
             </div>
         </CardHeader>
         <CardContent>
