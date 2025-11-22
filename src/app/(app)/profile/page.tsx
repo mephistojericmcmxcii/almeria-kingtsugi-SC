@@ -184,9 +184,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         let totalDiscountPercentage = 0;
 
         if (isFileBasedOrder) {
-            // For file-based orders, totalAmount is the final net price.
-            // We back-calculate the subtotal for display purposes.
-            subtotal = order.totalAmount + (order.discount || 0) - (order.deliveryFee || 0) - (order.packagingFee || 0);
+            subtotal = order.totalAmount + totalDiscount - (order.deliveryFee || 0) - (order.packagingFee || 0);
             if(subtotal > 0) {
                 totalDiscountPercentage = (totalDiscount / subtotal) * 100;
             }
@@ -826,6 +824,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
 
 
