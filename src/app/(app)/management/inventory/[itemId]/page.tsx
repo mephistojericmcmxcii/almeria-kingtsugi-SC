@@ -178,12 +178,6 @@ export default function ItemVariantsPage() {
             <PrintLayout item={item} variants={variants} />
           </Suspense>
         );
-        
-        // Timeout to allow content to render before printing
-        setTimeout(() => {
-          printWindow.print();
-          printWindow.close();
-        }, 500);
       }
     }
   };
