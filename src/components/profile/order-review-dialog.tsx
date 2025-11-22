@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState } from 'react';
@@ -27,7 +26,7 @@ interface OrderReviewDialogProps {
 
 export function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: OrderReviewDialogProps) {
     const [review, setReview] = useState('');
-    const [rating, setRating] = useState(0);
+    const [rating, setRating] = useState(1);
     const [hoverRating, setHoverRating] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,7 +34,7 @@ export function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: Ord
         setIsSubmitting(true);
         await onSubmit({ review: review || undefined, rating: rating > 0 ? rating : undefined });
         setIsSubmitting(false);
-        setRating(0);
+        setRating(1);
         setReview('');
         onOpenChange(false);
     };
