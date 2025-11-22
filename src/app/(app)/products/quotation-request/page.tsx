@@ -54,13 +54,13 @@ const baseSchema = z.object({
 const listSchema = baseSchema.extend({
     requestType: z.literal('list'),
     items: z.array(itemSchema).min(1, 'Please add at least one item.'),
-    fileAttachment: z.any().optional(), // Make sure fileAttachment is optional here
+    fileAttachment: z.any().optional(),
 });
 
 const attachmentSchema = baseSchema.extend({
     requestType: z.literal('attachment'),
     fileAttachment: z.any().refine(file => file instanceof File, { message: 'Please attach a file.' }),
-    items: z.array(itemSchema).optional(), // Make sure items is optional here
+    items: z.array(itemSchema).optional(),
 });
 
 const formSchema = z.discriminatedUnion('requestType', [
@@ -78,12 +78,6 @@ export default function RfqPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [formData, setFormData] = useState<FormValues | null>(null);
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      dismissAdminRfqBadge();
-    }
-  },[user, dismissAdminRfqBadge]);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -98,7 +92,7 @@ export default function RfqPage() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'items',
   });
@@ -106,17 +100,33 @@ export default function RfqPage() {
   const requestType = form.watch('requestType');
 
   useEffect(() => {
-    form.reset({
-      requestType: 'list',
-      customerName: user?.displayName || '',
-      contactNumber: user?.contactNumber || '',
-      emailAddress: user?.email || '',
-      companyName: '',
-      items: [{ name: '', quantity: 1, specs: '' }],
-      additionalDetails: '',
-      fileAttachment: undefined,
-    });
-  }, [user, form]);
+    if (user) {
+        form.reset({
+        requestType: 'list',
+        customerName: user.displayName || '',
+        contactNumber: user.contactNumber || '',
+        emailAddress: user.email || '',
+        companyName: '',
+        items: [{ name: '', quantity: 1, specs: '' }],
+        additionalDetails: '',
+        fileAttachment: undefined,
+        });
+    }
+  }, [user, form.reset]);
+  
+  useEffect(() => {
+    // When switching modes, clear the irrelevant fields to prevent validation conflicts.
+    if (requestType === 'attachment') {
+        replace([]); // Clear the items array
+    } else if (requestType === 'list') {
+        form.setValue('fileAttachment', undefined);
+        if (fields.length === 0) {
+            append({ name: '', quantity: 1, specs: '' }); // Add a default row if list is empty
+        }
+    }
+    // Clear validation errors when switching
+    form.clearErrors();
+  }, [requestType, form, replace, append, fields.length]);
   
   const onFormSubmit = (data: FormValues) => {
     setFormData(data);
@@ -141,9 +151,8 @@ export default function RfqPage() {
 
         const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
         
-        // This is the key fix: prepare data based on requestType
         const dataToSave: any = {
-            ...baseSchema.parse(formData), // Save common fields
+            ...baseSchema.parse(formData),
             userId: user.id,
             createdAt: serverTimestamp(),
             requestType: formData.requestType,
@@ -255,6 +264,7 @@ export default function RfqPage() {
                                     <Plus className="mr-2"/> Add Row
                                 </Button>
                                 {form.formState.errors.items?.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.root.message}</p>}
+                                 {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>}
                             </div>
                         )}
                         
@@ -280,7 +290,7 @@ export default function RfqPage() {
                         )}/>
 
                         <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={isSubmitting} size="lg">
+                            <Button type="submit" disabled={isSubmitting || !form.formState.isValid} size="lg">
                                 {isSubmitting ? 'Submitting...' : 'Submit Request for Quotation'}
                             </Button>
                         </div>
@@ -306,3 +316,5 @@ export default function RfqPage() {
     </>
   );
 }
+
+    
