@@ -28,6 +28,11 @@ type PoTotals = {
     utilized: number;
 }
 
+type DisplayPurchaseOrder = PurchaseOrder & {
+    displayStatus: PurchaseOrder['status'];
+};
+
+
 export default function PoPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
@@ -38,7 +43,7 @@ export default function PoPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<DisplayPurchaseOrder[]>([]);
   const [arePOsLoading, setArePOsLoading] = useState(true);
 
   const [totalAmounts, setTotalAmounts] = useState<Record<string, PoTotals>>({});
@@ -47,17 +52,61 @@ export default function PoPage() {
   const fetchPOs = async () => {
     if (!firestore) return;
     setArePOsLoading(true);
+    setAreTotalsLoading(true);
     try {
         const poCollectionRef = collection(firestore, 'purchase_orders');
         const snapshot = await getDocs(poCollectionRef);
         const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder))
-                              .filter(po => po.entryType !== 'manual'); // Exclude manual entries
-        setPurchaseOrders(pos);
+                              .filter(po => po.entryType !== 'manual'); 
+
+        const totals: Record<string, PoTotals> = {};
+        const displayPos: DisplayPurchaseOrder[] = [];
+
+        for (const po of pos) {
+            const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
+            const itemsSnapshot = await getDocs(itemsCollectionRef);
+            
+            let totalItems = 0;
+            let itemsWithActualAmount = 0;
+
+            const poTotals = itemsSnapshot.docs.reduce((acc, doc) => {
+                const item = doc.data() as PurchaseOrderItem;
+                totalItems++;
+                if (item.actualAmount && item.actualAmount > 0) {
+                    itemsWithActualAmount++;
+                }
+                acc.allocated += (item.amount || 0) * (item.quantity || 0);
+                acc.utilized += (item.actualAmount || 0) * (item.quantity || 0);
+                return acc;
+            }, { allocated: 0, utilized: 0 });
+
+            if (po.totalAllocation !== undefined && po.totalAllocation !== null) {
+                poTotals.allocated = po.totalAllocation;
+            }
+            totals[po.id] = poTotals;
+            
+            let displayStatus: PurchaseOrder['status'] = po.status;
+            if (po.status !== 'Cancelled' && po.status !== 'Delivered') { // Don't override these final statuses
+                if (totalItems > 0 && totalItems === itemsWithActualAmount) {
+                    displayStatus = 'Completed';
+                } else if (totalItems > 0) {
+                    displayStatus = 'Lacking';
+                }
+            }
+
+
+            displayPos.push({ ...po, displayStatus });
+        }
+        
+        setPurchaseOrders(displayPos);
+        setTotalAmounts(totals);
+
     } catch (error) {
         console.error("Error fetching POs:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not load purchase orders.' });
     } finally {
         setArePOsLoading(false);
+        setAreTotalsLoading(false);
     }
   };
 
@@ -67,41 +116,6 @@ export default function PoPage() {
       }
   }, [firestore, toast]);
   
-  useEffect(() => {
-    if (purchaseOrders.length === 0) {
-        setAreTotalsLoading(false);
-        return;
-    }
-
-    const fetchTotals = async () => {
-        setAreTotalsLoading(true);
-        const totals: Record<string, PoTotals> = {};
-        for (const po of purchaseOrders) {
-            
-            const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
-            const itemsSnapshot = await getDocs(itemsCollectionRef);
-            
-            const poTotals = itemsSnapshot.docs.reduce((acc, doc) => {
-                const item = doc.data() as PurchaseOrderItem;
-                acc.allocated += (item.amount || 0) * (item.quantity || 0);
-                acc.utilized += (item.actualAmount || 0) * (item.quantity || 0);
-                return acc;
-            }, { allocated: 0, utilized: 0 });
-
-            // If a totalAllocation is manually set on the PO, it overrides the item sum
-            if (po.totalAllocation !== undefined && po.totalAllocation !== null) {
-                poTotals.allocated = po.totalAllocation;
-            }
-
-            totals[po.id] = poTotals;
-        }
-        setTotalAmounts(totals);
-        setAreTotalsLoading(false);
-    };
-
-    fetchTotals();
-  }, [purchaseOrders, firestore]);
-
 
   const filteredPos = useMemo(() => {
     if (!purchaseOrders) return [];
@@ -230,7 +244,7 @@ export default function PoPage() {
                       <TableCell className="font-medium">{po.poNumber}</TableCell>
                       <TableCell>{format(po.date.toDate(), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{po.careOf}</TableCell>
-                      <TableCell>{getStatusBadge(po.status)}</TableCell>
+                      <TableCell>{getStatusBadge(po.displayStatus)}</TableCell>
                        <TableCell className="text-right font-medium">
                         {areTotalsLoading ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id]?.allocated || 0)}
                       </TableCell>
