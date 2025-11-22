@@ -139,6 +139,8 @@ export type PurchaseOrder = {
   // Manual entry fields
   totalAllocation?: number;
   totalExpenses?: number;
+  salesInvoice?: string;
+  deliveryReceipt?: string;
 };
 
 export type QuotationRequestItem = {

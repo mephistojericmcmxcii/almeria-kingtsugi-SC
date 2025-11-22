@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,8 @@ import type { DisplayPurchaseOrder } from '@/app/(app)/management/po/page';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
@@ -24,17 +27,22 @@ const formatCurrency = (amount: number) => {
 export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
   const { updatePoStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [salesInvoice, setSalesInvoice] = useState('');
+  const [deliveryReceipt, setDeliveryReceipt] = useState('');
+
 
   if (!po) return null;
 
   const handleUpdateStatus = async () => {
     setIsUpdating(true);
-    const success = await updatePoStatus(po.id, 'Delivered');
+    const success = await updatePoStatus(po.id, 'Delivered', { salesInvoice, deliveryReceipt });
     if (success) {
         onOpenChange(true); // Signal that a change was made
     }
     setIsUpdating(false);
   }
+  
+  const isMarkAsDeliveredDisabled = isUpdating || !salesInvoice || !deliveryReceipt;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => onOpenChange(false)}>
@@ -79,11 +87,27 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
                     <p className="font-bold text-lg">{formatCurrency(totals?.utilized || 0)}</p>
                 </div>
             </div>
+
+            {po.displayStatus === 'Completed' && (
+                <div className="space-y-4 border-t pt-4">
+                    <h3 className="font-semibold text-foreground">Delivery Confirmation</h3>
+                     <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                             <Label htmlFor="salesInvoice">Sales Invoice #</Label>
+                             <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} />
+                         </div>
+                         <div className="space-y-2">
+                             <Label htmlFor="deliveryReceipt">Delivery Receipt #</Label>
+                             <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} />
+                         </div>
+                     </div>
+                </div>
+            )}
         </div>
         <DialogFooter className="sm:justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
           {po.displayStatus === 'Completed' && (
-            <Button onClick={handleUpdateStatus} disabled={isUpdating}>
+            <Button onClick={handleUpdateStatus} disabled={isMarkAsDeliveredDisabled}>
                 {isUpdating ? 'Updating...' : 'Mark as Delivered'}
             </Button>
           )}

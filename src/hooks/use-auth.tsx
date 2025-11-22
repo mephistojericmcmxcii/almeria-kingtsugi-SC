@@ -61,7 +61,7 @@ interface AuthContextType {
       rating?: number;
     }
 ) => Promise<boolean>;
-  updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
+  updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string }) => Promise<boolean>;
   uploadFile: (file: File, path: string, fileName: string) => Promise<string | null>;
   showCartBadge: boolean;
   showQuoteReadyBadge: boolean;
@@ -978,13 +978,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updatePoStatus = async (poId: string, newStatus: PurchaseOrderStatus): Promise<boolean> => {
+    const updatePoStatus = async (poId: string, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string }): Promise<boolean> => {
         const poRef = doc(firestore, 'purchase_orders', poId);
         try {
-            await updateDoc(poRef, {
+            const dataToUpdate: any = {
                 status: newStatus,
                 updatedAt: serverTimestamp(),
-            });
+            };
+
+            if (newStatus === 'Delivered') {
+                if (details?.salesInvoice) dataToUpdate.salesInvoice = details.salesInvoice;
+                if (details?.deliveryReceipt) dataToUpdate.deliveryReceipt = details.deliveryReceipt;
+            }
+
+            await updateDoc(poRef, dataToUpdate);
+            
             toast({
                 title: 'PO Status Updated',
                 description: `The purchase order has been marked as ${newStatus}.`,
@@ -1001,7 +1009,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const permissionError = new FirestorePermissionError({
                     path: poRef.path,
                     operation: 'update',
-                    requestResourceData: { status: newStatus },
+                    requestResourceData: { status: newStatus, ...details },
                 });
                 errorEmitter.emit('permission-error', permissionError);
             }

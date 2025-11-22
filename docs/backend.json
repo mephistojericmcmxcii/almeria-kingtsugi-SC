@@ -486,6 +486,14 @@
         "totalExpenses": {
             "type": "number",
             "description": "The total actual expenses for a manually entered PO."
+        },
+        "salesInvoice": {
+            "type": "string",
+            "description": "The sales invoice number associated with the delivery."
+        },
+        "deliveryReceipt": {
+            "type": "string",
+            "description": "The delivery receipt number."
         }
       },
       "required": ["poNumber", "date", "careOf", "status", "source"]
