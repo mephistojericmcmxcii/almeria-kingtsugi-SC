@@ -56,7 +56,7 @@ const priceListSchema = baseSchema.extend({
 
 const uploadFileSchema = baseSchema.extend({
   responseType: z.literal('uploadFile'),
-  quotationFile: z.any().refine(file => file instanceof File, { message: 'A file is required for this response type.' }),
+  quotationFile: z.any().refine(fileList => fileList instanceof FileList && fileList.length > 0, { message: 'A file is required for this response type.' }),
   items: z.array(itemPricingSchema).optional(),
 });
 
@@ -89,6 +89,8 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
   });
 
   const responseType = form.watch('responseType');
+  const quotationFileRegistration = form.register("quotationFile");
+
 
   useEffect(() => {
     form.clearErrors();
@@ -99,7 +101,8 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
     
     let fileUrl = '';
     if (data.responseType === 'uploadFile' && data.quotationFile) {
-        const url = await uploadFile(data.quotationFile, 'quotation-responses');
+        const file = (data.quotationFile as FileList)[0];
+        const url = await uploadFile(file, 'quotation-responses');
         if (!url) {
             setIsSubmitting(false);
             return; // uploadFile will show a toast on error
@@ -196,14 +199,34 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                         </TableCell>
                         <TableCell>{field.quantity}</TableCell>
                         <TableCell>
-                          <FormField control={form.control} name={`items.${index}.price`} render={({ field }) => (
-                            <Input type="number" className="text-right" placeholder="0.00" {...field} />
-                          )} />
+                           <FormField
+                              control={form.control}
+                              name={`items.${index}.price`}
+                              render={({ field }) => (
+                                <Input
+                                  type="number"
+                                  className="text-right"
+                                  placeholder="0.00"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                />
+                              )}
+                            />
                         </TableCell>
                         <TableCell>
-                          <FormField control={form.control} name={`items.${index}.discount`} render={({ field }) => (
-                             <Input type="number" className="text-right" placeholder="0" {...field} />
-                          )} />
+                          <FormField
+                              control={form.control}
+                              name={`items.${index}.discount`}
+                              render={({ field }) => (
+                                <Input
+                                  type="number"
+                                  className="text-right"
+                                  placeholder="0"
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                />
+                              )}
+                            />
                         </TableCell>
                          <TableCell>
                             <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
@@ -215,22 +238,17 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                   </TableBody>
                 </Table>
                 {form.formState.errors.items?.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.root.message}</p>}
+                 {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>}
               </div>
             ) : (
-                <FormField
-                    control={form.control}
-                    name="quotationFile"
-                    render={({ field: { onChange, ...rest } }) => (
-                        <FormItem>
-                            <FormLabel>Quotation File</FormLabel>
-                            <FormControl>
-                                <Input type="file" accept=".pdf" onChange={e => onChange(e.target.files?.[0])} {...rest} />
-                            </FormControl>
-                            <FormDescription>Upload your official quotation document (PDF only).</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                <FormItem>
+                    <FormLabel>Quotation File</FormLabel>
+                    <FormControl>
+                        <Input type="file" accept=".pdf" {...quotationFileRegistration} />
+                    </FormControl>
+                    <FormDescription>Upload your official quotation document (PDF only).</FormDescription>
+                    <FormMessage>{form.formState.errors.quotationFile?.message?.toString()}</FormMessage>
+                </FormItem>
             )}
 
             <div className="grid grid-cols-2 gap-4">
