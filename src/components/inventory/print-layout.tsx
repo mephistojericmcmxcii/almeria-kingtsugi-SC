@@ -21,10 +21,8 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
   });
 
   return (
-    <html>
-      <head>
-        <title>Print Variants - {item.name}</title>
-        <style>{`
+    <>
+      <style>{`
           @media print {
             @page {
               size: A4;
@@ -80,8 +78,6 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
             }
           }
         `}</style>
-      </head>
-      <body>
         <div className="print-container">
           <div className="header">
             {/* You can add a logo or static header content here */}
@@ -129,8 +125,7 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
             Page <span className="page-number"></span>
            </div>
         </div>
-      </body>
-    </html>
+    </>
   );
 };
 
