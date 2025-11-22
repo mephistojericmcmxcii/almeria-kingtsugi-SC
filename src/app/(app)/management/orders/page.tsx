@@ -447,7 +447,7 @@ export default function AllOrdersPage() {
                                 )}
                                 {selectedOrder.customerRevisionUrl && (
                                     <a href={selectedOrder.customerRevisionUrl} target="_blank" rel="noopener noreferrer">
-                                        <Button variant="secondary" size="sm"><Download className="mr-2 h-4 w-4" /> View Customer Revision</Button>
+                                        <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> View Customer Revision</Button>
                                     </a>
                                 )}
                                 </div>
@@ -607,3 +607,5 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    
