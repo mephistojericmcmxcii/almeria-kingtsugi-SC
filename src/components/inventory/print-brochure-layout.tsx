@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -38,9 +37,9 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
   const renderSpecifications = () => {
     if (!variant.specifications) return null;
 
-    if (typeof variant.specifications === 'string') {
+    if (typeof variant.specifications === 'string' && variant.specifications) {
       return (
-        <div>
+        <div className="description-section">
           <h3>Specifications</h3>
           <p>{variant.specifications}</p>
         </div>
@@ -49,7 +48,7 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
     
     if (Array.isArray(variant.specifications) && variant.specifications.length > 0) {
       return (
-        <div>
+        <div className="description-section">
           <h3>Specifications</h3>
           <table className="structured-specs-table">
             <tbody>
@@ -115,7 +114,7 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
               padding-top: 1rem;
               border-top: 1px solid #e5e7eb;
            }
-          .brochure {
+          .brochure-main {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
@@ -148,7 +147,7 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
               margin: 0.25rem 0 1rem 0;
           }
           .description-section {
-              margin-top: auto;
+              margin-top: 2rem;
               padding-top: 1rem;
               border-top: 1px solid #f3f4f6;
           }
@@ -188,12 +187,13 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
             font-size: 10pt;
           }
           .structured-specs-table td {
-            padding: 0.4rem 0;
-            border-bottom: 1px solid #f3f4f6;
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #e5e7eb;
           }
           .structured-specs-table td:first-child {
             font-weight: 600;
-            width: 40%;
+            width: 30%;
+            background-color: #f9fafb;
           }
           
           @media print {
@@ -217,46 +217,48 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
              <h1>Kintsugi Variety Shop</h1>
           </header>
           
-          <main className="brochure">
-            <img src={placeholder.imageUrl} alt={variant.parentName} className="brochure-image" />
-            <div className="brochure-details">
-                <div>
-                    <h2>{variant.parentName}</h2>
-                    <p className="brand">{variant.brand}</p>
-                </div>
-                
-                <table className="specs-table">
-                    <tbody>
-                        <tr>
-                            <td>Variation</td>
-                            <td>{variant.variation}</td>
-                        </tr>
-                        {variant.model && (
+          <main>
+            <div className="brochure-main">
+                <img src={placeholder.imageUrl} alt={variant.parentName} className="brochure-image" />
+                <div className="brochure-details">
+                    <div>
+                        <h2>{variant.parentName}</h2>
+                        <p className="brand">{variant.brand}</p>
+                    </div>
+                    
+                    <table className="specs-table">
+                        <tbody>
                             <tr>
-                                <td>Model</td>
-                                <td>{variant.model}</td>
+                                <td>Variation</td>
+                                <td>{variant.variation}</td>
                             </tr>
-                        )}
-                        <tr>
-                            <td>Category</td>
-                            <td>{variant.parentCategory}</td>
-                        </tr>
-                        <tr>
-                            <td>Price</td>
-                            <td>{formatCurrency(variant.price)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div className="description-section">
-                    {variant.description && (
-                        <div>
-                            <h3>Description</h3>
-                            <p>{variant.description}</p>
-                        </div>
-                    )}
-                    {renderSpecifications()}
+                            {variant.model && (
+                                <tr>
+                                    <td>Model</td>
+                                    <td>{variant.model}</td>
+                                </tr>
+                            )}
+                            <tr>
+                                <td>Category</td>
+                                <td>{variant.parentCategory}</td>
+                            </tr>
+                            <tr>
+                                <td>Price</td>
+                                <td>{formatCurrency(variant.price)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+
+            <div className="full-width-section">
+                {variant.description && (
+                    <div className="description-section">
+                        <h3>Description</h3>
+                        <p>{variant.description}</p>
+                    </div>
+                )}
+                {renderSpecifications()}
             </div>
           </main>
 
@@ -269,5 +271,3 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
 };
 
 export default PrintBrochureLayout;
-
-    
