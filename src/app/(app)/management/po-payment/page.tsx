@@ -85,14 +85,14 @@ export default function PoPaymentPage() {
               });
           }
 
-          const taxDeduction = po.taxDeduction || 0;
+          const amountDeposited = po.amountDeposited || 0;
           
           return {
             id: po.id,
             po: po,
             totalAllocation,
             totalExpenses,
-            profit: totalAllocation - totalExpenses - taxDeduction,
+            profit: amountDeposited - totalExpenses,
             paymentStatus: po.paymentStatus,
           };
         });
@@ -299,7 +299,7 @@ export default function PoPaymentPage() {
                 <TableHead className="w-[15%]">Source</TableHead>
                 <TableHead className="text-right w-[15%]">Total Allocation</TableHead>
                 <TableHead className="text-right w-[15%]">Total Expenses</TableHead>
-                <TableHead className="text-right w-[15%]">Tax Deducted</TableHead>
+                <TableHead className="text-right w-[15%]">Amount Deposited</TableHead>
                 <TableHead className="text-right w-[15%]">Profit / Loss</TableHead>
                 <TableHead className="text-center w-[15%]">Payment Status</TableHead>
                 <TableHead className="text-right w-[10%]">Actions</TableHead>
@@ -326,7 +326,7 @@ export default function PoPaymentPage() {
                     <TableCell>{summary.po.source}</TableCell>
                     <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
-                    <TableCell className="text-right text-orange-600">{formatCurrency(summary.po.taxDeduction || 0)}</TableCell>
+                    <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
                     <TableCell className={cn(
                         "text-right font-bold",
                         summary.profit >= 0 ? "text-green-600" : "text-red-600"
