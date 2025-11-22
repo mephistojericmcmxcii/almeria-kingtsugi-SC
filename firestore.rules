@@ -3,83 +3,86 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper function: check admin ---
-    function isAdmin() {
-      return request.auth.token.admin == true;
+    // ✅ Collection group access for variants (important)
+    match /{path=**}/variants/{variantId} {
+      allow read: if true;
     }
 
-    // --- Users collection ---
-    match /users/{userId} {
-      // A newly created user can create their own document.
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // An existing user can only read, update, or delete their own document.
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-
-      // Admin can read/write all users
-      allow read, write: if isAdmin();
-
-      // --- Cart subcollection ---
-      match /cart/{cartItemId} {
-        // A user can read/write their own cart items
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      
-      // --- Orders subcollection ---
-      match /orders/{orderId} {
-        // User can R/W their own orders subcollection. Admin can R/W any.
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-        allow read, write: if isAdmin();
-      }
-
-      // --- RFQ subcollection ---
-      match /rfq/{rfqId} {
-        // User can create their own RFQ
-        allow create: if request.auth != null && request.auth.uid == userId;
-        // User can read their own RFQs
-        allow read: if request.auth != null && request.auth.uid == userId;
-        // Admins can read any RFQ
-        allow read: if isAdmin();
-        // RFQs are not updatable/deletable by users after creation.
-        allow update, delete: if isAdmin();
-      }
-    }
-    
-    // --- Inventory collection ---
+    // ---------- INVENTORY ----------
     match /inventory/{itemId} {
 
-      // Any authenticated user can write to inventory
-      allow write: if request.auth != null;
-
-      // All users: read only for parent item
       allow read: if true;
 
-      // --- Variants subcollection ---
+      allow create, delete: if request.auth != null &&
+                            request.auth.token.admin == true;
+
+      allow update: if request.auth != null &&
+                    request.auth.token.admin == true;
+
       match /variants/{variantId} {
-        // Allow reads for authenticated users (for dashboard)
         allow read: if true;
-        
-        // Allow full writes for any authenticated user
-        allow write: if request.auth != null;
+
+        allow create, delete: if request.auth != null &&
+                              request.auth.token.admin == true;
+
+        // Allow admin to update anything, but guests can only update quantity (e.g. for a sale)
+        // This is a more complex rule that might be useful later.
+        allow update: if request.auth != null &&
+                      (request.auth.token.admin == true ||
+                       request.resource.data.diff(resource.data)
+                               .changedKeys().hasOnly(["quantity"]));
       }
     }
-    
-    // --- System Settings (Public Read) ---
-    match /system_settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
+
+    // ---------- USERS ----------
+    match /users/{userId} {
+      allow read, write: if request.auth != null &&
+                   request.auth.uid == userId;
+
+      match /cart/{cartId} {
+        allow read, write: if request.auth != null &&
+                           request.auth.uid == userId;
+      }
+
+      match /orders/{orderId} {
+        // User can R/W own orders, admin can R/W any
+        allow read, write: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.admin == true);
+      }
+
+      match /rfq/{rfqId} {
+        // User can R/W own RFQs, admin can read any
+        allow write: if request.auth != null && request.auth.uid == userId;
+        allow read: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.admin == true);
+      }
     }
 
-    // --- Admin Roles collection ---
+    // --- Admin-only collections
     match /roles_admin/{userId} {
-      // Admins can read this to check other admins, but never write.
-      // Writes should only happen from a secure backend.
-      allow read: if isAdmin();
+        allow read: if request.auth != null && request.auth.token.admin == true;
     }
-    
-    // Fallback: deny everything else
+
+    match /purchase_orders/{poId} {
+      allow read, write: if request.auth != null &&
+                         request.auth.token.admin == true;
+       match /items/{itemId} {
+         allow read, write: if request.auth != null &&
+                         request.auth.token.admin == true;
+       }
+    }
+
+    match /system_settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                   request.auth.token.admin == true;
+    }
+
+    // ---------- FALLBACK ----------
+    // This is a safer fallback. It denies all writes unless you are an admin,
+    // and reads are implicitly denied unless explicitly allowed in the rules above.
     match /{document=**} {
-      allow read, write: if false;
+      allow write: if request.auth != null &&
+                   request.auth.token.admin == true;
+      allow read: if false; // Deny all other reads by default
     }
   }
 }
