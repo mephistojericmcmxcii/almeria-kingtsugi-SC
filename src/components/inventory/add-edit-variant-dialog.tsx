@@ -92,6 +92,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
       costPrice: 0,
       warningLimit: 10,
       description: '',
+      specifications: '',
       imageUrl: '',
   };
 
@@ -112,6 +113,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             costPrice: variantToEdit.costPrice || 0,
             warningLimit: variantToEdit.warningLimit || 10,
             description: variantToEdit.description || '',
+            specifications: variantToEdit.specifications || '',
             imageUrl: variantToEdit.imageUrl || '',
         } : initialFormState;
 
@@ -246,7 +248,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         {isSubmitting && (
             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center z-20 rounded-lg">
                 <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -275,14 +277,14 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
                 </RadioGroup>
             </div>
             
-            <div className={cn("space-y-2", imageSource !== 'url' && 'hidden')}>
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl ?? ''} onChange={handleInputChange} disabled={isSubmitting} />
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl" style={{ display: imageSource === 'url' ? 'block' : 'none' }}>Image URL</Label>
+              <Input id="imageUrl" name="imageUrl" placeholder="https://example.com/image.png" value={formState.imageUrl ?? ''} onChange={handleInputChange} disabled={isSubmitting} style={{ display: imageSource === 'url' ? 'flex' : 'none' }} />
             </div>
 
-            <div className={cn("space-y-2", imageSource !== 'upload' && 'hidden')}>
-              <Label htmlFor="imageUpload">Upload File</Label>
-              <Input id="imageUpload" name="imageUpload" type="file" accept="image/*" onChange={handleFileChange} disabled={isSubmitting} />
+            <div className="space-y-2">
+              <Label htmlFor="imageUpload" style={{ display: imageSource === 'upload' ? 'block' : 'none' }}>Upload File</Label>
+              <Input id="imageUpload" name="imageUpload" type="file" accept="image/*" onChange={handleFileChange} disabled={isSubmitting} style={{ display: imageSource === 'upload' ? 'flex' : 'none' }} />
             </div>
 
             {previewUrl && (
@@ -308,7 +310,9 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           
-          <div className="space-y-2"><Label htmlFor="description">Description / Specifications (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., 0.5mm, Black Ink" value={formState.description || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., A smooth-writing gel pen." value={formState.description ?? ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+
+          <div className="space-y-2"><Label htmlFor="specifications">Specifications (Optional)</Label><Textarea id="specifications" name="specifications" placeholder="e.g., 0.5mm tip, Black Ink, Retractable" value={formState.specifications ?? ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
@@ -321,3 +325,5 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     </Dialog>
   );
 }
+
+    

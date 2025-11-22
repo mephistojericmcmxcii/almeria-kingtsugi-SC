@@ -270,7 +270,11 @@
         },
         "description": {
           "type": "string",
-          "description": "An optional description of the variant."
+          "description": "An optional general description of the variant."
+        },
+        "specifications": {
+          "type": "string",
+          "description": "Detailed technical specifications for the variant."
         },
         "createdAt": {
           "type": "string",

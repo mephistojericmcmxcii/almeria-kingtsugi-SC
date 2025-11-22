@@ -123,11 +123,13 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
               font-size: 11pt;
               color: #6b7280;
               margin-bottom: 0.5rem;
+              margin-top: 1rem;
           }
           .description-section p {
               font-size: 10pt;
               color: #4b5563;
               white-space: pre-wrap;
+              margin: 0;
           }
           .specs-table {
             width: 100%;
@@ -196,12 +198,20 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
                     </tbody>
                 </table>
 
-                {variant.description && (
-                    <div className="description-section">
-                        <h3>Specifications / Description</h3>
-                        <p>{variant.description}</p>
-                    </div>
-                )}
+                <div className="description-section">
+                    {variant.description && (
+                        <div>
+                            <h3>Description</h3>
+                            <p>{variant.description}</p>
+                        </div>
+                    )}
+                    {variant.specifications && (
+                        <div>
+                            <h3>Specifications</h3>
+                            <p>{variant.specifications}</p>
+                        </div>
+                    )}
+                </div>
             </div>
           </main>
 
@@ -214,3 +224,5 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
 };
 
 export default PrintBrochureLayout;
+
+    

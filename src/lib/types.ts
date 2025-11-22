@@ -43,6 +43,7 @@ export type InventoryVariant = {
   costPrice: number;
   warningLimit: number;
   description?: string;
+  specifications?: string;
   imageUrl?: string;
   createdAt: any;
   updatedAt: any;
