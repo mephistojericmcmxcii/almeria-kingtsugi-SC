@@ -102,7 +102,8 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
     let fileUrl = '';
     if (data.responseType === 'uploadFile' && data.quotationFile) {
         const file = (data.quotationFile as FileList)[0];
-        const url = await uploadFile(file, 'quotation-responses');
+        const fileName = `${rfq.id}_admin_response`;
+        const url = await uploadFile(file, `quotation_responses/${rfq.id}`, fileName);
         if (!url) {
             setIsSubmitting(false);
             return; // uploadFile will show a toast on error
@@ -207,8 +208,10 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                                   type="number"
                                   className="text-right"
                                   placeholder="0.00"
-                                  value={field.value}
-                                  onChange={field.onChange}
+                                  step="0.01"
+                                  {...field}
+                                  value={field.value === 0 ? '' : field.value}
+                                  onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)}
                                 />
                               )}
                             />
@@ -222,8 +225,9 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                                   type="number"
                                   className="text-right"
                                   placeholder="0"
-                                  value={field.value}
-                                  onChange={field.onChange}
+                                  {...field}
+                                   value={field.value === 0 ? '' : field.value}
+                                   onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)}
                                 />
                               )}
                             />
@@ -241,14 +245,20 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                  {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>}
               </div>
             ) : (
-                <FormItem>
-                    <FormLabel>Quotation File</FormLabel>
-                    <FormControl>
+                <FormField
+                  control={form.control}
+                  name="quotationFile"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Quotation File</FormLabel>
+                      <FormControl>
                         <Input type="file" accept=".pdf" {...quotationFileRegistration} />
-                    </FormControl>
-                    <FormDescription>Upload your official quotation document (PDF only).</FormDescription>
-                    <FormMessage>{form.formState.errors.quotationFile?.message?.toString()}</FormMessage>
-                </FormItem>
+                      </FormControl>
+                      <FormDescription>Upload your official quotation document (PDF only).</FormDescription>
+                      <FormMessage>{form.formState.errors.quotationFile?.message?.toString()}</FormMessage>
+                    </FormItem>
+                  )}
+                />
             )}
 
             <div className="grid grid-cols-2 gap-4">

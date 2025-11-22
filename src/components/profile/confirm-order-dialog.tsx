@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2 } from 'lucide-react';
+import { Plus, Minus, Trash2, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ConfirmOrderDialogProps {
     isOpen: boolean;
@@ -26,15 +27,15 @@ const formatCurrency = (amount: number) => {
 
 
 export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrderDialogProps) {
-    const { user, updateOrderStatus } = useAuth();
+    const { user, updateOrderStatus, uploadFile } = useAuth();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Local state for editable fields
     const [items, setItems] = useState<CartItem[]>([]);
     const [shippingAddress, setShippingAddress] = useState('');
     const [contactNumber, setContactNumber] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'bank'>('cod');
+    const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
     const isFileBasedQuote = !!order.quotationFileUrl && order.items.length === 0;
 
@@ -44,8 +45,9 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
             setShippingAddress(user?.address || order.shippingAddress);
             setContactNumber(user?.contactNumber || order.shippingContactNumber);
             setPaymentMethod(order.paymentMethod as any || 'cod');
+            setFileToUpload(null);
         }
-    }, [order, user]);
+    }, [order, user, isOpen]);
 
     const handleQuantityChange = (itemId: string, newQuantity: number) => {
         const itemToUpdate = items.find(item => item.id === itemId);
@@ -107,6 +109,19 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
 
         setIsSubmitting(true);
         
+        let revisionUrl = '';
+        if (fileToUpload) {
+            const fileName = `${order.id}_customer_revision`;
+            const url = await uploadFile(fileToUpload, `order_revisions/${order.userId}/${order.id}`, fileName);
+            if (url) {
+                revisionUrl = url;
+            } else {
+                setIsSubmitting(false);
+                // uploadFile will show a toast on error
+                return;
+            }
+        }
+
         const success = await updateOrderStatus(order, 'confirmed', {
             items,
             totalAmount: finalTotal,
@@ -114,6 +129,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
             shippingAddress,
             shippingContactNumber: contactNumber,
             paymentMethod,
+            customerRevisionUrl: revisionUrl || undefined,
         });
         
         if (success) {
@@ -134,7 +150,7 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                 <DialogHeader>
                     <DialogTitle className="font-headline text-2xl">Confirm Your Purchase</DialogTitle>
                     <DialogDescription>
-                        Review your items and confirm your delivery and payment details. You can adjust quantities or remove items before finalizing.
+                        Review your items and confirm your delivery and payment details. You can adjust quantities or upload a revised document before finalizing.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 py-4">
@@ -166,6 +182,19 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
                         </div>
                     )}
                     
+                     {/* Revision Upload Section */}
+                    <div className="space-y-4 border-t pt-6">
+                        <h3 className="font-semibold">Upload Revision (Optional)</h3>
+                        <p className="text-sm text-muted-foreground">If you've changed the items or quantities from the original quote, you can upload a revised document here.</p>
+                        <Input 
+                            type="file" 
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                            onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
+                            disabled={isSubmitting}
+                        />
+                         {fileToUpload && <Alert variant="default" className="bg-blue-50 border-blue-200"><Upload className="h-4 w-4 !text-blue-600" /><AlertDescription className="!pl-7 text-blue-800">New file selected: <span className="font-medium">{fileToUpload.name}</span>. This will be sent with your confirmation.</AlertDescription></Alert>}
+                    </div>
+
                     {/* Billing Information */}
                     <div className="space-y-4 border-t pt-6">
                          <h3 className="font-semibold">Billing & Delivery</h3>

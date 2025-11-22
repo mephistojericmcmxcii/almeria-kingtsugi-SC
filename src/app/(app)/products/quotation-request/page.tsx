@@ -138,21 +138,23 @@ export default function RfqPage() {
     setIsSubmitting(true);
     setShowConfirmation(false);
 
+    const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
+
     try {
         let fileUrl = '';
         if (formData.requestType === 'attachment' && formData.fileAttachment) {
             const file = formData.fileAttachment as File;
-            const downloadUrl = await uploadFile(file, 'rfq-attachments');
+            const fileName = `${rfqRef.id}_customer_rfq`;
+            const downloadUrl = await uploadFile(file, `rfq_attachments/${rfqRef.id}`, fileName);
             if (!downloadUrl) {
                 throw new Error("File upload failed. Please try again.");
             }
             fileUrl = downloadUrl;
         }
-
-        const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
         
         const dataToSave: any = {
             ...baseSchema.parse(formData),
+            id: rfqRef.id,
             userId: user.id,
             createdAt: serverTimestamp(),
             requestType: formData.requestType,

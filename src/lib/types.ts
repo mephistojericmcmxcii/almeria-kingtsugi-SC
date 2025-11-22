@@ -88,6 +88,7 @@ export type Order = {
   updatedAt?: Timestamp;
   cancellationReason?: string;
   quotationFileUrl?: string; // URL to the uploaded quotation file from admin
+  customerRevisionUrl?: string; // URL to a revised file uploaded by the customer
   discount: number; // Overall order discount, can be sum of item discounts
   deliveryFee?: number;
   packagingFee?: number;

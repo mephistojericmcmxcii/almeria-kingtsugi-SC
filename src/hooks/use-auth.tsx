@@ -52,14 +52,15 @@ interface AuthContextType {
       totalAmount?: number, 
       discount?: number,
       deliveryFee?: number,
-      packagingFee?: number
+      packagingFee?: number,
       shippingAddress?: string;
       shippingContactNumber?: string;
       paymentMethod?: string;
+      customerRevisionUrl?: string;
     }
 ) => Promise<boolean>;
   updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus) => Promise<boolean>;
-  uploadFile: (file: File, path: string) => Promise<string | null>;
+  uploadFile: (file: File, path: string, fileName: string) => Promise<string | null>;
   showCartBadge: boolean;
   showQuoteReadyBadge: boolean;
   showNewPurchaseBadge: boolean;
@@ -856,6 +857,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           shippingAddress?: string;
           shippingContactNumber?: string;
           paymentMethod?: string;
+          customerRevisionUrl?: string;
         }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
@@ -874,6 +876,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 dataToUpdate.cancellationReason = details.reason;
             }
             
+            if (details?.customerRevisionUrl) {
+                dataToUpdate.customerRevisionUrl = details.customerRevisionUrl;
+            }
+
             // This block handles updates from the admin's quote-ready response or user's confirmation
             if ((newStatus === 'quote-ready' || newStatus === 'confirmed')) {
                 if (details?.items !== undefined) dataToUpdate.items = details.items;
@@ -886,25 +892,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (details?.paymentMethod !== undefined) dataToUpdate.paymentMethod = details.paymentMethod;
             }
 
-            if ((newStatus === 'cancelled' || newStatus === 'declined') && order.status !== 'cancelled' && order.status !== 'declined') {
-                await runTransaction(firestore, async (transaction: Transaction) => {
-                    transaction.update(orderRef, dataToUpdate);
+            // Transaction for stock updates
+            await runTransaction(firestore, async (transaction: Transaction) => {
+                // Always update the order document
+                transaction.update(orderRef, dataToUpdate);
 
-                    if (order.status === 'confirmed' || order.status === 'delivering') {
-                        for (const item of order.items) {
-                            if (item.parentItemId === 'custom-rfq') continue;
-                            const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
-                            transaction.update(variantRef, {
-                                quantity: increment(item.quantity)
-                            });
-                        }
-                    }
-                });
-            } else if (newStatus === 'confirmed' && order.status !== 'confirmed') {
-                // This block specifically handles the transition TO 'confirmed'
-                await runTransaction(firestore, async (transaction: Transaction) => {
-                    transaction.update(orderRef, dataToUpdate);
+                // --- STOCK LOGIC ---
 
+                // 1. DEDUCT stock when moving TO 'confirmed' FROM a non-confirmed state
+                if (newStatus === 'confirmed' && order.status !== 'confirmed') {
                     const itemsToUpdate = details?.items || order.items;
                     for (const item of itemsToUpdate) {
                         if (item.parentItemId === 'custom-rfq') continue;
@@ -913,10 +909,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                             quantity: increment(-item.quantity)
                         });
                     }
-                });
-            } else {
-                await updateDoc(orderRef, dataToUpdate);
-            }
+                }
+                
+                // 2. RESTORE stock when moving TO 'cancelled' or 'declined' FROM a state where stock was already deducted
+                if ((newStatus === 'cancelled' || newStatus === 'declined') && (order.status === 'confirmed' || order.status === 'delivering')) {
+                     for (const item of order.items) {
+                        if (item.parentItemId === 'custom-rfq') continue;
+                        const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
+                        transaction.update(variantRef, {
+                            quantity: increment(item.quantity)
+                        });
+                    }
+                }
+            });
+
 
             await fetchOrders(); // Refetch orders to show the update
             toast({
@@ -974,28 +980,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const uploadFile = async (file: File, path: string): Promise<string | null> => {
+    const uploadFile = async (file: File, path: string, fileName: string): Promise<string | null> => {
         if (!storage) {
             toast({
                 variant: 'destructive',
                 title: 'Storage Error',
                 description: 'Storage service is not available. Cannot upload file.'
             });
-            console.error("[uploadFile] Firebase Storage service is not available.");
             return null;
         }
-        console.log("[uploadFile] Firebase Storage service is available. Connection successful.");
 
-        const storageRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
-        console.log(`[uploadFile] Starting upload for: ${file.name} to path: ${path}`);
-        console.log(`[uploadFile] Created storage reference: ${storageRef.fullPath}`);
+        const fileExtension = file.name.split('.').pop();
+        const finalFileName = `${fileName}.${fileExtension}`;
+        const storageRef = ref(storage, `${path}/${finalFileName}`);
 
         try {
-            console.log("[uploadFile] Attempting to upload bytes...");
             const snapshot = await uploadBytes(storageRef, file);
-            console.log("[uploadFile] Upload successful:", snapshot);
             const downloadURL = await getDownloadURL(snapshot.ref);
-            console.log("[uploadFile] Got download URL:", downloadURL);
             return downloadURL;
         } catch (error: any) {
             console.error("[uploadFile] Upload failed:", error);
@@ -1027,6 +1028,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
 
 
