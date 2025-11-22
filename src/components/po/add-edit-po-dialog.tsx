@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -28,6 +29,10 @@ const formSchema = z.object({
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
   status: z.enum(PO_STATUSES),
+  totalAllocation: z.preprocess(
+    (val) => (val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val)),
+    z.number().optional()
+  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,6 +55,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
       poNumber: '',
       careOf: '',
       status: 'Lacking',
+      totalAllocation: 0,
     },
   });
 
@@ -61,6 +67,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           date: poToEdit.date.toDate(),
           careOf: poToEdit.careOf,
           status: poToEdit.status,
+          totalAllocation: poToEdit.totalAllocation || 0,
         });
       } else {
         form.reset({
@@ -68,6 +75,7 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
           date: new Date(),
           careOf: '',
           status: 'Lacking',
+          totalAllocation: 0,
         });
       }
     }
@@ -170,6 +178,13 @@ export function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddEditPoDia
                 <FormControl><Input {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
+            )} />
+            <FormField control={form.control} name="totalAllocation" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Total Amount Allocated (Optional)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                </FormItem>
             )} />
             <FormField control={form.control} name="status" render={({ field }) => (
               <FormItem>

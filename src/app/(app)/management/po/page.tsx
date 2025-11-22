@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
@@ -38,23 +39,24 @@ export default function PoPage() {
   const [totalAmounts, setTotalAmounts] = useState<Record<string, number>>({});
   const [areTotalsLoading, setAreTotalsLoading] = useState(true);
 
+  const fetchPOs = async () => {
+    if (!firestore) return;
+    setArePOsLoading(true);
+    try {
+        const poCollectionRef = collection(firestore, 'purchase_orders');
+        const snapshot = await getDocs(poCollectionRef);
+        const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder))
+                              .filter(po => po.entryType !== 'manual'); // Exclude manual entries
+        setPurchaseOrders(pos);
+    } catch (error) {
+        console.error("Error fetching POs:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load purchase orders.' });
+    } finally {
+        setArePOsLoading(false);
+    }
+  };
+
   useEffect(() => {
-      const fetchPOs = async () => {
-          if (!firestore) return;
-          setArePOsLoading(true);
-          try {
-              const poCollectionRef = collection(firestore, 'purchase_orders');
-              const snapshot = await getDocs(poCollectionRef);
-              const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder))
-                                    .filter(po => po.entryType !== 'manual'); // Exclude manual entries
-              setPurchaseOrders(pos);
-          } catch (error) {
-              console.error("Error fetching POs:", error);
-              toast({ variant: 'destructive', title: 'Error', description: 'Could not load purchase orders.' });
-          } finally {
-              setArePOsLoading(false);
-          }
-      };
       fetchPOs();
   }, [firestore, toast]);
   
@@ -68,6 +70,10 @@ export default function PoPage() {
         setAreTotalsLoading(true);
         const totals: Record<string, number> = {};
         for (const po of purchaseOrders) {
+            if (po.totalAllocation) {
+                totals[po.id] = po.totalAllocation;
+                continue;
+            }
             const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
             const itemsSnapshot = await getDocs(itemsCollectionRef);
             const total = itemsSnapshot.docs.reduce((sum, doc) => {
@@ -121,6 +127,14 @@ export default function PoPage() {
       }
       setPoToDelete(null);
   }
+  
+  const handleDialogClose = (open: boolean) => {
+      if (!open) {
+          fetchPOs(); // Refetch POs when the dialog closes
+      }
+      setIsAddDialogOpen(open);
+  }
+
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
@@ -241,7 +255,7 @@ export default function PoPage() {
         <Suspense fallback={<div>Loading...</div>}>
             <AddEditPoDialog
                 isOpen={isAddDialogOpen}
-                onOpenChange={setIsAddDialogOpen}
+                onOpenChange={handleDialogClose}
                 poToEdit={poToEdit}
             />
         </Suspense>
