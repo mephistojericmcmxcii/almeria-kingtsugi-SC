@@ -91,5 +91,3 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
     </Dialog>
   );
 }
-
-
