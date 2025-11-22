@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { PurchaseOrder } from '@/lib/types';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
+import { useState } from 'react';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (changed: boolean) => void;
   po: PurchaseOrder;
-  totals: { allocated: number; utilized: number; } | undefined;
+  totals: { allocated: number; utilized: number; itemCount: number; } | undefined;
 }
 
 const formatCurrency = (amount: number) => {
@@ -19,10 +21,22 @@ const formatCurrency = (amount: number) => {
 
 
 export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
+  const { updatePoStatus } = useAuth();
+  const [isUpdating, setIsUpdating] = useState(false);
+
   if (!po) return null;
 
+  const handleUpdateStatus = async () => {
+    setIsUpdating(true);
+    const success = await updatePoStatus(po.id, 'Delivered');
+    if (success) {
+        onOpenChange(true); // Signal that a change was made
+    }
+    setIsUpdating(false);
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => onOpenChange(false)}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">PO Details: #{po.poNumber}</DialogTitle>
@@ -45,8 +59,8 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
             </div>
              <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <p className="text-sm font-semibold text-muted-foreground">Source / Supplier</p>
-                    <p>{po.source || 'N/A'}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">Number of Items</p>
+                    <p>{totals?.itemCount ?? 0}</p>
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-muted-foreground">Status</p>
@@ -65,11 +79,17 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
                 </div>
             </div>
         </div>
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
+        <DialogFooter className="sm:justify-between">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
+          {po.status === 'Completed' && (
+            <Button onClick={handleUpdateStatus} disabled={isUpdating}>
+                {isUpdating ? 'Updating...' : 'Mark as Delivered'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 

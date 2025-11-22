@@ -28,6 +28,7 @@ const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-d
 type PoTotals = {
     allocated: number;
     utilized: number;
+    itemCount: number;
 }
 
 type DisplayPurchaseOrder = PurchaseOrder & {
@@ -83,11 +84,13 @@ export default function PoPage() {
                 acc.allocated += (item.amount || 0) * (item.quantity || 0);
                 acc.utilized += (item.actualAmount || 0) * (item.quantity || 0);
                 return acc;
-            }, { allocated: 0, utilized: 0 });
+            }, { allocated: 0, utilized: 0, itemCount: 0 });
 
             if (po.totalAllocation !== undefined && po.totalAllocation !== null) {
                 poTotals.allocated = po.totalAllocation;
             }
+            
+            poTotals.itemCount = itemsSnapshot.size;
             totals[po.id] = poTotals;
             
             let displayStatus: PurchaseOrder['status'] = po.status;
@@ -178,6 +181,12 @@ export default function PoPage() {
       setIsAddDialogOpen(open);
   }
 
+  const handleViewDialogClose = (changed: boolean) => {
+      setIsViewDialogOpen(false);
+      if (changed) {
+          fetchPOs();
+      }
+  }
 
   const getStatusBadge = (status: PurchaseOrder['status']) => {
     switch (status) {
@@ -315,7 +324,7 @@ export default function PoPage() {
             {poToView && (
                  <ViewPoDetailsDialog
                     isOpen={isViewDialogOpen}
-                    onOpenChange={setIsViewDialogOpen}
+                    onOpenChange={handleViewDialogClose}
                     po={poToView}
                     totals={totalAmounts[poToView.id]}
                 />
