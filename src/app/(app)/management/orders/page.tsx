@@ -289,18 +289,26 @@ export default function AllOrdersPage() {
         const isFileBased = !!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0;
 
         if (isFileBased) {
-            const baseAmount = selectedOrder.totalAmount || 0; // In file-based, totalAmount is the base
-            const discountAmount = selectedOrder.discount || 0;
-            const final = baseAmount - discountAmount + (selectedOrder.deliveryFee || 0) + (selectedOrder.packagingFee || 0);
-            const discountPercentage = baseAmount > 0 ? (discountAmount / baseAmount) * 100 : 0;
+            // For file-based orders, derive the original subtotal from the stored final values.
+            const storedFinalTotal = selectedOrder.totalAmount || 0;
+            const storedDiscount = selectedOrder.discount || 0;
+            const storedDeliveryFee = selectedOrder.deliveryFee || 0;
+            const storedPackagingFee = selectedOrder.packagingFee || 0;
+            
+            // Subtotal is the gross amount before any deductions or additions.
+            const calculatedSubtotal = storedFinalTotal - storedDeliveryFee - storedPackagingFee + storedDiscount;
+            
+            const discountPercentage = calculatedSubtotal > 0 ? (storedDiscount / calculatedSubtotal) * 100 : 0;
+            
             return {
-                subtotal: baseAmount,
-                totalDiscount: discountAmount,
-                finalTotal: final,
+                subtotal: calculatedSubtotal,
+                totalDiscount: storedDiscount,
+                finalTotal: storedFinalTotal,
                 totalDiscountPercentage: discountPercentage,
             };
         }
 
+        // Calculation for item-based orders (remains the same)
         const currentSubtotal = selectedOrder.items.reduce((acc, item) => {
             const price = itemPrices[item.id] || item.price || 0;
             return acc + (price * item.quantity);
@@ -624,3 +632,5 @@ export default function AllOrdersPage() {
         </>
     );
 }
+
+    
