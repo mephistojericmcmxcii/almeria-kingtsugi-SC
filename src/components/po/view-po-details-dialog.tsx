@@ -37,7 +37,7 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
 
   const handleUpdateStatus = async () => {
     setIsUpdating(true);
-    const success = await updatePoStatus(po.id, 'Delivered', { salesInvoice, deliveryReceipt, salesInvoiceFile: siFile, deliveryReceiptFile: drFile });
+    const success = await updatePoStatus(po, 'Delivered', { salesInvoice, deliveryReceipt, salesInvoiceFile: siFile, deliveryReceiptFile: drFile });
     if (success) {
         onOpenChange(true); // Signal that a change was made
     }
@@ -48,7 +48,7 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => onOpenChange(false)}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">PO Details: #{po.poNumber}</DialogTitle>
           <DialogDescription>A read-only summary of the purchase order.</DialogDescription>
@@ -93,23 +93,21 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
             {(po.displayStatus === 'Completed' || po.displayStatus === 'Delivered') && (
                 <div className="space-y-4 border-t pt-4">
                     <h3 className="font-semibold text-foreground">Delivery Confirmation</h3>
-                     <div className="grid grid-cols-1 gap-4">
+                     <div className="space-y-4">
                          <div className="space-y-2">
                              <Label htmlFor="salesInvoice">Sales Invoice #</Label>
-                             <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} disabled={po.displayStatus === 'Delivered'} />
-                         </div>
-                         <div className="space-y-2">
-                             <Label htmlFor="siFile">Attach Sales Invoice File</Label>
-                             <Input id="siFile" type="file" onChange={(e) => setSiFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} />
+                             <div className="flex gap-2">
+                                <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
+                                <Input id="siFile" type="file" onChange={(e) => setSiFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
+                             </div>
                              {po.salesInvoiceUrl && <a href={po.salesInvoiceUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded SI</Button></a>}
                          </div>
                          <div className="space-y-2">
                              <Label htmlFor="deliveryReceipt">Delivery Receipt #</Label>
-                             <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} disabled={po.displayStatus === 'Delivered'} />
-                         </div>
-                          <div className="space-y-2">
-                             <Label htmlFor="drFile">Attach Delivery Receipt File</Label>
-                             <Input id="drFile" type="file" onChange={(e) => setDrFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} />
+                             <div className="flex gap-2">
+                                <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
+                                <Input id="drFile" type="file" onChange={(e) => setDrFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
+                             </div>
                              {po.deliveryReceiptUrl && <a href={po.deliveryReceiptUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded DR</Button></a>}
                          </div>
                      </div>
