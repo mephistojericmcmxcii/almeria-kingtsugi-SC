@@ -554,10 +554,6 @@
       "type": "object",
       "description": "Represents a customer's feedback and rating for a completed order.",
       "properties": {
-        "orderId": {
-          "type": "string",
-          "description": "The ID of the order this feedback is for."
-        },
         "userId": {
           "type": "string",
           "description": "The ID of the user who provided the feedback."
@@ -581,7 +577,6 @@
         }
       },
       "required": [
-        "orderId",
         "userId",
         "userName",
         "rating",

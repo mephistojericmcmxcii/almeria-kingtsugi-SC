@@ -156,7 +156,6 @@ export type QuotationRequest = {
 
 export type CustomerFeedback = {
   id: string; // Typically the orderId
-  orderId: string;
   userId: string;
   userName: string;
   rating: number;
