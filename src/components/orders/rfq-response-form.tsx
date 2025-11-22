@@ -130,6 +130,12 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
     e.currentTarget.blur();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+    }
+  };
+
 
   return (
     <Card>
@@ -221,6 +227,7 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                                   placeholder="0.00"
                                   step="0.01"
                                   onWheel={handleNumberInputOnWheel}
+                                  onKeyDown={handleKeyDown}
                                   {...field}
                                   value={field.value === 0 ? '' : field.value}
                                   onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)}
@@ -238,6 +245,7 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                                   className="text-right"
                                   placeholder="0"
                                   onWheel={handleNumberInputOnWheel}
+                                  onKeyDown={handleKeyDown}
                                   {...field}
                                    value={field.value === 0 ? '' : field.value}
                                    onChange={e => field.onChange(e.target.value === '' ? '' : e.target.value)}
@@ -275,10 +283,10 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                     />
                     <div className="grid grid-cols-2 gap-4">
                         <FormField control={form.control} name="totalAmount" render={({ field }) => (
-                            <FormItem><FormLabel>Total Amount (from file)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Total Amount (from file)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="discount" render={({ field }) => (
-                            <FormItem><FormLabel>Total Discount (from file, optional)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Total Discount (from file, optional)</FormLabel><FormControl><Input type="number" step="0.01" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                 </div>
@@ -286,10 +294,10 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
 
             <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="deliveryFee" render={({ field }) => (
-                    <FormItem><FormLabel>Delivery Fee</FormLabel><FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Delivery Fee</FormLabel><FormControl><Input type="number" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="packagingFee" render={({ field }) => (
-                    <FormItem><FormLabel>Packaging Fee</FormLabel><FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Packaging Fee</FormLabel><FormControl><Input type="number" onWheel={handleNumberInputOnWheel} onKeyDown={handleKeyDown} {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
             </div>
 
