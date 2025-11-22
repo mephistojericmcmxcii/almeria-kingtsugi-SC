@@ -891,6 +891,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     // Only restock items if the order was confirmed or in delivery before cancellation
                     if (order.status === 'confirmed' || order.status === 'delivering') {
                         for (const item of order.items) {
+                            if (item.parentItemId === 'custom-rfq') continue; // Do not restock custom RFQ items
                             const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
                             transaction.update(variantRef, {
                                 quantity: increment(item.quantity)
@@ -905,6 +906,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     // Deduct stock for confirmed items
                     if (details?.items) {
                         for (const item of details.items) {
+                            if (item.parentItemId === 'custom-rfq') continue; // Do not deduct stock for custom RFQ items
                             const variantRef = doc(firestore, 'inventory', item.parentItemId, 'variants', item.variantId);
                             transaction.update(variantRef, {
                                 quantity: increment(-item.quantity)
@@ -1025,5 +1027,6 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
 
