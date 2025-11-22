@@ -286,13 +286,17 @@ export default function AllOrdersPage() {
     const { subtotal, totalDiscount, finalTotal, totalDiscountPercentage } = useMemo(() => {
         if (!selectedOrder) return { subtotal: 0, totalDiscount: 0, finalTotal: 0, totalDiscountPercentage: 0 };
         
-        if (selectedOrder.quotationFileUrl && selectedOrder.items.length === 0) {
-            // For file-based quotes, the finalTotal IS the total amount. Discount is separate.
+        const isFileBased = !!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0;
+
+        if (isFileBased) {
+            const baseAmount = selectedOrder.totalAmount || 0;
+            const discount = selectedOrder.discount || 0;
+            const final = baseAmount - discount + deliveryFee + packagingFee;
             return {
-                subtotal: 0,
-                totalDiscount: selectedOrder.discount || 0,
-                finalTotal: selectedOrder.totalAmount || 0,
-                totalDiscountPercentage: 0,
+                subtotal: baseAmount, // For file-based, subtotal is the base amount
+                totalDiscount: discount,
+                finalTotal: final,
+                totalDiscountPercentage: 0, // Not applicable
             };
         }
 
@@ -464,7 +468,7 @@ export default function AllOrdersPage() {
                             </div>
                         )}
 
-                        {!(selectedOrder.quotationFileUrl && selectedOrder.items.length === 0) && (
+                        {!(!!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0) && (
                             <div>
                                 <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
                                 {selectedOrder.items.length > 0 ? (
@@ -530,20 +534,10 @@ export default function AllOrdersPage() {
                          <div className="space-y-4 pt-4 border-t">
                             <div className="flex justify-end text-sm">
                                 <div className="w-1/2 space-y-2">
-                                     <div className="flex justify-between items-center">
-                                        <Label htmlFor="deliveryFee">Delivery Fee</Label>
-                                        <Input id="deliveryFee" type="number" className="h-8 w-24 text-right" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
+                                     <div className="flex justify-between items-center font-medium">
+                                        <p>{!!selectedOrder.quotationFileUrl && selectedOrder.items.length === 0 ? 'Base Amount' : 'Subtotal'}</p>
+                                        <p>{formatCurrency(subtotal)}</p>
                                     </div>
-                                     <div className="flex justify-between items-center">
-                                        <Label htmlFor="packagingFee">Packaging Fee</Label>
-                                        <Input id="packagingFee" type="number" className="h-8 w-24 text-right" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
-                                    </div>
-                                    { (selectedOrder.items.length > 0) &&
-                                        <div className="flex justify-between items-center font-medium">
-                                            <p>Subtotal</p>
-                                            <p>{formatCurrency(subtotal)}</p>
-                                        </div>
-                                    }
                                     {totalDiscount > 0 && (
                                         <div className="flex justify-between items-center text-green-600">
                                             <span>Total Discount</span>
@@ -552,6 +546,14 @@ export default function AllOrdersPage() {
                                             </span>
                                         </div>
                                     )}
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="deliveryFee">Delivery Fee</Label>
+                                        <Input id="deliveryFee" type="number" className="h-8 w-24 text-right" value={deliveryFee} onChange={(e) => setDeliveryFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
+                                    </div>
+                                     <div className="flex justify-between items-center">
+                                        <Label htmlFor="packagingFee">Packaging Fee</Label>
+                                        <Input id="packagingFee" type="number" className="h-8 w-24 text-right" value={packagingFee} onChange={(e) => setPackagingFee(Number(e.target.value))} onWheel={handleNumberInputOnWheel} onFocus={(e) => e.target.select()} disabled={isUpdating || !isPricingEditable} />
+                                    </div>
                                 </div>
                             </div>
                             <Separator />
