@@ -136,13 +136,10 @@ export type PurchaseOrder = {
   bank?: string;
   paymentStatus?: PoPaymentStatus;
   entryType?: 'system' | 'manual';
+  depositReceiptUrl?: string;
   // Manual entry fields
   totalAllocation?: number;
   totalExpenses?: number;
-  salesInvoice?: string;
-  deliveryReceipt?: string;
-  salesInvoiceUrl?: string;
-  deliveryReceiptUrl?: string;
 };
 
 export type QuotationRequestItem = {

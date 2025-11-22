@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format, parse } from 'date-fns';
 import { useFirebase } from '@/firebase';
+import { useAuth } from '@/hooks/use-auth';
 import { doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PoPaymentStatus } from '@/lib/types';
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 
@@ -39,6 +39,7 @@ const formSchema = z.object({
   ),
   bank: z.string().optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+  depositReceipt: z.any().optional(),
   // Manual fields
   totalAllocation: z.preprocess(
     (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
@@ -70,6 +71,7 @@ const formatCurrency = (amount: number) => {
 
 export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess }: PaymentDetailsDialogProps) {
   const { firestore } = useFirebase();
+  const { uploadFile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -101,38 +103,50 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     setIsSubmitting(true);
     const poRef = doc(firestore, 'purchase_orders', po.id);
 
-    const dataToUpdate: any = {
-      ...values,
-      paymentDate: values.paymentDate ? Timestamp.fromDate(values.paymentDate) : null,
-      updatedAt: serverTimestamp(),
-    };
-
-    // Ensure empty strings for numbers become null or undefined in Firestore
-    if (values.taxDeduction === undefined) dataToUpdate.taxDeduction = null;
-    if (values.amountDeposited === undefined) dataToUpdate.amountDeposited = null;
-    if (isManualEntry) {
-        dataToUpdate.totalAllocation = values.totalAllocation ?? 0;
-        dataToUpdate.totalExpenses = values.totalExpenses ?? 0;
-    }
-
-
     try {
-      await updateDoc(poRef, dataToUpdate);
-      toast({
-        title: 'Payment Details Updated',
-        description: `Details for PO #${po.poNumber} have been saved.`,
-      });
-      onSuccess();
-      onOpenChange(false);
+        const dataToUpdate: any = {
+            ...values,
+            paymentDate: values.paymentDate ? Timestamp.fromDate(values.paymentDate) : null,
+            updatedAt: serverTimestamp(),
+        };
+
+        if (values.depositReceipt && values.depositReceipt.length > 0) {
+            const file = values.depositReceipt[0] as File;
+            const downloadURL = await uploadFile(file, `po_payment_documents/${po.id}`);
+            if (downloadURL) {
+                dataToUpdate.depositReceiptUrl = downloadURL;
+            } else {
+                throw new Error("File upload failed.");
+            }
+        }
+
+        // Ensure empty strings for numbers become null or undefined in Firestore
+        if (values.taxDeduction === undefined) dataToUpdate.taxDeduction = null;
+        if (values.amountDeposited === undefined) dataToUpdate.amountDeposited = null;
+        if (isManualEntry) {
+            dataToUpdate.totalAllocation = values.totalAllocation ?? 0;
+            dataToUpdate.totalExpenses = values.totalExpenses ?? 0;
+        }
+
+        delete dataToUpdate.depositReceipt; // Don't save the file object itself
+
+        await updateDoc(poRef, dataToUpdate);
+
+        toast({
+            title: 'Payment Details Updated',
+            description: `Details for PO #${po.poNumber} have been saved.`,
+        });
+        onSuccess();
+        onOpenChange(false);
     } catch (error: any) {
-      console.error('Failed to update PO payment details:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.message || 'Could not save payment details.',
-      });
+        console.error('Failed to update PO payment details:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: error.message || 'Could not save payment details.',
+        });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
   
@@ -282,6 +296,33 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     <FormMessage />
                 </FormItem>
                 )} />
+            </div>
+
+            <div className="space-y-2">
+                <FormField
+                    control={form.control}
+                    name="depositReceipt"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Deposit Receipt/Document</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => field.onChange(e.target.files)}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                {po.depositReceiptUrl && (
+                    <a href={po.depositReceiptUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="link" size="sm" className="p-0 h-auto">
+                            <Download className="mr-2 h-3 w-3" /> View Uploaded Receipt
+                        </Button>
+                    </a>
+                )}
             </div>
 
             <DialogFooter className="pt-6">
