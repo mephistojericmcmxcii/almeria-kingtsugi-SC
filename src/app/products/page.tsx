@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
 export default function ProductsPage() {
-  const { products: allVariants, isProductsLoading: isDataLoading, addToCart } = useAuth();
+  const { user, products: allVariants, isProductsLoading: isDataLoading, addToCart } = useAuth();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
@@ -39,6 +41,14 @@ export default function ProductsPage() {
       return inCategory && matchesSearch;
     });
   }, [allVariants, searchTerm, selectedCategory]);
+
+  const handleGetQuoteClick = (variant: InventoryVariant) => {
+    if (!user) {
+        router.push('/login');
+    } else {
+        setSelectedVariant(variant);
+    }
+  };
 
   const handleAddToCart = (variant: InventoryVariant) => {
     addToCart(variant);
@@ -117,7 +127,7 @@ export default function ProductsPage() {
                             <Card 
                                 key={variant.ref?.path || variant.id} 
                                 className="overflow-hidden group cursor-pointer flex flex-col"
-                                onClick={() => setSelectedVariant(variant)}
+                                onClick={() => handleGetQuoteClick(variant)}
                             >
                                 <div className="aspect-square relative w-full">
                                     <img
