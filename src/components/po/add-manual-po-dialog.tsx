@@ -32,10 +32,6 @@ const formSchema = z.object({
   source: z.string().min(2, 'Source/Supplier is required.'),
   status: z.enum(PO_STATUSES),
   paymentStatus: z.enum(PAYMENT_STATUSES),
-  taxDeduction: z.preprocess(
-    (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
-    z.number().optional()
-  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -72,7 +68,6 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
         source: '',
         status: 'Completed',
         paymentStatus: 'Paid',
-        taxDeduction: 0,
       });
     }
   }, [isOpen, form]);
@@ -89,8 +84,6 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
     };
-
-    if (values.taxDeduction === undefined) (dataToSave as any).taxDeduction = null;
 
     try {
       await setDoc(poRef, dataToSave);
@@ -182,13 +175,7 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
                 <FormMessage />
               </FormItem>
             )} />
-             <FormField control={form.control} name="taxDeduction" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Tax Deduction (Optional)</FormLabel>
-                    <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
+            
              <div className="grid grid-cols-2 gap-4">
                  <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
@@ -236,3 +223,4 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
     </Dialog>
   );
 }
+
