@@ -4,58 +4,43 @@
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { collectionGroup, getDocs } from 'firebase/firestore';
-import type { InventoryVariant } from '@/lib/types';
+import { collection, getDocs } from 'firebase/firestore';
+import type { InventoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Eye, ShoppingCart, Search, Tag, Package, FileQuestion } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
-const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
+import { Eye, Search, Package } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function ProductsPage() {
   const { firestore } = useFirebase();
-  const { addToCart } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [allVariants, setAllVariants] = useState<InventoryVariant[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [variantToAddToCart, setVariantToAddToCart] = useState<InventoryVariant | null>(null);
-
+  
   useEffect(() => {
     const fetchAllData = async () => {
         if (!firestore) return;
         setIsDataLoading(true);
 
         try {
-            // This single query is much more efficient than fetching parents individually.
-            const variantsCollectionGroup = collectionGroup(firestore, 'variants');
-            const variantsSnapshot = await getDocs(variantsCollectionGroup);
+            const itemsCollectionRef = collection(firestore, 'inventory');
+            const itemsSnapshot = await getDocs(itemsCollectionRef);
             
-            const variants = variantsSnapshot.docs.map(doc => ({
+            const items = itemsSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            } as InventoryVariant));
+            } as InventoryItem));
 
-            setAllVariants(variants);
+            setInventoryItems(items);
         } catch (error) {
             console.error("Error fetching product data:", error);
             toast({
@@ -70,62 +55,49 @@ export default function ProductsPage() {
 
     fetchAllData();
   }, [firestore, toast]);
-
-
-  const filteredItems = useMemo(() => {
-    if (!allVariants) return [];
-    return allVariants.filter(item => {
-      const lowercasedTerm = searchTerm.toLowerCase();
-      const hasParentName = item.parentName && item.parentName.toLowerCase().includes(lowercasedTerm);
-      const hasParentCategory = item.parentCategory && item.parentCategory.toLowerCase().includes(lowercasedTerm);
-      const hasBrand = item.brand && item.brand.toLowerCase().includes(lowercasedTerm);
-      const hasDescription = item.description && item.description.toLowerCase().includes(lowercasedTerm);
-      return hasParentName || hasParentCategory || hasBrand || hasDescription;
-    });
-  }, [allVariants, searchTerm]);
   
-  const handleAddToCartConfirm = () => {
-    if (!variantToAddToCart) return;
-    addToCart(variantToAddToCart);
-    setVariantToAddToCart(null);
+  const handleViewVariants = (itemId: string) => {
+    router.push(`/management/inventory/${itemId}`);
   };
 
-  const handleViewDetails = (variant: InventoryVariant) => {
-    setSelectedVariant(variant);
-    setIsModalOpen(true);
-  }
-
-  const handleAddToCartRequest = (variant: InventoryVariant) => {
-    setIsModalOpen(false); // Close the view modal
-    setVariantToAddToCart(variant); // Open the confirmation dialog
-  };
-
-  const getPlaceholderImage = (item: InventoryVariant) => {
-      if (item.imageUrl) {
-          return { imageUrl: item.imageUrl, description: item.parentName, imageHint: 'product' };
+  const getPlaceholderImage = (item: InventoryItem) => {
+      if (item.category) {
+        const categoryId = item.category.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
+        const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
+        if (categoryImage) {
+            return categoryImage;
+        }
       }
-      const categoryId = item.parentCategory?.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-category';
-      const categoryImage = PlaceHolderImages.find(p => p.id === categoryId);
-      if (categoryImage) {
-          return categoryImage;
-      }
-      const itemImage = PlaceHolderImages.find(p => p.id === item.parentItemId);
+      const itemImage = PlaceHolderImages.find(p => p.id === item.id);
       if (itemImage) {
         return itemImage;
       }
       return PlaceHolderImages.find(p => p.id === 'product-fallback')!;
-  }
+  };
   
-    const getStatusBadge = (variant: InventoryVariant) => {
-        if (variant.quantity <= 0) {
-        return <Badge variant="destructive">Out of Stock</Badge>;
-        }
-        if (variant.quantity <= variant.warningLimit) {
-        return <Badge variant="secondary" className="bg-orange-500 text-orange-50 hover:bg-orange-600">Low Stock</Badge>;
-        }
-        return <Badge className="bg-green-600 text-green-50 hover:bg-green-700 border-green-700">In Stock</Badge>;
-    }
+  const groupedAndFilteredItems = useMemo(() => {
+    if (!inventoryItems) return {};
+    
+    const filtered = inventoryItems.filter(item => {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      const hasName = item.name.toLowerCase().includes(lowercasedTerm);
+      const hasCategory = item.category.toLowerCase().includes(lowercasedTerm);
+      return hasName || hasCategory;
+    });
 
+    return filtered.reduce((acc, item) => {
+        const category = item.category || 'Uncategorized';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(item);
+        return acc;
+    }, {} as Record<string, InventoryItem[]>);
+
+  }, [inventoryItems, searchTerm]);
+
+  const categories = Object.keys(groupedAndFilteredItems).sort();
+  const defaultActiveCategories = useMemo(() => categories, [categories]);
 
   return (
     <>
@@ -133,12 +105,11 @@ export default function ProductsPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight font-headline">Product Catalog</h1>
-                <p className="text-muted-foreground">Browse our collection of unique, handcrafted items.</p>
             </div>
             <div className="relative w-full md:w-1/3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input 
-                    placeholder="Search by name, category, brand..."
+                    placeholder="Search by name or category..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10"
@@ -147,104 +118,57 @@ export default function ProductsPage() {
         </div>
 
         {isDataLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {Array.from({ length: 10 }).map((_, i) => (
-                    <Card key={i} className="overflow-hidden">
-                        <Skeleton className="h-48 w-full" />
-                        <CardHeader>
-                            <Skeleton className="h-6 w-3/4" />
-                            <Skeleton className="h-4 w-1/2" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-10 w-full" />
-                        </CardContent>
-                        <CardFooter className="gap-2">
-                             <Skeleton className="h-10 w-full" />
-                             <Skeleton className="h-10 w-full" />
-                        </CardFooter>
-                    </Card>
+            <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full rounded-lg" />
                 ))}
             </div>
-        ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {filteredItems.map((item) => {
-                    const placeholder = getPlaceholderImage(item);
-                    return (
-                        <Card key={item.id} className="flex flex-col overflow-hidden group">
-                            <div className="aspect-square relative">
-                                <img
-                                    src={placeholder.imageUrl}
-                                    alt={placeholder.description}
-                                    className="object-cover w-full h-full"
-                                    data-ai-hint={placeholder.imageHint}
-                                />
-                                <div className="absolute top-2 right-2">
-                                    {getStatusBadge(item)}
-                                </div>
+        ) : categories.length > 0 ? (
+           <Accordion type="multiple" defaultValue={defaultActiveCategories} className="space-y-4">
+                {categories.map(category => (
+                    <AccordionItem value={category} key={category} className="border rounded-lg overflow-hidden">
+                        <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted">
+                            <h2 className="text-xl font-headline font-semibold text-primary">{category}</h2>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-6 bg-background">
+                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                                {groupedAndFilteredItems[category].map((item) => {
+                                    const placeholder = getPlaceholderImage(item);
+                                    return (
+                                        <Card key={item.id} className="flex flex-col overflow-hidden group">
+                                            <div className="aspect-square relative">
+                                                <img
+                                                    src={placeholder.imageUrl}
+                                                    alt={placeholder.description}
+                                                    className="object-cover w-full h-full"
+                                                    data-ai-hint={placeholder.imageHint}
+                                                />
+                                            </div>
+                                            <CardHeader className="pb-2 flex-grow">
+                                                <CardTitle className="font-headline text-lg">{item.name}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewVariants(item.id)}>
+                                                    <Eye className="mr-2 h-4 w-4" /> View Variants ({item.variantCount || 0})
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
                             </div>
-                            <CardHeader className="pb-2">
-                                <CardDescription>
-                                    <Badge variant="secondary">{item.parentCategory}</Badge>
-                                </CardDescription>
-                                <CardTitle className="font-headline text-xl">{item.parentName}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex-grow space-y-2">
-                                <p className="text-lg font-semibold text-primary">{item.brand}</p>
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                    {item.description || 'A unique variant from our collection.'}
-                                </p>
-                                <div className="flex items-center justify-between text-sm pt-2">
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                         <Package className="w-4 h-4" />
-                                        <span className="font-medium text-foreground">{item.quantity} left</span>
-                                    </div>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex justify-center gap-2 pt-4">
-                                <Button variant="outline" size="sm" onClick={() => handleViewDetails(item)}>
-                                    <Eye className="mr-2 h-4 w-4" /> View
-                                </Button>
-                                <Button size="sm" onClick={() => setVariantToAddToCart(item)} disabled={item.quantity <= 0}>
-                                    <FileQuestion className="mr-2 h-4 w-4" /> Add to Quotation
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    );
-                })}
-            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+           </Accordion>
         ) : (
-            <div className="text-center py-24">
-                <p className="text-muted-foreground">No products found matching your search.</p>
+            <div className="text-center py-24 border rounded-lg">
+                <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">
+                    {searchTerm ? 'No products found matching your search.' : 'No products available in the catalog.'}
+                </p>
             </div>
         )}
     </div>
-    {isModalOpen && selectedVariant && (
-        <Suspense fallback={<div>Loading...</div>}>
-            <ViewProductModal 
-                isOpen={isModalOpen}
-                onOpenChange={setIsModalOpen}
-                variant={selectedVariant}
-                onAddToCart={handleAddToCartRequest}
-            />
-        </Suspense>
-    )}
-
-    <AlertDialog open={!!variantToAddToCart} onOpenChange={(open) => !open && setVariantToAddToCart(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Add to Quotation</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Are you sure you want to add <strong>{variantToAddToCart?.parentName} ({variantToAddToCart?.brand})</strong> to your quotation list?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleAddToCartConfirm}>
-                    Confirm
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
