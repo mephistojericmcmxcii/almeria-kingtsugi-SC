@@ -22,7 +22,7 @@ interface OrderReviewDialogProps {
     onSubmit: (review?: string) => Promise<void>;
 }
 
-export default function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: OrderReviewDialogProps) {
+export function OrderReviewDialog({ isOpen, onOpenChange, order, onSubmit }: OrderReviewDialogProps) {
     const [review, setReview] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 

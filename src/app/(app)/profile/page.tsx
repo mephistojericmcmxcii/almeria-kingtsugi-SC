@@ -189,7 +189,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         let totalDiscountPercentage = 0;
 
         if (isFileBasedOrder) {
-            subtotal = order.totalAmount + totalDiscount - (order.deliveryFee || 0) - (order.packagingFee || 0);
+            subtotal = order.totalAmount - (order.deliveryFee || 0) - (order.packagingFee || 0) + totalDiscount;
             if(subtotal > 0) {
                 totalDiscountPercentage = (totalDiscount / subtotal) * 100;
             }
@@ -843,10 +843,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-
-
-
-
-
-
