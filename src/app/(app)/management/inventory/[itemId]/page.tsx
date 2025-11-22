@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const AddEditVariantDialog = lazy(() => import('@/components/inventory/add-edit-variant-dialog').then(module => ({ default: module.AddEditVariantDialog })));
-const PrintLayout = lazy(() => import('@/components/inventory/print-layout').then(module => ({ default: module.PrintLayout })));
+const PrintLayout = lazy(() => import('@/components/inventory/print-layout'));
 
 export default function ItemVariantsPage() {
   const { firestore } = useFirebase();
