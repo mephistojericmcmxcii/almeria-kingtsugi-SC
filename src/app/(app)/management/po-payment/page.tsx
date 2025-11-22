@@ -89,13 +89,14 @@ export default function PoPaymentPage() {
           }
 
           const amountDeposited = po.amountDeposited || 0;
+          const taxDeduction = po.taxDeduction || 0;
           
           return {
             id: po.id,
             po: po,
             totalAllocation,
             totalExpenses,
-            profit: amountDeposited - totalExpenses,
+            profit: amountDeposited - totalExpenses - taxDeduction,
             paymentStatus: po.paymentStatus,
           };
         });
