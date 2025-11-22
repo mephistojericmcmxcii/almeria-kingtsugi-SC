@@ -141,6 +141,8 @@ export type PurchaseOrder = {
   totalExpenses?: number;
   salesInvoice?: string;
   deliveryReceipt?: string;
+  salesInvoiceUrl?: string;
+  deliveryReceiptUrl?: string;
 };
 
 export type QuotationRequestItem = {

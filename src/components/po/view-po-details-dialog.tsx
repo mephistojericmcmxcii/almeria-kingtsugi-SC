@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Download } from 'lucide-react';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
@@ -27,15 +28,16 @@ const formatCurrency = (amount: number) => {
 export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
   const { updatePoStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [salesInvoice, setSalesInvoice] = useState('');
-  const [deliveryReceipt, setDeliveryReceipt] = useState('');
-
+  const [salesInvoice, setSalesInvoice] = useState(po.salesInvoice || '');
+  const [deliveryReceipt, setDeliveryReceipt] = useState(po.deliveryReceipt || '');
+  const [siFile, setSiFile] = useState<File | null>(null);
+  const [drFile, setDrFile] = useState<File | null>(null);
 
   if (!po) return null;
 
   const handleUpdateStatus = async () => {
     setIsUpdating(true);
-    const success = await updatePoStatus(po.id, 'Delivered', { salesInvoice, deliveryReceipt });
+    const success = await updatePoStatus(po.id, 'Delivered', { salesInvoice, deliveryReceipt, salesInvoiceFile: siFile, deliveryReceiptFile: drFile });
     if (success) {
         onOpenChange(true); // Signal that a change was made
     }
@@ -88,17 +90,27 @@ export function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPo
                 </div>
             </div>
 
-            {po.displayStatus === 'Completed' && (
+            {(po.displayStatus === 'Completed' || po.displayStatus === 'Delivered') && (
                 <div className="space-y-4 border-t pt-4">
                     <h3 className="font-semibold text-foreground">Delivery Confirmation</h3>
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 gap-4">
                          <div className="space-y-2">
                              <Label htmlFor="salesInvoice">Sales Invoice #</Label>
-                             <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} />
+                             <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} disabled={po.displayStatus === 'Delivered'} />
+                         </div>
+                         <div className="space-y-2">
+                             <Label htmlFor="siFile">Attach Sales Invoice File</Label>
+                             <Input id="siFile" type="file" onChange={(e) => setSiFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} />
+                             {po.salesInvoiceUrl && <a href={po.salesInvoiceUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded SI</Button></a>}
                          </div>
                          <div className="space-y-2">
                              <Label htmlFor="deliveryReceipt">Delivery Receipt #</Label>
-                             <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} />
+                             <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} disabled={po.displayStatus === 'Delivered'} />
+                         </div>
+                          <div className="space-y-2">
+                             <Label htmlFor="drFile">Attach Delivery Receipt File</Label>
+                             <Input id="drFile" type="file" onChange={(e) => setDrFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} />
+                             {po.deliveryReceiptUrl && <a href={po.deliveryReceiptUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded DR</Button></a>}
                          </div>
                      </div>
                 </div>

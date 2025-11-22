@@ -61,8 +61,8 @@ interface AuthContextType {
       rating?: number;
     }
 ) => Promise<boolean>;
-  updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string }) => Promise<boolean>;
-  uploadFile: (file: File, path: string, fileName: string) => Promise<string | null>;
+  updatePoStatus: (poId: string, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null }) => Promise<boolean>;
+  uploadFile: (file: File, path: string, fileName?: string) => Promise<string | null>;
   showCartBadge: boolean;
   showQuoteReadyBadge: boolean;
   showNewPurchaseBadge: boolean;
@@ -978,7 +978,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updatePoStatus = async (poId: string, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string }): Promise<boolean> => {
+    const updatePoStatus = async (poId: string, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null }): Promise<boolean> => {
         const poRef = doc(firestore, 'purchase_orders', poId);
         try {
             const dataToUpdate: any = {
@@ -989,6 +989,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (newStatus === 'Delivered') {
                 if (details?.salesInvoice) dataToUpdate.salesInvoice = details.salesInvoice;
                 if (details?.deliveryReceipt) dataToUpdate.deliveryReceipt = details.deliveryReceipt;
+
+                if (details?.salesInvoiceFile) {
+                    const url = await uploadFile(details.salesInvoiceFile, `po_documents/${poId}`, `sales_invoice_${poId}`);
+                    if (url) dataToUpdate.salesInvoiceUrl = url;
+                }
+                if (details?.deliveryReceiptFile) {
+                    const url = await uploadFile(details.deliveryReceiptFile, `po_documents/${poId}`, `delivery_receipt_${poId}`);
+                    if (url) dataToUpdate.deliveryReceiptUrl = url;
+                }
             }
 
             await updateDoc(poRef, dataToUpdate);
@@ -1017,7 +1026,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const uploadFile = async (file: File, path: string, fileName: string): Promise<string | null> => {
+    const uploadFile = async (file: File, path: string, fileName?: string): Promise<string | null> => {
         if (!storage) {
             toast({
                 variant: 'destructive',
@@ -1026,9 +1035,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             return null;
         }
-
-        const fileExtension = file.name.split('.').pop();
-        const finalFileName = `${fileName}.${fileExtension}`;
+    
+        const finalFileName = fileName ? `${fileName}.${file.name.split('.').pop()}` : file.name;
         const storageRef = ref(storage, `${path}/${finalFileName}`);
 
         try {
