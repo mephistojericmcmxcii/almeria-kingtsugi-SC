@@ -16,8 +16,6 @@ import { Plus, Trash2 } from 'lucide-react';
 
 const poItemSchema = z.object({
   name: z.string().min(1, 'Item name is required.'),
-  brand: z.string().optional(),
-  model: z.string().optional(),
   unit: z.string().min(1, 'Unit is required.'),
   quantity: z.preprocess(
     (val) => (val === '' ? 1 : parseInt(String(val), 10)),
@@ -27,6 +25,7 @@ const poItemSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().min(0, 'Allocated amount cannot be negative.')
   ),
+  description: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -50,7 +49,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }],
+      items: [{ name: '', unit: '', quantity: 1, amount: 0, description: '' }],
     },
   });
 
@@ -61,7 +60,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
   useEffect(() => {
     if (!isOpen) {
-      form.reset({ items: [{ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 }] });
+      form.reset({ items: [{ name: '', unit: '', quantity: 1, amount: 0, description: '' }] });
     }
   }, [isOpen, form]);
 
@@ -97,7 +96,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Add Items to Purchase Order</DialogTitle>
           <DialogDescription>Add one or more line items to this PO.</DialogDescription>
@@ -106,7 +105,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-[2fr,1fr,1fr,0.5fr,0.5fr,1fr,auto] items-end gap-2 p-2 border rounded-lg">
+                <div key={field.id} className="grid grid-cols-[3fr,1fr,1fr,1fr,2fr,auto] items-end gap-2 p-2 border rounded-lg">
                   <FormField
                     control={form.control}
                     name={`items.${index}.name`}
@@ -115,32 +114,6 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                         {index === 0 && <label className="text-sm font-medium">Item Name</label>}
                         <FormControl>
                           <Input placeholder="e.g., Bond Paper" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name={`items.${index}.brand`}
-                    render={({ field }) => (
-                      <FormItem>
-                        {index === 0 && <label className="text-sm font-medium">Brand</label>}
-                        <FormControl>
-                          <Input placeholder="e.g., Pilot" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name={`items.${index}.model`}
-                    render={({ field }) => (
-                      <FormItem>
-                        {index === 0 && <label className="text-sm font-medium">Model/Description</label>}
-                        <FormControl>
-                          <Input placeholder="e.g., G2" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -185,6 +158,19 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={form.control}
+                    name={`items.${index}.description`}
+                    render={({ field }) => (
+                      <FormItem>
+                        {index === 0 && <label className="text-sm font-medium">Description</label>}
+                        <FormControl>
+                          <Input placeholder="Optional details" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <Button
                     type="button"
                     variant="ghost"
@@ -203,7 +189,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ name: '', brand: '', model: '', unit: '', quantity: 1, amount: 0 })}
+              onClick={() => append({ name: '', unit: '', quantity: 1, amount: 0, description: '' })}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Another Item
@@ -222,3 +208,5 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
     </Dialog>
   );
 }
+
+    

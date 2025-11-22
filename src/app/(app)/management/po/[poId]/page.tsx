@@ -138,9 +138,8 @@ export default function PoDetailsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Item Name</TableHead>
-                                <TableHead>Brand</TableHead>
-                                <TableHead>Model/Description</TableHead>
                                 <TableHead>Unit</TableHead>
+                                <TableHead>Description</TableHead>
                                 <TableHead className="text-right">Quantity</TableHead>
                                 <TableHead className="text-right">Allocated Amount</TableHead>
                                 <TableHead className="text-right">Actual Amount</TableHead>
@@ -154,9 +153,8 @@ export default function PoDetailsPage() {
                                 Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
@@ -169,9 +167,8 @@ export default function PoDetailsPage() {
                                 poItems.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell className="text-muted-foreground">{item.brand || 'N/A'}</TableCell>
-                                        <TableCell className="text-muted-foreground">{item.model || 'N/A'}</TableCell>
                                         <TableCell><Badge variant="secondary">{item.unit}</Badge></TableCell>
+                                        <TableCell className="text-muted-foreground">{item.description || 'N/A'}</TableCell>
                                         <TableCell className="text-right">{item.quantity}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.actualAmount || 0)}</TableCell>
@@ -204,7 +201,7 @@ export default function PoDetailsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center">
+                                    <TableCell colSpan={9} className="h-24 text-center">
                                         No items have been added to this purchase order yet.
                                     </TableCell>
                                 </TableRow>
@@ -251,3 +248,5 @@ export default function PoDetailsPage() {
         </div>
     );
 }
+
+    

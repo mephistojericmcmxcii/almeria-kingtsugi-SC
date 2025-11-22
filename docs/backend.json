@@ -504,14 +504,6 @@
           "type": "string",
           "description": "The unit of measurement (e.g., 'pcs', 'box', 'ream')."
         },
-        "brand": {
-            "type": "string",
-            "description": "The brand of the item (optional)."
-        },
-        "model": {
-            "type": "string",
-            "description": "The model of the item (optional)."
-        },
         "quantity": {
           "type": "number",
           "description": "The quantity of the item being ordered."
@@ -523,6 +515,10 @@
         "actualAmount": {
           "type": "number",
           "description": "The actual cost per unit for this line item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description for the item."
         }
       },
       "required": ["name", "unit", "quantity", "amount"]

@@ -110,12 +110,11 @@ export type PoPaymentStatus = 'Paid' | 'Unpaid';
 export type PurchaseOrderItem = {
   id: string;
   name: string;
-  brand?: string;
-  model?: string;
   unit: string;
   quantity: number;
   amount: number; // Allocated amount per unit
   actualAmount?: number; // Real cost per unit
+  description?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -168,5 +167,7 @@ export type CustomerFeedback = {
   review?: string;
   createdAt: any;
 };
+
+    
 
     
