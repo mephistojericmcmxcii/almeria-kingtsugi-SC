@@ -176,12 +176,27 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
 
         const order = viewingOrder;
         const isFileBasedOrder = !!order.quotationFileUrl;
-        const showPricing = order.status !== 'pending-quote' && !isFileBasedOrder;
-        const subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
-        const totalDiscount = order.discount || 0;
-        const finalTotal = order.totalAmount;
-        const totalDiscountPercentage = subtotal > 0 ? (totalDiscount / subtotal) * 100 : 0;
+        const showPricing = order.status !== 'pending-quote';
 
+        let subtotal = 0;
+        let totalDiscount = order.discount || 0;
+        let finalTotal = order.totalAmount;
+        let totalDiscountPercentage = 0;
+
+        if (isFileBasedOrder) {
+            // For file-based orders, the 'totalAmount' is the gross amount before discounts and fees.
+            // We adjust it to get the subtotal before final calculation.
+            subtotal = order.totalAmount + (order.discount || 0) - (order.deliveryFee || 0) - (order.packagingFee || 0);
+            if(subtotal > 0) {
+                totalDiscountPercentage = (totalDiscount / subtotal) * 100;
+            }
+        } else {
+            subtotal = order.items.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
+            if(subtotal > 0) {
+                totalDiscountPercentage = (totalDiscount / subtotal) * 100;
+            }
+        }
+        
         return (
              <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
@@ -260,8 +275,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                 </div>
                                 {(totalDiscount) > 0 && (
                                     <div className="flex justify-between text-sm text-green-600">
-                                        <span>Total Item Discounts</span>
-                                        <span>- {formatCurrency(totalDiscount)} ({totalDiscountPercentage.toFixed(1)}%)</span>
+                                        <span>Total Discount</span>
+                                        <span>- {formatCurrency(totalDiscount)}{totalDiscountPercentage > 0 ? ` (${totalDiscountPercentage.toFixed(1)}%)` : ''}</span>
                                     </div>
                                 )}
                                 {(order.deliveryFee || 0) > 0 && (
@@ -811,5 +826,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
 
