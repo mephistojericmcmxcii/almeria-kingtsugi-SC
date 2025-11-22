@@ -102,17 +102,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const maintenanceRef = useMemo(() => doc(firestore, 'system_settings', 'maintenance_mode'), [firestore]);
   
   useEffect(() => {
-    const unsub = onSnapshot(maintenanceRef, (snap) => {
-        const maintenanceSetting = snap.data() as { enabled: boolean };
-        if (maintenanceSetting?.enabled && user?.role !== 'admin') {
-            logout();
-            toast({
-                variant: "destructive",
-                title: "Under Maintenance",
-                description: "The portal is currently under maintenance. You have been logged out.",
-            });
+    const unsub = onSnapshot(maintenanceRef, 
+        (snap) => {
+            const maintenanceSetting = snap.data() as { enabled: boolean };
+            if (maintenanceSetting?.enabled && user?.role !== 'admin') {
+                logout();
+                toast({
+                    variant: "destructive",
+                    title: "Under Maintenance",
+                    description: "The portal is currently under maintenance. You have been logged out.",
+                });
+            }
+        },
+        (error) => {
+            if (error.code === 'permission-denied') {
+                const contextualError = new FirestorePermissionError({
+                    path: maintenanceRef.path,
+                    operation: 'get',
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            } else {
+                console.error("Maintenance listener error:", error);
+            }
         }
-    });
+    );
     return () => unsub();
   }, [maintenanceRef, user]);
 
@@ -148,12 +161,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } as InventoryVariant));
         setProducts(variants);
       }).catch(error => {
-        console.error("Error fetching product data:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Error Fetching Products',
-          description: 'Could not load the product catalog.'
-        });
+        if (error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                path: 'variants',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        } else {
+             console.error("Error fetching product data:", error);
+            toast({
+              variant: 'destructive',
+              title: 'Error Fetching Products',
+              description: 'Could not load the product catalog.'
+            });
+        }
       }).finally(() => {
         setIsProductsLoading(false);
       });
