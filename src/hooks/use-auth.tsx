@@ -910,7 +910,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (newStatus === 'completed' && details?.rating && user) {
                     const feedbackRef = doc(firestore, 'customer_feedback', order.id);
                     const newFeedback: Omit<CustomerFeedback, 'id'> = {
-                        userId: user.id,
                         userName: user.displayName,
                         rating: details.rating,
                         review: details.review,

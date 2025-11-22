@@ -554,10 +554,6 @@
       "type": "object",
       "description": "Represents a customer's feedback and rating for a completed order.",
       "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who provided the feedback."
-        },
         "userName": {
           "type": "string",
           "description": "The name of the user."
@@ -577,7 +573,6 @@
         }
       },
       "required": [
-        "userId",
         "userName",
         "rating",
         "createdAt"
@@ -793,7 +788,7 @@
           "schema": {
             "$ref": "#/backend/entities/CustomerFeedback"
           },
-          "description": "Stores customer feedback. Publicly readable, but only the user who created it can write it.",
+          "description": "Stores customer feedback. Publicly readable, but only authenticated users can create it.",
           "params": [
             {
               "name": "feedbackId",

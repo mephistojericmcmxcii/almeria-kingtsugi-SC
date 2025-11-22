@@ -77,8 +77,8 @@ service cloud.firestore {
     match /customer_feedback/{feedbackId} {
         // Anyone can read feedback
         allow read: if true;
-        // Only authenticated users can create feedback, and only if they are the owner of the associated order
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        // Only authenticated users can create feedback.
+        allow create: if request.auth != null;
         // Only admins can delete feedback
         allow delete: if request.auth != null && request.auth.token.admin == true;
         // Nobody can update feedback
