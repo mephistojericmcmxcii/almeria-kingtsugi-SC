@@ -89,10 +89,16 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
           }
           .brochure-image {
               width: 100%;
-              height: 350px;
+              height: auto;
+              aspect-ratio: 1 / 1;
               object-fit: cover;
               border-radius: 0.5rem;
               border: 1px solid #e5e7eb;
+          }
+          .brochure-details {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
           }
           .brochure-details h2 {
               font-family: 'Playfair Display', serif;
@@ -107,14 +113,26 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
               color: hsl(var(--primary));
               margin: 0.25rem 0 1rem 0;
           }
-          .brochure-details .description {
+          .description-section {
+              margin-top: auto;
+              padding-top: 1rem;
+              border-top: 1px solid #f3f4f6;
+          }
+          .description-section h3 {
+              font-weight: 600;
               font-size: 11pt;
+              color: #6b7280;
+              margin-bottom: 0.5rem;
+          }
+          .description-section p {
+              font-size: 10pt;
               color: #4b5563;
-              margin-bottom: 1.5rem;
+              white-space: pre-wrap;
           }
           .specs-table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 1.5rem;
           }
           .specs-table td {
             padding: 0.5rem 0;
@@ -150,9 +168,10 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
           <main className="brochure">
             <img src={placeholder.imageUrl} alt={variant.parentName} className="brochure-image" />
             <div className="brochure-details">
-                <h2>{variant.parentName}</h2>
-                <p className="brand">{variant.brand}</p>
-                <p className="description">{variant.description || 'No description available.'}</p>
+                <div>
+                    <h2>{variant.parentName}</h2>
+                    <p className="brand">{variant.brand}</p>
+                </div>
                 
                 <table className="specs-table">
                     <tbody>
@@ -171,15 +190,18 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
                             <td>{variant.parentCategory}</td>
                         </tr>
                         <tr>
-                            <td>Quantity</td>
-                            <td>{variant.quantity}</td>
-                        </tr>
-                        <tr>
                             <td>Price</td>
                             <td>{formatCurrency(variant.price)}</td>
                         </tr>
                     </tbody>
                 </table>
+
+                {variant.description && (
+                    <div className="description-section">
+                        <h3>Specifications / Description</h3>
+                        <p>{variant.description}</p>
+                    </div>
+                )}
             </div>
           </main>
 
