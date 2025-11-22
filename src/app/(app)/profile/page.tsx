@@ -137,8 +137,8 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
         setIsUpdating(order.id);
         await updateOrderStatus(order, status);
         setIsUpdating(null);
-        if (newStatus === 'cancelled' || newStatus === 'completed') {
-            setViewingOrder(prev => prev ? {...prev, status: newStatus} : null);
+        if (status === 'cancelled' || status === 'completed') {
+            setViewingOrder(prev => prev ? {...prev, status: status} : null);
         }
     };
 
@@ -458,7 +458,7 @@ function RfqList() {
                         </Table>
                     )}
                     {rfq.requestType === 'attachment' && rfq.fileAttachment && (
-                            <a href={rfq.fileAttachment} target="_blank" rel="noopener noreferrer">
+                        <a href={rfq.fileAttachment} target="_blank" rel="noopener noreferrer">
                             <Button variant="outline" size="sm">
                                 <Download className="mr-2 h-4 w-4" /> View Attachment
                             </Button>
@@ -800,5 +800,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
