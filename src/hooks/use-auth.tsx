@@ -817,7 +817,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         { status: 'pending-quote', timestamp: rfq.createdAt },
                         { status: 'quote-ready', timestamp: Timestamp.now() }
                     ],
-                    cancellationReason: fileUrl // Repurposing this field to store the quote file URL
+                    quotationFileUrl: fileUrl,
                 };
 
                 transaction.set(newOrderRef, newOrder);

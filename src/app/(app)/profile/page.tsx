@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -206,31 +207,46 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                             <AlertDescription className="whitespace-pre-wrap">{order.notes}</AlertDescription>
                                         </Alert>
                                     )}
-                                    <div>
-                                        <h4 className="font-semibold mb-2">Items</h4>
-                                        <div className="space-y-2">
-                                        {order.items.map(item => {
-                                            const itemTotal = (item.price || 0) * item.quantity;
-                                            const discountValue = itemTotal * ((item.discount || 0) / 100);
-                                            const finalItemPrice = itemTotal - discountValue;
-
-                                            return (
-                                            <div key={item.id} className="flex justify-between items-center text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" data-ai-hint={item.imageHint} />
-                                                    <div>
-                                                        <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
-                                                        {showPricing && (item.discount || 0) > 0 && (
-                                                            <p className="text-xs text-green-600">Discount: {item.discount}% (-{formatCurrency(discountValue)})</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {showPricing && <span>{formatCurrency(finalItemPrice)}</span>}
-                                            </div>
-                                            )
-                                        })}
+                                    
+                                    {order.quotationFileUrl && (
+                                        <div className="pt-4 border-t">
+                                            <h4 className="font-semibold mb-2">Quotation File</h4>
+                                             <a href={order.quotationFileUrl} target="_blank" rel="noopener noreferrer">
+                                                <Button variant="outline" size="sm">
+                                                    <Download className="mr-2 h-4 w-4" /> View Quotation
+                                                </Button>
+                                            </a>
                                         </div>
-                                    </div>
+                                    )}
+
+                                    {order.items && order.items.length > 0 && (
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Items</h4>
+                                            <div className="space-y-2">
+                                            {order.items.map(item => {
+                                                const itemTotal = (item.price || 0) * item.quantity;
+                                                const discountValue = itemTotal * ((item.discount || 0) / 100);
+                                                const finalItemPrice = itemTotal - discountValue;
+
+                                                return (
+                                                <div key={item.id} className="flex justify-between items-center text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <img src={item.imageUrl} alt={item.parentName || 'item'} className="w-10 h-10 rounded object-cover" data-ai-hint={item.imageHint} />
+                                                        <div>
+                                                            <p>{item.parentName} ({item.brand}) x {item.quantity}</p>
+                                                            {showPricing && (item.discount || 0) > 0 && (
+                                                                <p className="text-xs text-green-600">Discount: {item.discount}% (-{formatCurrency(discountValue)})</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {showPricing && <span>{formatCurrency(finalItemPrice)}</span>}
+                                                </div>
+                                                )
+                                            })}
+                                            </div>
+                                        </div>
+                                    )}
+
 
                                     {showPricing && (
                                         <div className="space-y-2 pt-4 border-t">

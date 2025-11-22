@@ -87,6 +87,7 @@ export type Order = {
   ref?: DocumentReference; // Available on collection group queries
   updatedAt?: Timestamp;
   cancellationReason?: string;
+  quotationFileUrl?: string; // URL to the uploaded quotation file from admin
   discount: number; // Overall order discount, can be sum of item discounts
   deliveryFee?: number;
   packagingFee?: number;
