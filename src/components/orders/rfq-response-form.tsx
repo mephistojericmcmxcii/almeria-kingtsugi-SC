@@ -23,8 +23,14 @@ const itemPricingSchema = z.object({
   name: z.string(),
   quantity: z.number(),
   specs: z.string().optional(),
-  price: z.coerce.number().min(0, 'Price must be a positive number.'),
-  discount: z.coerce.number().min(0).max(100).optional().default(0),
+  price: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null) ? 0 : (typeof val === 'string' ? parseFloat(val) : val),
+    z.coerce.number().min(0, 'Price must be a positive number.')
+  ),
+  discount: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null) ? 0 : (typeof val === 'string' ? parseFloat(val) : val),
+    z.coerce.number().min(0).max(100).optional().default(0)
+  ),
 });
 
 const baseSchema = z.object({
