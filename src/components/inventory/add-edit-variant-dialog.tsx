@@ -82,6 +82,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
   const initialFormState: VariantFormData = {
       brand: '',
+      model: '',
       source: '',
       quantity: 0,
       price: 0,
@@ -100,6 +101,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
     if (isOpen) {
         const initialState = variantToEdit ? {
             brand: variantToEdit.brand || '',
+            model: variantToEdit.model || '',
             source: variantToEdit.source || '',
             quantity: variantToEdit.quantity || 0,
             price: variantToEdit.price || 0,
@@ -287,6 +289,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             )}
 
             <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="e.g., Pilot" value={formState.brand} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="model">Model (Optional)</Label><Input id="model" name="model" placeholder="e.g., G2" value={formState.model} onChange={handleInputChange} disabled={isSubmitting} /></div>
             <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source} onChange={handleInputChange} disabled={isSubmitting} /></div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -298,7 +301,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           
-          <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., G2, 0.5mm, Black Ink" value={formState.description} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          <div className="space-y-2"><Label htmlFor="description">Description / Specifications (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., 0.5mm, Black Ink" value={formState.description} onChange={handleInputChange} disabled={isSubmitting} /></div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

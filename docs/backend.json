@@ -240,6 +240,10 @@
           "type": "string",
           "description": "Brand of the item variant."
         },
+        "model": {
+          "type": "string",
+          "description": "Model of the item variant (optional)."
+        },
         "source": {
           "type": "string",
           "description": "Where the item was sourced from."
@@ -565,17 +569,11 @@
         "review": {
           "type": "string",
           "description": "The optional text review provided by the user."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the feedback was submitted."
         }
       },
       "required": [
         "userName",
-        "rating",
-        "createdAt"
+        "rating"
       ]
     }
   },
