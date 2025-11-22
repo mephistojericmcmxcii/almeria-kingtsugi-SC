@@ -15,10 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { StatsCard } from '@/components/dashboard/stats-card';
 
 const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
 const AddManualPoDialog = lazy(() => import('@/components/po/add-manual-po-dialog').then(module => ({ default: module.AddManualPoDialog })));
@@ -107,6 +108,22 @@ export default function PoPaymentPage() {
         setIsLoading(false);
     }
   }, [firestore, user]);
+  
+  const { paidCount, unpaidCount, totalProfitLoss } = useMemo(() => {
+    if (!summaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
+    
+    return summaries.reduce((acc, summary) => {
+        if (summary.paymentStatus === 'Paid') {
+            acc.paidCount++;
+        } else if (summary.paymentStatus === 'Unpaid') {
+            acc.unpaidCount++;
+        }
+        acc.totalProfitLoss += summary.profit;
+        return acc;
+    }, { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 });
+
+  }, [summaries]);
+
 
   const handleDeleteConfirm = async () => {
     if (!poToDelete) return;
@@ -174,6 +191,32 @@ export default function PoPaymentPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Manual Payment
         </Button>
       </div>
+
+       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <StatsCard
+            title="Paid POs"
+            value={isLoading ? <Skeleton className="h-8 w-1/4" /> : paidCount}
+            description="Total purchase orders marked as paid."
+            icon={CircleDollarSign}
+            isLoading={isLoading}
+        />
+        <StatsCard
+            title="Unpaid POs"
+            value={isLoading ? <Skeleton className="h-8 w-1/4" /> : unpaidCount}
+            description="Total purchase orders awaiting payment."
+            icon={BadgeDollarSign}
+            isLoading={isLoading}
+        />
+        <StatsCard
+            title="Total Profit / Loss"
+            value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)}
+            description="Sum of all PO profits and losses."
+            icon={TrendingUp}
+            isLoading={isLoading}
+        />
+       </div>
+
+
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Purchase Order Financials</CardTitle>
@@ -296,3 +339,4 @@ export default function PoPaymentPage() {
     </>
   );
 }
+
