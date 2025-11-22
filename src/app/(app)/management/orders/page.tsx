@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
@@ -16,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ShoppingCart, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info, FileText, Send } from 'lucide-react';
+import { ShoppingCart, Search, Eye, ShieldAlert, Phone, Package, Plus, Percent, MessageSquare, Info, FileText, Send, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -434,61 +435,84 @@ export default function AllOrdersPage() {
                                 <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md whitespace-pre-wrap">{selectedOrder.notes}</p>
                             </div>
                         )}
+                        
+                        {(selectedOrder.quotationFileUrl || selectedOrder.customerRevisionUrl) && (
+                            <div className="space-y-2">
+                                <h3 className="font-semibold">Attached Files</h3>
+                                <div className="flex items-center gap-4">
+                                {selectedOrder.quotationFileUrl && (
+                                    <a href={selectedOrder.quotationFileUrl} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> View Original Quotation</Button>
+                                    </a>
+                                )}
+                                {selectedOrder.customerRevisionUrl && (
+                                    <a href={selectedOrder.customerRevisionUrl} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="secondary" size="sm"><Download className="mr-2 h-4 w-4" /> View Customer Revision</Button>
+                                    </a>
+                                )}
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <h3 className="font-semibold mb-2">Items ({selectedOrder.items.length})</h3>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-2/5">Item</TableHead>
-                                        <TableHead className="text-right">Price</TableHead>
-                                        <TableHead className="text-right">Qty</TableHead>
-                                        <TableHead className="text-right">Discount (%)</TableHead>
-                                        <TableHead className="text-right">Total Price</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {selectedOrder.items.map((item) => {
-                                        const price = itemPrices[item.id] || 0;
-                                        const discountPercent = itemDiscounts[item.id] || 0;
-                                        const itemTotal = price * item.quantity;
-                                        const discountValue = itemTotal * (discountPercent / 100);
-                                        const totalPrice = itemTotal - discountValue;
-
-                                        return (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <p className="font-medium">{item.parentName}</p>
-                                                <p className="text-xs text-muted-foreground">{item.brand}</p>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                 <Input 
-                                                    type="number" 
-                                                    className="h-8 w-24 ml-auto text-right"
-                                                    value={price}
-                                                    onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
-                                                    onWheel={handleNumberInputOnWheel}
-                                                    onFocus={(e) => e.target.select()}
-                                                    disabled={isUpdating || !isPricingEditable}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-right">{item.quantity}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Input 
-                                                    type="number" 
-                                                    className="h-8 w-20 ml-auto text-right"
-                                                    value={discountPercent}
-                                                    onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
-                                                    onWheel={handleNumberInputOnWheel}
-                                                    onFocus={(e) => e.target.select()}
-                                                    disabled={isUpdating || !isPricingEditable}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium">{formatCurrency(totalPrice)}</TableCell>
+                            {selectedOrder.items.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-2/5">Item</TableHead>
+                                            <TableHead className="text-right">Price</TableHead>
+                                            <TableHead className="text-right">Qty</TableHead>
+                                            <TableHead className="text-right">Discount (%)</TableHead>
+                                            <TableHead className="text-right">Total Price</TableHead>
                                         </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedOrder.items.map((item) => {
+                                            const price = itemPrices[item.id] || 0;
+                                            const discountPercent = itemDiscounts[item.id] || 0;
+                                            const itemTotal = price * item.quantity;
+                                            const discountValue = itemTotal * (discountPercent / 100);
+                                            const totalPrice = itemTotal - discountValue;
+
+                                            return (
+                                            <TableRow key={item.id}>
+                                                <TableCell>
+                                                    <p className="font-medium">{item.parentName}</p>
+                                                    <p className="text-xs text-muted-foreground">{item.brand}</p>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Input 
+                                                        type="number" 
+                                                        className="h-8 w-24 ml-auto text-right"
+                                                        value={price}
+                                                        onChange={(e) => handleItemPriceChange(item.id, Number(e.target.value))}
+                                                        onWheel={handleNumberInputOnWheel}
+                                                        onFocus={(e) => e.target.select()}
+                                                        disabled={isUpdating || !isPricingEditable}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Input 
+                                                        type="number" 
+                                                        className="h-8 w-20 ml-auto text-right"
+                                                        value={discountPercent}
+                                                        onChange={(e) => handleItemDiscountChange(item.id, Number(e.target.value))}
+                                                        onWheel={handleNumberInputOnWheel}
+                                                        onFocus={(e) => e.target.select()}
+                                                        disabled={isUpdating || !isPricingEditable}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">{formatCurrency(totalPrice)}</TableCell>
+                                            </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                             ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">No items were listed. This order is likely based on an attached file.</p>
+                            )}
                         </div>
                         
                          <div className="space-y-4 pt-4 border-t">
