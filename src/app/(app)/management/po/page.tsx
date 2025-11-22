@@ -21,11 +21,13 @@ import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2, Edit, PackagePlus,
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 
-const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog').then(module => ({ default: module.AddEditPoDialog })));
-const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog').then(module => ({ default: module.ViewPoDetailsDialog })));
-const ViewPoItemsDialog = lazy(() => import('@/components/po/view-po-items-dialog').then(module => ({ default: module.ViewPoItemsDialog })));
+const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog'));
+const ViewPoDetailsDialog = lazy(() => import('@/components/po/view-po-details-dialog'));
+const ViewPoItemsDialog = lazy(() => import('@/components/po/view-po-items-dialog'));
 const PrintPoListLayout = lazy(() => import('@/components/po/print-po-list-layout'));
 
 
@@ -63,6 +65,7 @@ export default function PoPage() {
   
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [selectedPoIds, setSelectedPoIds] = useState<Set<string>>(new Set());
+  const [printType, setPrintType] = useState<'parentOnly' | 'withChildren'>('parentOnly');
 
 
   const fetchPOs = async () => {
@@ -247,7 +250,7 @@ export default function PoPage() {
       }
   }
   
-  const handlePrintSelected = () => {
+  const handlePrintSelected = async () => {
     if (selectedPoIds.size === 0) {
       toast({
         variant: "destructive",
@@ -258,9 +261,20 @@ export default function PoPage() {
     }
 
     const selectedPOs = purchaseOrders.filter(po => selectedPoIds.has(po.id));
-    const selectedTotals = selectedPOs.map(po => ({ ...totalAmounts[po.id], poNumber: po.poNumber }));
+    
+    let poItems: Record<string, PurchaseOrderItem[]> | undefined;
 
-    const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+    if (printType === 'withChildren') {
+        poItems = {};
+        for (const po of selectedPOs) {
+            const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
+            const itemsSnapshot = await getDocs(itemsCollectionRef);
+            poItems[po.id] = itemsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem));
+        }
+    }
+
+
+    const features = "width=1100,height=800,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
     const printWindow = window.open('', '_blank', features);
     if (printWindow) {
       printWindow.document.write('<div id="print-root"></div>');
@@ -271,7 +285,7 @@ export default function PoPage() {
         const root = createRoot(printRoot);
         root.render(
           <Suspense fallback={<div>Loading print view...</div>}>
-            <PrintPoListLayout pos={selectedPOs} totals={totalAmounts} />
+            <PrintPoListLayout pos={selectedPOs} totals={totalAmounts} poItems={poItems} />
           </Suspense>
         );
       }
@@ -324,24 +338,37 @@ export default function PoPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                  {isPrintMode ? (
                      <>
+                        <RadioGroup value={printType} onValueChange={(v) => setPrintType(v as any)} className="flex items-center gap-4 border p-1.5 pr-3 rounded-lg bg-muted/50">
+                            <Label className="pl-2 text-sm font-medium">Print Type:</Label>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="parentOnly" id="parentOnly" />
+                                <Label htmlFor="parentOnly">Parent Only</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="withChildren" id="withChildren" />
+                                <Label htmlFor="withChildren">With Children</Label>
+                            </div>
+                        </RadioGroup>
                         <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedPoIds(new Set()); }}>
                             <X className="mr-2 h-4 w-4" /> Cancel
                         </Button>
                         <Button onClick={handlePrintSelected} disabled={selectedPoIds.size === 0}>
-                            <Printer className="mr-2 h-4 w-4" /> Print Selected POs
+                            <Printer className="mr-2 h-4 w-4" /> Print Selected
                         </Button>
                      </>
                  ) : (
+                    <>
                     <Button variant="outline" onClick={() => setIsPrintMode(true)}>
                         <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
+                    <Button onClick={handleAddNew}>
+                        <Plus className="mr-2 h-4 w-4" /> Add New PO
+                    </Button>
+                    </>
                  )}
-                <Button onClick={handleAddNew}>
-                  <Plus className="mr-2 h-4 w-4" /> Add New PO
-                </Button>
               </div>
             </div>
           </CardHeader>

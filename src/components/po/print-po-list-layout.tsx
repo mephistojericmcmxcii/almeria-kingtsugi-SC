@@ -3,14 +3,15 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import type { PurchaseOrder } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
 
 interface PrintPoListLayoutProps {
   pos: PurchaseOrder[];
   totals: Record<string, { allocated: number; utilized: number; itemCount: number; }>;
+  poItems?: Record<string, PurchaseOrderItem[]>;
 }
 
-const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) => {
+const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poItems }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
   };
@@ -77,7 +78,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
           table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
           }
           th, td {
             border-bottom: 1px solid hsl(var(--border));
@@ -101,6 +102,22 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
           .font-medium {
               font-weight: 600;
           }
+          .po-block {
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 1rem;
+              margin-bottom: 1.5rem;
+              page-break-inside: avoid;
+          }
+          .child-table {
+              margin-top: 1rem;
+              margin-left: 2rem;
+              width: calc(100% - 2rem);
+          }
+          .child-table th, .child-table td {
+              font-size: 9pt;
+              padding: 6px 8px;
+          }
           
           @media print {
             @page {
@@ -120,6 +137,13 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
             th, td {
                 padding: 8px 6px;
             }
+            .po-block {
+                border: none;
+                padding: 0;
+                margin-bottom: 1rem;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 1rem;
+            }
           }
         `}</style>
         <div className="print-container">
@@ -131,45 +155,99 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
             <div className="document-title">
               <h2>Purchase Order Summary</h2>
             </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th>PO #</th>
-                  <th>Date</th>
-                  <th>Care Of</th>
-                  <th className="text-right">Total Allocation</th>
-                  <th className="text-right">Amount Utilized</th>
-                  <th className="text-right" style={{ paddingRight: '24px' }}>Variance</th>
-                  <th style={{ paddingLeft: '24px' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pos.length > 0 ? (
-                  pos.map((po) => {
-                    const total = totals[po.id];
-                    const itemCount = total?.itemCount || 0;
-                    return (
-                        <tr key={po.id}>
-                            <td className="font-medium">{po.poNumber}</td>
-                            <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
-                            <td>{po.careOf}</td>
-                            <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>
-                            <td className="text-right">{formatCurrency(total?.utilized || 0)}</td>
-                            <td className="text-right font-medium" style={{ paddingRight: '24px' }}>
-                                {itemCount}
-                            </td>
-                            <td style={{ paddingLeft: '24px' }}>{(po as any).displayStatus || po.status}</td>
-                        </tr>
-                    );
-                  })
+            
+            {pos.length > 0 ? (
+                poItems ? (
+                    pos.map(po => {
+                        const total = totals[po.id];
+                        const children = poItems[po.id] || [];
+                        return (
+                            <div key={po.id} className="po-block">
+                                <table className="parent-table">
+                                    <thead>
+                                        <tr>
+                                            <th>PO #</th>
+                                            <th>Date</th>
+                                            <th>Care Of</th>
+                                            <th className="text-right">Total Allocation</th>
+                                            <th className="text-right">Amount Utilized</th>
+                                            <th className="text-right" style={{ paddingRight: '24px' }}>Variance</th>
+                                            <th style={{ paddingLeft: '24px' }}>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="font-medium">{po.poNumber}</td>
+                                            <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
+                                            <td>{po.careOf}</td>
+                                            <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>
+                                            <td className="text-right">{formatCurrency(total?.utilized || 0)}</td>
+                                            <td className="text-right font-medium" style={{ paddingRight: '24px' }}>{total?.itemCount || 0}</td>
+                                            <td style={{ paddingLeft: '24px' }}>{(po as any).displayStatus || po.status}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                {children.length > 0 && (
+                                    <table className="child-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Item Name</th>
+                                                <th>Unit</th>
+                                                <th className="text-right">Qty</th>
+                                                <th className="text-right">Allocated</th>
+                                                <th className="text-right">Actual</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {children.map(child => (
+                                                <tr key={child.id}>
+                                                    <td>{child.name}</td>
+                                                    <td>{child.unit}</td>
+                                                    <td className="text-right">{child.quantity}</td>
+                                                    <td className="text-right">{formatCurrency(child.amount)}</td>
+                                                    <td className="text-right">{formatCurrency(child.actualAmount || 0)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        )
+                    })
                 ) : (
-                  <tr>
-                    <td colSpan={7} style={{textAlign: 'center', padding: '20px'}}>No purchase orders selected.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>PO #</th>
+                      <th>Date</th>
+                      <th>Care Of</th>
+                      <th className="text-right">Total Allocation</th>
+                      <th className="text-right">Amount Utilized</th>
+                      <th className="text-right" style={{ paddingRight: '24px' }}>Variance</th>
+                      <th style={{ paddingLeft: '24px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pos.map((po) => {
+                        const total = totals[po.id];
+                        return (
+                            <tr key={po.id}>
+                                <td className="font-medium">{po.poNumber}</td>
+                                <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
+                                <td>{po.careOf}</td>
+                                <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>
+                                <td className="text-right">{formatCurrency(total?.utilized || 0)}</td>
+                                <td className="text-right font-medium" style={{ paddingRight: '24px' }}>{total?.itemCount || 0}</td>
+                                <td style={{ paddingLeft: '24px' }}>{(po as any).displayStatus || po.status}</td>
+                            </tr>
+                        );
+                    })}
+                  </tbody>
+                </table>
+                )
+            ) : (
+                <p style={{textAlign: 'center', padding: '20px'}}>No purchase orders selected.</p>
+            )}
           </main>
 
            <footer className="footer">
