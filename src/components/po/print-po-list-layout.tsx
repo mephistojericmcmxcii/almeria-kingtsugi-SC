@@ -140,8 +140,8 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
                   <th>Care Of</th>
                   <th className="text-right">Total Allocation</th>
                   <th className="text-right">Amount Utilized</th>
-                  <th className="text-right"># of Items</th>
-                  <th>Status</th>
+                  <th className="text-right" style={{ paddingRight: '24px' }}>Variance</th>
+                  <th style={{ paddingLeft: '24px' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -156,10 +156,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals }) =>
                             <td>{po.careOf}</td>
                             <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>
                             <td className="text-right">{formatCurrency(total?.utilized || 0)}</td>
-                            <td className="text-right font-medium">
+                            <td className="text-right font-medium" style={{ paddingRight: '24px' }}>
                                 {itemCount}
                             </td>
-                            <td>{(po as any).displayStatus || po.status}</td>
+                            <td style={{ paddingLeft: '24px' }}>{(po as any).displayStatus || po.status}</td>
                         </tr>
                     );
                   })
