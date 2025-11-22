@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import React from 'react';
-import type { InventoryVariant } from '@/lib/types';
+import type { InventoryVariant, Specification } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface PrintBrochureLayoutProps {
@@ -33,6 +34,39 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
   };
 
   const placeholder = getPlaceholderImage(variant);
+  
+  const renderSpecifications = () => {
+    if (!variant.specifications) return null;
+
+    if (typeof variant.specifications === 'string') {
+      return (
+        <div>
+          <h3>Specifications</h3>
+          <p>{variant.specifications}</p>
+        </div>
+      );
+    }
+    
+    if (Array.isArray(variant.specifications) && variant.specifications.length > 0) {
+      return (
+        <div>
+          <h3>Specifications</h3>
+          <table className="structured-specs-table">
+            <tbody>
+              {variant.specifications.map((spec: Specification, index: number) => (
+                <tr key={index}>
+                  <td>{spec.title}</td>
+                  <td>{spec.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <>
@@ -124,6 +158,8 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
               color: #6b7280;
               margin-bottom: 0.5rem;
               margin-top: 1rem;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
           }
           .description-section p {
               font-size: 10pt;
@@ -143,6 +179,20 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
           .specs-table td:first-child {
             font-weight: 600;
             color: #6b7280;
+            width: 40%;
+          }
+          .structured-specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+            font-size: 10pt;
+          }
+          .structured-specs-table td {
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #f3f4f6;
+          }
+          .structured-specs-table td:first-child {
+            font-weight: 600;
             width: 40%;
           }
           
@@ -205,12 +255,7 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
                             <p>{variant.description}</p>
                         </div>
                     )}
-                    {variant.specifications && (
-                        <div>
-                            <h3>Specifications</h3>
-                            <p>{variant.specifications}</p>
-                        </div>
-                    )}
+                    {renderSpecifications()}
                 </div>
             </div>
           </main>

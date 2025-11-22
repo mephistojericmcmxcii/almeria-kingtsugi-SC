@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -16,11 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import type { InventoryItem, InventoryVariant } from '@/lib/types';
+import type { InventoryItem, InventoryVariant, Specification } from '@/lib/types';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useFirebase } from '@/firebase';
 import { cn } from '@/lib/utils';
+import { Plus, Trash2 } from 'lucide-react';
 
 
 type VariantFormData = Omit<InventoryVariant, 'id' | 'createdAt' | 'updatedAt' | 'ref' | 'parentItemId' | 'parentName' | 'parentCategory'>;
@@ -61,8 +63,6 @@ const compressImage = (file: File, quality = 0.7, maxSizeKB = 300): Promise<File
                             type: 'image/jpeg',
                             lastModified: Date.now()
                         });
-                        // If it's still too large, we could add recursive compression logic here
-                        // but for now, one pass is often enough.
                         resolve(newFile);
                     } else {
                         reject(new Error('Canvas to Blob conversion failed'));
@@ -81,6 +81,8 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
   const { uploadFile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [specType, setSpecType] = useState<'text' | 'list'>('text');
+  const [structuredSpecs, setStructuredSpecs] = useState<Specification[]>([{ title: '', value: '' }]);
 
   const initialFormState: VariantFormData = {
       variation: '',
@@ -122,6 +124,14 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         setPreviewUrl(initialState.imageUrl || null);
         setImageSource(initialState.imageUrl ? 'url' : 'upload');
 
+        if (variantToEdit && Array.isArray(variantToEdit.specifications)) {
+            setSpecType('list');
+            setStructuredSpecs(variantToEdit.specifications.length > 0 ? variantToEdit.specifications : [{ title: '', value: '' }]);
+        } else {
+            setSpecType('text');
+            setStructuredSpecs([{ title: '', value: '' }]);
+        }
+
     }
   }, [variantToEdit, isOpen]);
   
@@ -145,6 +155,22 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleSpecChange = (index: number, field: 'title' | 'value', value: string) => {
+    const newSpecs = [...structuredSpecs];
+    newSpecs[index][field] = value;
+    setStructuredSpecs(newSpecs);
+  };
+
+  const addSpecRow = () => {
+    setStructuredSpecs([...structuredSpecs, { title: '', value: '' }]);
+  };
+
+  const removeSpecRow = (index: number) => {
+    if (structuredSpecs.length > 1) {
+      setStructuredSpecs(structuredSpecs.filter((_, i) => i !== index));
     }
   };
 
@@ -191,9 +217,14 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             const variantCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
             const variantId = variantToEdit ? variantToEdit.id : doc(variantCollectionRef).id;
             const variantRef = doc(variantCollectionRef, variantId);
+            
+            const finalSpecifications = specType === 'list'
+              ? structuredSpecs.filter(spec => spec.title && spec.value)
+              : formState.specifications;
 
             const dataToSave: Omit<InventoryVariant, 'id' | 'ref'> = {
                 ...formState,
+                specifications: finalSpecifications,
                 imageUrl: finalImageUrl,
                 parentItemId: item.id,
                 parentName: item.name,
@@ -248,7 +279,7 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         {isSubmitting && (
             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center z-20 rounded-lg">
                 <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -302,17 +333,41 @@ export function AddEditVariantDialog({ isOpen, onOpenChange, item, variantToEdit
             <div className="space-y-2"><Label htmlFor="source">Source</Label><Input id="source" name="source" placeholder="e.g., National Bookstore" value={formState.source || ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
           
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label htmlFor="quantity">Quantity</Label><Input id="quantity" name="quantity" type="number" value={formState.quantity || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
-             <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="quantity">Quantity</Label><Input id="quantity" name="quantity" type="number" value={formState.quantity} onChange={handleInputChange} disabled={isSubmitting} /></div>
+             <div className="space-y-2"><Label htmlFor="warningLimit">Warning Limit</Label><Input id="warningLimit" name="warningLimit" type="number" value={formState.warningLimit} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label htmlFor="costPrice">Cost Price (₱)</Label><Input id="costPrice" name="costPrice" type="number" step="0.01" value={formState.costPrice || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
-            <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price || 0} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="costPrice">Cost Price (₱)</Label><Input id="costPrice" name="costPrice" type="number" step="0.01" value={formState.costPrice} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="price">Selling Price (₱)</Label><Input id="price" name="price" type="number" step="0.01" value={formState.price} onChange={handleInputChange} disabled={isSubmitting} /></div>
           </div>
           
           <div className="space-y-2"><Label htmlFor="description">Description (Optional)</Label><Textarea id="description" name="description" placeholder="e.g., A smooth-writing gel pen." value={formState.description ?? ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+          
+          <div className="space-y-3 rounded-lg border p-4">
+            <Label>Specifications</Label>
+            <RadioGroup value={specType} onValueChange={(v) => setSpecType(v as 'text' | 'list')} className="flex space-x-4">
+                <div className="flex items-center space-x-2"><RadioGroupItem value="text" id="text-spec" /><Label htmlFor="text-spec">Simple Text</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="list" id="list-spec" /><Label htmlFor="list-spec">Structured List</Label></div>
+            </RadioGroup>
 
-          <div className="space-y-2"><Label htmlFor="specifications">Specifications (Optional)</Label><Textarea id="specifications" name="specifications" placeholder="e.g., 0.5mm tip, Black Ink, Retractable" value={formState.specifications ?? ''} onChange={handleInputChange} disabled={isSubmitting} /></div>
+            {specType === 'text' ? (
+                <Textarea name="specifications" placeholder="e.g., 0.5mm tip, Black Ink, Retractable" value={typeof formState.specifications === 'string' ? formState.specifications : ''} onChange={handleInputChange} disabled={isSubmitting} />
+            ) : (
+                <div className="space-y-2">
+                    {structuredSpecs.map((spec, index) => (
+                        <div key={index} className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">
+                            <Input placeholder="Title" value={spec.title} onChange={(e) => handleSpecChange(index, 'title', e.target.value)} />
+                            <Input placeholder="Value" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSpecRow(index)} disabled={structuredSpecs.length <= 1}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={addSpecRow}><Plus className="mr-2 h-4 w-4" /> Add Specification</Button>
+                </div>
+            )}
+          </div>
+
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

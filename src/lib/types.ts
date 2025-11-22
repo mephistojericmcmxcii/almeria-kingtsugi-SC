@@ -27,6 +27,11 @@ export type InventoryItem = {
     totalStock: number;
 };
 
+export type Specification = {
+    title: string;
+    value: string;
+}
+
 export type InventoryVariant = {
   id: string;
   // Denormalized fields from parent for query optimization
@@ -43,7 +48,7 @@ export type InventoryVariant = {
   costPrice: number;
   warningLimit: number;
   description?: string;
-  specifications?: string;
+  specifications?: string | Specification[];
   imageUrl?: string;
   createdAt: any;
   updatedAt: any;
