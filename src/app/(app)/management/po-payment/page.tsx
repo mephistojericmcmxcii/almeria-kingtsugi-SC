@@ -9,17 +9,20 @@ import { useAuth } from '@/hooks/use-auth';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { getQuarter } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp } from "lucide-react";
+import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp, Search } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { StatsCard } from '@/components/dashboard/stats-card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
 const AddManualPoDialog = lazy(() => import('@/components/po/add-manual-po-dialog').then(module => ({ default: module.AddManualPoDialog })));
@@ -47,6 +50,11 @@ export default function PoPaymentPage() {
   const [isAddManualDialogOpen, setIsAddManualDialogOpen] = useState(false);
   const [poToDelete, setPoToDelete] = useState<PoFinancialSummary | null>(null);
   
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [selectedQuarter, setSelectedQuarter] = useState('all');
+
   const fetchSummaries = async () => {
       if (!firestore || user?.role !== 'admin') {
         setIsLoading(false);
@@ -90,6 +98,7 @@ export default function PoPaymentPage() {
         });
 
         const calculatedSummaries = await Promise.all(summaryPromises);
+        calculatedSummaries.sort((a,b) => b.po.date.toMillis() - a.po.date.toMillis());
         setSummaries(calculatedSummaries);
 
       } catch (error) {
@@ -109,10 +118,32 @@ export default function PoPaymentPage() {
     }
   }, [firestore, user]);
   
+  const availableYears = useMemo(() => {
+    if (!summaries) return [];
+    const years = new Set(summaries.map(s => s.po.date.toDate().getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [summaries]);
+  
+  const filteredSummaries = useMemo(() => {
+    return summaries.filter(summary => {
+        const poDate = summary.po.date.toDate();
+        const yearMatch = selectedYear === 'all' || poDate.getFullYear() === parseInt(selectedYear);
+        const quarterMatch = selectedQuarter === 'all' || getQuarter(poDate) === parseInt(selectedQuarter);
+        
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        const searchMatch = !searchTerm ||
+                              summary.po.poNumber.toLowerCase().includes(lowerSearchTerm) ||
+                              summary.po.source.toLowerCase().includes(lowerSearchTerm) ||
+                              summary.po.careOf.toLowerCase().includes(lowerSearchTerm);
+
+        return yearMatch && quarterMatch && searchMatch;
+    });
+  }, [summaries, searchTerm, selectedYear, selectedQuarter]);
+  
   const { paidCount, unpaidCount, totalProfitLoss } = useMemo(() => {
-    if (!summaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
+    if (!filteredSummaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
     
-    return summaries.reduce((acc, summary) => {
+    return filteredSummaries.reduce((acc, summary) => {
         if (summary.paymentStatus === 'Paid') {
             acc.paidCount++;
         } else if (summary.paymentStatus === 'Unpaid') {
@@ -122,7 +153,7 @@ export default function PoPaymentPage() {
         return acc;
     }, { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 });
 
-  }, [summaries]);
+  }, [filteredSummaries]);
 
 
   const handleDeleteConfirm = async () => {
@@ -223,12 +254,49 @@ export default function PoPaymentPage() {
           <CardDescription>
             A summary of allocated budget vs. actual expenses for each PO.
           </CardDescription>
+           <div className="flex flex-col md:flex-row items-center gap-4 pt-4">
+                <div className="relative w-full md:flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by PO #, Source, Care Of..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10"
+                    />
+                </div>
+                <div className="flex gap-4 w-full md:w-auto">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Select Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Years</SelectItem>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                     <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Select Quarter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Quarters</SelectItem>
+                            <SelectItem value="1">Quarter 1</SelectItem>
+                            <SelectItem value="2">Quarter 2</SelectItem>
+                            <SelectItem value="3">Quarter 3</SelectItem>
+                            <SelectItem value="4">Quarter 4</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[15%]">PO #</TableHead>
+                <TableHead className="w-[15%]">Source</TableHead>
                 <TableHead className="text-right w-[15%]">Total Allocation</TableHead>
                 <TableHead className="text-right w-[15%]">Total Expenses</TableHead>
                 <TableHead className="text-right w-[15%]">Tax Deducted</TableHead>
@@ -242,6 +310,7 @@ export default function PoPaymentPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
@@ -250,10 +319,11 @@ export default function PoPaymentPage() {
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : summaries.length > 0 ? (
-                summaries.map((summary) => (
+              ) : filteredSummaries.length > 0 ? (
+                filteredSummaries.map((summary) => (
                   <TableRow key={summary.id}>
                     <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
+                    <TableCell>{summary.po.source}</TableCell>
                     <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
                     <TableCell className="text-right text-orange-600">{formatCurrency(summary.po.taxDeduction || 0)}</TableCell>
@@ -290,8 +360,8 @@ export default function PoPaymentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    No purchase orders found.
+                  <TableCell colSpan={8} className="h-24 text-center">
+                    No purchase orders found for the selected filters.
                   </TableCell>
                 </TableRow>
               )}
@@ -339,4 +409,3 @@ export default function PoPaymentPage() {
     </>
   );
 }
-
