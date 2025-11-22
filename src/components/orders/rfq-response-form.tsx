@@ -184,12 +184,12 @@ export function RfqResponseForm({ rfq }: { rfq: QuotationRequest }) {
                         <TableCell>{field.quantity}</TableCell>
                         <TableCell>
                           <FormField control={form.control} name={`items.${index}.price`} render={({ field }) => (
-                            <Input type="number" className="text-right" placeholder="0.00" {...field} />
+                            <Input type="number" className="text-right" placeholder="0.00" {...field} value={field.value ?? ''}/>
                           )} />
                         </TableCell>
                         <TableCell>
                           <FormField control={form.control} name={`items.${index}.discount`} render={({ field }) => (
-                            <Input type="number" className="text-right" placeholder="0" {...field} />
+                            <Input type="number" className="text-right" placeholder="0" {...field} value={field.value ?? ''} />
                           )} />
                         </TableCell>
                          <TableCell>
