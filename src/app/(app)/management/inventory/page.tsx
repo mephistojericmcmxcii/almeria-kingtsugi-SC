@@ -43,33 +43,47 @@ export default function InventoryPage() {
   
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalInventoryValue, setTotalInventoryValue] = useState<number>(0);
+  const [isTotalValueLoading, setIsTotalValueLoading] = useState(true);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
   };
 
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchItemsAndValue = async () => {
       if (!firestore) return;
       setIsLoading(true);
+      setIsTotalValueLoading(true);
       try {
+        // Fetch parent items
         const inventoryCollectionRef = collection(firestore, 'inventory');
-        const snapshot = await getDocs(inventoryCollectionRef);
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+        const itemsSnapshot = await getDocs(inventoryCollectionRef);
+        const items = itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
         setInventoryItems(items);
 
+        // Fetch all variants using a collection group query to calculate total value
+        const variantsQuery = collectionGroup(firestore, 'variants');
+        const variantsSnapshot = await getDocs(variantsQuery);
+        const totalValue = variantsSnapshot.docs.reduce((sum, doc) => {
+            const variant = doc.data() as InventoryVariant;
+            return sum + (variant.price * variant.quantity);
+        }, 0);
+        setTotalInventoryValue(totalValue);
+
       } catch (error) {
-        console.error("Error fetching inventory items:", error);
+        console.error("Error fetching inventory items and value:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not load inventory.",
+          description: "Could not load inventory data.",
         });
       } finally {
         setIsLoading(false);
+        setIsTotalValueLoading(false);
       }
     };
-    fetchItems();
+    fetchItemsAndValue();
   }, [firestore, toast, isAddDialogOpen]); // Refetch when dialog closes
 
   const filteredItems = useMemo(() => {
@@ -172,8 +186,8 @@ export default function InventoryPage() {
             <div className="h-4 w-4 text-muted-foreground font-bold">₱</div>
           </CardHeader>
           <CardContent>
-             <div className="text-2xl font-bold">N/A</div>
-            <p className="text-xs text-muted-foreground">Value calculation moved to Dashboard</p>
+             {isTotalValueLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>}
+            <p className="text-xs text-muted-foreground">Sum of (price * quantity) for all variants</p>
           </CardContent>
         </Card>
       </div>
