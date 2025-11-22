@@ -62,11 +62,13 @@ export default function PoPage() {
   };
 
   useEffect(() => {
-      fetchPOs();
+      if(firestore) {
+        fetchPOs();
+      }
   }, [firestore, toast]);
   
   useEffect(() => {
-    if (arePOsLoading || purchaseOrders.length === 0) {
+    if (purchaseOrders.length === 0) {
         setAreTotalsLoading(false);
         return;
     }
@@ -76,14 +78,6 @@ export default function PoPage() {
         const totals: Record<string, PoTotals> = {};
         for (const po of purchaseOrders) {
             
-            if (po.totalAllocation !== undefined) {
-                 totals[po.id] = {
-                    allocated: po.totalAllocation,
-                    utilized: po.totalExpenses || 0
-                 };
-                 continue;
-            }
-
             const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
             const itemsSnapshot = await getDocs(itemsCollectionRef);
             
@@ -94,6 +88,11 @@ export default function PoPage() {
                 return acc;
             }, { allocated: 0, utilized: 0 });
 
+            // If a totalAllocation is manually set on the PO, it overrides the item sum
+            if (po.totalAllocation !== undefined && po.totalAllocation !== null) {
+                poTotals.allocated = po.totalAllocation;
+            }
+
             totals[po.id] = poTotals;
         }
         setTotalAmounts(totals);
@@ -101,7 +100,7 @@ export default function PoPage() {
     };
 
     fetchTotals();
-  }, [purchaseOrders, firestore, arePOsLoading]);
+  }, [purchaseOrders, firestore]);
 
 
   const filteredPos = useMemo(() => {
