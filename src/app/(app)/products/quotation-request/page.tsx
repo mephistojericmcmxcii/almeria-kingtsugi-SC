@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -53,11 +54,13 @@ const baseSchema = z.object({
 const listSchema = baseSchema.extend({
     requestType: z.literal('list'),
     items: z.array(itemSchema).min(1, 'Please add at least one item.'),
+    fileAttachment: z.any().optional(), // Make sure fileAttachment is optional here
 });
 
 const attachmentSchema = baseSchema.extend({
     requestType: z.literal('attachment'),
     fileAttachment: z.any().refine(file => file instanceof File, { message: 'Please attach a file.' }),
+    items: z.array(itemSchema).optional(), // Make sure items is optional here
 });
 
 const formSchema = z.discriminatedUnion('requestType', [
@@ -85,7 +88,13 @@ export default function RfqPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       requestType: 'list',
+      customerName: user?.displayName || '',
+      contactNumber: user?.contactNumber || '',
+      emailAddress: user?.email || '',
+      companyName: '',
       items: [{ name: '', quantity: 1, specs: '' }],
+      additionalDetails: '',
+      fileAttachment: undefined,
     },
   });
 
