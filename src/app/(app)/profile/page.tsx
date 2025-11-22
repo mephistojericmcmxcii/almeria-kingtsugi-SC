@@ -124,6 +124,7 @@ const statusDisplayMap: Record<OrderStatus, string> = {
   'completed': 'Delivered',
   'cancelled': 'Cancelled',
   'declined': 'Declined by Seller',
+  'rescheduled': 'Rescheduled',
 };
 
 
@@ -152,6 +153,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
             case 'completed': return <Badge className="bg-green-600 text-green-50">{displayName}</Badge>;
             case 'cancelled': return <Badge variant="destructive">{displayName}</Badge>;
             case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">{displayName}</Badge>;
+            case 'rescheduled': return <Badge variant="secondary" className="bg-gray-500 text-gray-50">{displayName}</Badge>;
         }
     };
     
@@ -597,7 +599,7 @@ export default function ProfilePage() {
     if (!orders) return { quotationOrders: [], activeOrders: [], completedOrders: [] };
     
     const quotationOrders = orders.filter(o => ['pending-quote', 'quote-ready'].includes(o.status));
-    const activeOrders = orders.filter(o => ['confirmed', 'delivering'].includes(o.status));
+    const activeOrders = orders.filter(o => ['confirmed', 'delivering', 'rescheduled'].includes(o.status));
     const completedOrders = orders.filter(o => ['completed', 'cancelled', 'declined'].includes(o.status));
     
     return { quotationOrders, activeOrders, completedOrders };
@@ -824,6 +826,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
 
 
