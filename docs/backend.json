@@ -547,6 +547,46 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "customerName", "contactNumber", "emailAddress", "requestType", "createdAt"]
+    },
+    "CustomerFeedback": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CustomerFeedback",
+      "type": "object",
+      "description": "Represents a customer's feedback and rating for a completed order.",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "The ID of the order this feedback is for."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who provided the feedback."
+        },
+        "userName": {
+          "type": "string",
+          "description": "The name of the user."
+        },
+        "rating": {
+          "type": "number",
+          "description": "The star rating given by the user (1-5)."
+        },
+        "review": {
+          "type": "string",
+          "description": "The optional text review provided by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the feedback was submitted."
+        }
+      },
+      "required": [
+        "orderId",
+        "userId",
+        "userName",
+        "rating",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -750,10 +790,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/customer_feedback/{feedbackId}",
+        "definition": {
+          "entityName": "CustomerFeedback",
+          "schema": {
+            "$ref": "#/backend/entities/CustomerFeedback"
+          },
+          "description": "Stores customer feedback. Publicly readable, but only the user who created it can write it.",
+          "params": [
+            {
+              "name": "feedbackId",
+              "description": "The unique identifier for the feedback, typically the order ID."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore structure is designed to support a business management portal with user authentication (Guest/Admin roles), a dashboard for metrics, and an admin panel for user and settings management. The structure emphasizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs.\\n\\n**Authorization Independence:**  Authorization data is denormalized to avoid `get()` calls in security rules.  For example, admin privileges are determined by the existence of a document in `/roles_admin/{userId}`, avoiding the need to read user profile data during authorization.\\n\\n**Structural Segregation:** Data with different access requirements is stored in separate collections (e.g., public vs. private data).  System settings, which require admin-only access, are stored in `/system_settings`, segregated from user-specific data. Inventory data is in its own collection with specific admin/guest rules, and variants are in a subcollection with admin-only access.\\n\\n**Access Modeling:** User-owned data will be stored in `/users/{userId}/...`. Global roles are managed via existence checks in dedicated role collections (`/roles_admin/{userId}`).\\n\\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations. The segregation of data based on access levels (e.g., system settings in a separate collection) ensures that listing operations can be secured without filtering based on document content.\\n\\n**Denormalization Strategy:**  The role is denormalized to avoid reads in security rules. The dashboard metrics do not have user based authorization requirements so it will be under a main collection. The system settings require admin only access, which is achieved via role verification."
   }
 }
-
-    

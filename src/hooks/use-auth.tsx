@@ -10,7 +10,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest } from '@/lib/types';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -885,14 +885,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 dataToUpdate.cancellationReason = details.reason;
             }
             
-            if (details?.review) {
-                dataToUpdate.review = details.review;
-            }
-            
-            if (details?.rating) {
-                dataToUpdate.rating = details.rating;
-            }
-
             if (details?.customerRevisionUrl) {
                 dataToUpdate.customerRevisionUrl = details.customerRevisionUrl;
             }
@@ -909,10 +901,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (details?.paymentMethod !== undefined) dataToUpdate.paymentMethod = details.paymentMethod;
             }
 
-            // Transaction for stock updates
+            // Transaction for stock updates and feedback
             await runTransaction(firestore, async (transaction: Transaction) => {
                 // Always update the order document
                 transaction.update(orderRef, dataToUpdate);
+
+                // If review and rating are provided, create a new feedback document
+                if (newStatus === 'completed' && details?.rating && user) {
+                    const feedbackRef = doc(firestore, 'customer_feedback', order.id);
+                    const newFeedback: Omit<CustomerFeedback, 'id'> = {
+                        orderId: order.id,
+                        userId: user.id,
+                        userName: user.displayName,
+                        rating: details.rating,
+                        review: details.review,
+                        createdAt: serverTimestamp(),
+                    };
+                    transaction.set(feedbackRef, newFeedback);
+                }
 
                 // --- STOCK LOGIC ---
                 const stockShouldBeDeducted = newStatus === 'confirmed' && order.status !== 'confirmed';

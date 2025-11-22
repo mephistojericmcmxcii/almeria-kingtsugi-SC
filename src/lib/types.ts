@@ -94,8 +94,6 @@ export type Order = {
   packagingFee?: number;
   notes?: string;
   statusHistory?: StatusHistory[];
-  review?: string;
-  rating?: number;
 };
 
 export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled';
@@ -156,4 +154,12 @@ export type QuotationRequest = {
   createdAt: any;
 };
 
-    
+export type CustomerFeedback = {
+  id: string; // Typically the orderId
+  orderId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  review?: string;
+  createdAt: any;
+};
