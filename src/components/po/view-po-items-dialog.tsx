@@ -66,11 +66,11 @@ export function ViewPoItemsDialog({ isOpen, onOpenChange, po }: ViewPoItemsDialo
                             <TableRow>
                                 <TableHead>Item Name</TableHead>
                                 <TableHead>Unit</TableHead>
-                                <TableHead>Description</TableHead>
                                 <TableHead className="text-right">Quantity</TableHead>
                                 <TableHead className="text-right">Allocated Amount</TableHead>
                                 <TableHead className="text-right">Actual Amount</TableHead>
                                 <TableHead className="text-right">Total Actual Cost</TableHead>
+                                <TableHead>Description</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -79,11 +79,11 @@ export function ViewPoItemsDialog({ isOpen, onOpenChange, po }: ViewPoItemsDialo
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : items.length > 0 ? (
@@ -91,11 +91,11 @@ export function ViewPoItemsDialog({ isOpen, onOpenChange, po }: ViewPoItemsDialo
                                     <TableRow key={item.id}>
                                         <TableCell className="font-medium">{item.name}</TableCell>
                                         <TableCell><Badge variant="secondary">{item.unit}</Badge></TableCell>
-                                        <TableCell className="text-muted-foreground">{item.description || 'N/A'}</TableCell>
                                         <TableCell className="text-right">{item.quantity}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.actualAmount || 0)}</TableCell>
                                         <TableCell className="text-right font-medium">{formatCurrency((item.actualAmount || 0) * item.quantity)}</TableCell>
+                                        <TableCell className="text-muted-foreground">{item.description || 'N/A'}</TableCell>
                                     </TableRow>
                                 ))
                             ) : (
