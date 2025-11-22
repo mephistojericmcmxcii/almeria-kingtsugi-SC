@@ -40,6 +40,7 @@ const getStatusBadge = (status: OrderStatus) => {
         case 'completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
         case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
         case 'declined': return <Badge variant="destructive" className="bg-red-700 text-red-50">Declined</Badge>;
+        case 'rescheduled': return <Badge variant="secondary" className="bg-gray-500 text-gray-50">Rescheduled</Badge>;
     }
 };
 
@@ -47,10 +48,11 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     'pending-quote': ['quote-ready', 'declined'],
     'quote-ready': ['confirmed', 'declined'],
     confirmed: ['delivering', 'declined'],
-    delivering: ['completed'],
+    delivering: ['cancelled', 'declined', 'rescheduled'],
     completed: [],
     cancelled: [],
     declined: [],
+    rescheduled: ['delivering', 'cancelled', 'declined'],
 };
 
 const STATUS_DISPLAY_NAMES: Record<OrderStatus, string> = {
@@ -61,10 +63,11 @@ const STATUS_DISPLAY_NAMES: Record<OrderStatus, string> = {
     completed: 'Mark as Completed',
     cancelled: 'Cancel Order',
     declined: 'Decline Order',
+    rescheduled: 'Reschedule Delivery',
 };
 
 
-const REQUIRES_REASON: OrderStatus[] = ['declined', 'cancelled'];
+const REQUIRES_REASON: OrderStatus[] = ['declined', 'cancelled', 'rescheduled'];
 
 export default function AllOrdersPage() {
     const { user, updateOrderStatus, dismissAdminOrderBadge, dismissAdminRfqBadge } = useAuth();
@@ -575,11 +578,11 @@ export default function AllOrdersPage() {
 
                         {showReasonInput && (
                             <div className="pt-4 border-t">
-                                <h3 className="font-semibold mb-2">Reason for Decline/Cancellation</h3>
+                                <h3 className="font-semibold mb-2">Reason for {STATUS_DISPLAY_NAMES[selectedStatus!]}</h3>
                                 <Textarea 
                                     value={cancellationReason}
                                     onChange={(e) => setCancellationReason(e.target.value)}
-                                    placeholder={`Provide a reason for declining or cancelling the order...`}
+                                    placeholder={`Provide a reason for this action...`}
                                 />
                             </div>
                         )}

@@ -64,7 +64,7 @@ export type CartItem = {
   discount?: number; // Per-item discount as a percentage
 };
 
-export type OrderStatus = 'pending-quote' | 'quote-ready' | 'confirmed' | 'delivering' | 'completed' | 'cancelled' | 'declined';
+export type OrderStatus = 'pending-quote' | 'quote-ready' | 'confirmed' | 'delivering' | 'completed' | 'cancelled' | 'declined' | 'rescheduled';
 
 export type StatusHistory = {
   status: OrderStatus;
