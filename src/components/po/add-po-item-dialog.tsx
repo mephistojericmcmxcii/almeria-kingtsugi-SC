@@ -81,6 +81,18 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
     }
   }, [isOpen, form]);
 
+  const handleAddRow = () => {
+    const lastItemType = watchedItems[watchedItems.length - 1]?.itemType || 'general';
+    append({
+        itemType: lastItemType,
+        name: '',
+        unit: '',
+        quantity: 1,
+        amount: 0,
+        description: ''
+    });
+  };
+
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     const batch = writeBatch(firestore);
@@ -222,7 +234,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ itemType: 'general', name: '', unit: '', quantity: 1, amount: 0, description: '' })}
+              onClick={handleAddRow}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Another Item
