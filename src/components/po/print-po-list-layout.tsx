@@ -190,9 +190,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                             <tr>
                                                 <th>Item Name</th>
                                                 <th className="text-right">Qty</th>
-                                                <th className="text-right">Allocated Amt.</th>
-                                                <th className="text-right">Actual Amt.</th>
-                                                <th className="text-right">Total Actual</th>
+                                                <th className="text-right">Allocated Amt. (per QTY)</th>
+                                                <th className="text-right">Actual Amt. (per QTY)</th>
+                                                <th className="text-right">Total Allocation</th>
+                                                <th className="text-right">Total Utilized</th>
                                                 <th>Description</th>
                                             </tr>
                                         </thead>
@@ -203,6 +204,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                                     <td className="text-right">{child.quantity}</td>
                                                     <td className="text-right">{formatCurrency(child.amount)}</td>
                                                     <td className="text-right">{formatCurrency(child.actualAmount || 0)}</td>
+                                                    <td className="text-right font-medium">{formatCurrency(child.amount * child.quantity)}</td>
                                                     <td className="text-right font-medium">{formatCurrency((child.actualAmount || 0) * child.quantity)}</td>
                                                     <td>{child.description || 'N/A'}</td>
                                                 </tr>
