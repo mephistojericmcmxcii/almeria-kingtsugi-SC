@@ -90,8 +90,13 @@ export default function PoPaymentPage() {
               const itemsSnapshot = await getDocs(itemsCollectionRef);
               itemsSnapshot.forEach(itemDoc => {
                 const item = itemDoc.data() as PurchaseOrderItem;
-                totalAllocation += (item.amount || 0) * (item.quantity || 0);
-                totalExpenses += ((item.actualAmount || 0) * (item.quantity || 0)) + (item.miscCost || 0);
+                if (item.itemType === 'misc') {
+                    totalExpenses += item.amount || 0; // Add misc cost to expenses
+                    totalAllocation += item.amount || 0; // Also add to allocation
+                } else {
+                    totalAllocation += (item.amount || 0) * (item.quantity || 0);
+                    totalExpenses += (item.actualAmount || 0) * (item.quantity || 0);
+                }
               });
           }
 
