@@ -33,8 +33,6 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
                 <th>Brand</th>
                 <th>Model</th>
                 <th className="text-right">Quantity</th>
-                <th className="text-right">Cost Price</th>
-                <th className="text-right">Selling Price</th>
               </tr>
             </thead>
             <tbody>
@@ -45,13 +43,11 @@ const PrintLayout: React.FC<PrintLayoutProps> = ({ item, variants }) => {
                     <td className="font-medium">{variant.brand}</td>
                     <td>{variant.model || 'N/A'}</td>
                     <td className="text-right">{variant.quantity}</td>
-                    <td className="text-right">{formatCurrency(variant.costPrice)}</td>
-                    <td className="text-right">{formatCurrency(variant.price)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} style={{textAlign: 'center', padding: '20px'}}>No variants found.</td>
+                  <td colSpan={4} style={{textAlign: 'center', padding: '20px'}}>No variants found.</td>
                 </tr>
               )}
             </tbody>
