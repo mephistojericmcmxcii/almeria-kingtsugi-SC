@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { InventoryVariant } from '@/lib/types';
+import type { InventoryVariant, Specification } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -14,8 +14,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tag, Package, FileQuestion } from 'lucide-react';
+import { Tag, Package, FileQuestion, Info, ListTree } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
 
 interface ViewProductModalProps {
   isOpen: boolean;
@@ -67,6 +68,37 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
     }
     return <Badge className="bg-green-600 text-green-50 hover:bg-green-700 border-green-700">In Stock</Badge>;
   };
+  
+  const renderSpecifications = () => {
+    if (!variant.specifications || (Array.isArray(variant.specifications) && variant.specifications.length === 0)) return null;
+
+    let specsContent;
+
+    if (typeof variant.specifications === 'string' && variant.specifications) {
+        specsContent = <p className="text-sm text-muted-foreground whitespace-pre-wrap">{variant.specifications}</p>;
+    } else if (Array.isArray(variant.specifications)) {
+        specsContent = (
+            <table className="w-full text-sm">
+                <tbody>
+                    {variant.specifications.map((spec: Specification, index: number) => (
+                        <tr key={index} className="border-b last:border-b-0">
+                            <td className="py-2 pr-2 font-medium text-muted-foreground w-1/3">{spec.title}</td>
+                            <td className="py-2 pr-2">{spec.value}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
+    }
+
+    return (
+        <div className="space-y-2">
+            <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><ListTree className="w-4 h-4" /> Specifications</h4>
+            {specsContent}
+        </div>
+    );
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -80,27 +112,30 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                     data-ai-hint={placeholder.imageHint}
                 />
             </div>
-            <div className="flex flex-col space-y-4">
-                <DialogHeader>
+            <div className="flex flex-col">
+                <DialogHeader className="space-y-2">
                     <div className='flex items-center justify-between'>
                         <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
                         {getStatusBadge(variant)}
                     </div>
                     <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
-                    <DialogDescription className="text-xl font-semibold">{variant.brand}</DialogDescription>
+                    <DialogDescription className="text-xl font-semibold">{variant.brand}{variant.model && ` - ${variant.model}`}</DialogDescription>
                 </DialogHeader>
                 
-                <div className="space-y-4 text-sm">
-                    <p className="text-muted-foreground">{variant.description || 'A unique variant from our collection.'}</p>
-                    <div className="flex items-center justify-between text-base pt-4">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Tag className="w-5 h-5" />
-                            <span className="font-bold text-2xl text-foreground">Price on Request</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                             <Package className="w-5 h-5" />
-                            <span className="font-bold text-2xl text-foreground">{variant.quantity} left</span>
-                        </div>
+                <div className="space-y-6 text-sm flex-grow overflow-y-auto mt-4 pr-2">
+                   {variant.description && (
+                       <div className="space-y-2">
+                            <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><Info className="w-4 h-4"/>Description</h4>
+                            <p className="text-sm text-muted-foreground">{variant.description}</p>
+                       </div>
+                   )}
+                   {renderSpecifications()}
+                </div>
+                
+                 <div className="flex items-center justify-between text-base pt-6 mt-auto">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Tag className="w-5 h-5" />
+                        <span className="font-bold text-xl text-foreground">Price on Request</span>
                     </div>
                 </div>
 
