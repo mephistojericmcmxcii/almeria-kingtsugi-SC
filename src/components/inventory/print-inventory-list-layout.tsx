@@ -201,7 +201,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                                                 <th>Brand</th>
                                                 <th>Model</th>
                                                 <th className="text-right">Qty</th>
-                                                <th style={{width: '100px'}}>Location</th>
+                                                <th style={{width: '180px'}}>Location</th>
                                                 <th style={{width: '100px'}}>Physical Count</th>
                                             </tr>
                                         </thead>
@@ -229,7 +229,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                       <th>Item Name</th>
                       <th>Category</th>
                       <th className="text-right">Total Stock</th>
-                      <th style={{width: '120px'}}>Location</th>
+                      <th style={{width: '180px'}}>Location</th>
                       <th style={{width: '120px'}}>Physical Count</th>
                     </tr>
                   </thead>
