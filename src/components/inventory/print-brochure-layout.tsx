@@ -1,9 +1,11 @@
 
+
 'use client';
 
 import React from 'react';
 import type { InventoryVariant, Specification } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import PrintLayoutWrapper from '@/components/layout/print-layout-wrapper';
 
 interface PrintBrochureLayoutProps {
   variant: InventoryVariant;
@@ -68,52 +70,8 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
   };
 
   return (
-    <>
+    <PrintLayoutWrapper>
       <style>{`
-          :root {
-            --primary: 39 61% 57%;
-            --muted-foreground: 240 3.8% 46.1%;
-            --border: 0 0% 89.8%;
-          }
-          body {
-            font-family: 'PT Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            padding: 2rem;
-            font-size: 12pt;
-            background-color: #f9fafb;
-            color: #111827;
-            -webkit-print-color-adjust: exact;
-          }
-          .print-container {
-            width: 100%;
-            max-width: 800px;
-            margin: auto;
-            background-color: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-          }
-          .header, .footer {
-            text-align: center;
-            font-size: 9pt;
-            color: #6b7280;
-          }
-          .header {
-             border-bottom: 1px solid #e5e7eb;
-             padding-bottom: 1rem;
-             margin-bottom: 2rem;
-          }
-          .header h1 {
-              font-family: 'Playfair Display', serif;
-              font-size: 24pt;
-              margin: 0;
-              color: hsl(var(--primary));
-          }
-          .footer {
-              margin-top: 2rem;
-              padding-top: 1rem;
-              border-top: 1px solid #e5e7eb;
-           }
           .brochure-main {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -195,78 +153,52 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
             width: 30%;
             background-color: #f9fafb;
           }
-          
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 1cm;
-            }
-            body {
-              background-color: white;
-              padding: 0;
-            }
-            .print-container {
-              box-shadow: none;
-              border-radius: 0;
-              padding: 0;
-            }
-          }
-        `}</style>
-        <div className="print-container">
-          <header className="header">
-             <h1>Kintsugi Variety Shop</h1>
-          </header>
-          
-          <main>
-            <div className="brochure-main">
-                <img src={placeholder.imageUrl} alt={variant.parentName} className="brochure-image" />
-                <div className="brochure-details">
-                    <div>
-                        <h2>{variant.parentName}</h2>
-                        <p className="brand">{variant.brand}</p>
-                    </div>
-                    
-                    <table className="specs-table">
-                        <tbody>
-                            <tr>
-                                <td>Variation</td>
-                                <td>{variant.variation}</td>
-                            </tr>
-                            {variant.model && (
-                                <tr>
-                                    <td>Model</td>
-                                    <td>{variant.model}</td>
-                                </tr>
-                            )}
-                            <tr>
-                                <td>Category</td>
-                                <td>{variant.parentCategory}</td>
-                            </tr>
-                            <tr>
-                                <td>Price</td>
-                                <td>{formatCurrency(variant.price)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+      `}</style>
+      <main>
+        <div className="brochure-main">
+            <img src={placeholder.imageUrl} alt={variant.parentName} className="brochure-image" />
+            <div className="brochure-details">
+                <div>
+                    <h2>{variant.parentName}</h2>
+                    <p className="brand">{variant.brand}</p>
                 </div>
+                
+                <table className="specs-table">
+                    <tbody>
+                        <tr>
+                            <td>Variation</td>
+                            <td>{variant.variation}</td>
+                        </tr>
+                        {variant.model && (
+                            <tr>
+                                <td>Model</td>
+                                <td>{variant.model}</td>
+                            </tr>
+                        )}
+                        <tr>
+                            <td>Category</td>
+                            <td>{variant.parentCategory}</td>
+                        </tr>
+                        <tr>
+                            <td>Price</td>
+                            <td>{formatCurrency(variant.price)}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-
-            <div className="full-width-section">
-                {variant.description && (
-                    <div className="description-section">
-                        <h3>Description</h3>
-                        <p>{variant.description}</p>
-                    </div>
-                )}
-                {renderSpecifications()}
-            </div>
-          </main>
-
-           <footer className="footer">
-            Product Information Slip - Printed on {new Date().toLocaleDateString()}
-           </footer>
         </div>
-    </>
+
+        <div className="full-width-section">
+            {variant.description && (
+                <div className="description-section">
+                    <h3>Description</h3>
+                    <p>{variant.description}</p>
+                </div>
+            )}
+            {renderSpecifications()}
+        </div>
+      </main>
+    </PrintLayoutWrapper>
   );
 };
 

@@ -111,6 +111,24 @@
         "settingValue"
       ]
     },
+     "PrintSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PrintSettings",
+      "type": "object",
+      "description": "Stores URLs for custom print headers and footers.",
+      "properties": {
+        "headerImageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the image to be used as the header in print layouts."
+        },
+        "footerImageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the image to be used as the footer in print layouts."
+        }
+      }
+    },
     "AboutPageContent": {
       "$schema": "http://json-schema.org/draft-07-schema#",
       "title": "AboutPageContent",
@@ -722,11 +740,11 @@
           "schema": {
             "$ref": "#/backend/entities/SystemSetting"
           },
-          "description": "Stores system settings. Only accessible to admins.",
+          "description": "Stores system settings. Only accessible to admins. Can hold 'about_page', 'home_page', or 'print_settings'.",
           "params": [
             {
               "name": "settingId",
-              "description": "The unique identifier for the system setting. This can be a specific ID like 'about_page' or 'maintenance_mode' or 'home_page'."
+              "description": "The unique identifier for the system setting. This can be a specific ID like 'about_page', 'maintenance_mode', 'home_page' or 'print_settings'."
             }
           ]
         }

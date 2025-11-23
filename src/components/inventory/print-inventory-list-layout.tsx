@@ -1,9 +1,11 @@
 
+
 'use client';
 
 import React from 'react';
 import { format } from 'date-fns';
 import type { InventoryItem, InventoryVariant } from '@/lib/types';
+import PrintLayoutWrapper from '@/components/layout/print-layout-wrapper';
 
 interface PrintInventoryListLayoutProps {
   items: InventoryItem[];
@@ -11,57 +13,9 @@ interface PrintInventoryListLayoutProps {
 }
 
 const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ items, variants }) => {
-  const printDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-
   return (
-    <>
+    <PrintLayoutWrapper>
       <style>{`
-          :root {
-            --primary: 39 61% 57%;
-            --muted-foreground: 240 3.8% 46.1%;
-            --border: 0 0% 89.8%;
-          }
-          body {
-            font-family: 'PT Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            padding: 2rem;
-            font-size: 10pt;
-            background-color: #f9fafb;
-            color: #111827;
-            -webkit-print-color-adjust: exact;
-          }
-          .print-container {
-            width: 100%;
-            max-width: 1000px;
-            margin: auto;
-            background-color: white;
-            padding: 2rem;
-          }
-          .header, .footer {
-            text-align: center;
-            font-size: 9pt;
-            color: #6b7280;
-          }
-          .header {
-             border-bottom: 1px solid #e5e7eb;
-             padding-bottom: 1rem;
-             margin-bottom: 1rem;
-          }
-          .header h1 {
-              font-family: 'Playfair Display', serif;
-              font-size: 24pt;
-              margin: 0;
-              color: hsl(var(--primary));
-          }
-           .footer {
-              margin-top: 2rem;
-              padding-top: 1rem;
-              border-top: 1px solid #e5e7eb;
-           }
           .document-header {
             display: flex;
             justify-content: space-between;
@@ -93,26 +47,6 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
             margin: 0 0 1rem 0;
             color: #111827;
           }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-          }
-          th, td {
-            border-bottom: 1px solid hsl(var(--border));
-            padding: 10px 8px;
-            text-align: left;
-            vertical-align: top;
-          }
-          th {
-            font-weight: bold;
-            color: hsl(var(--muted-foreground));
-            font-size: 9pt;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .text-right { text-align: right; }
-          .font-medium { font-weight: 600; }
           .item-block {
               border: 1px solid #e5e7eb;
               border-radius: 8px;
@@ -141,31 +75,8 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
            .variants-table tr:last-child td {
                border-bottom: none;
            }
-          
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 1cm;
-            }
-            body {
-              background-color: white;
-              padding: 0;
-              font-size: 9pt;
-            }
-            .print-container {
-              box-shadow: none;
-              border-radius: 0;
-              padding: 0;
-            }
-          }
         `}</style>
-        <div className="print-container">
-          <header className="header">
-             <h1>Kintsugi Variety Shop</h1>
-             <p>Inventory Checklist</p>
-          </header>
-          
-          <main>
+        <main>
             <div className="document-header">
               <div className="info-block">
                 <div className="info-item">
@@ -249,13 +160,8 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
             ) : (
                 <p style={{textAlign: 'center', padding: '20px'}}>No items selected for printing.</p>
             )}
-          </main>
-
-           <footer className="footer">
-            Date Printed: {printDate}
-           </footer>
-        </div>
-    </>
+        </main>
+    </PrintLayoutWrapper>
   );
 };
 

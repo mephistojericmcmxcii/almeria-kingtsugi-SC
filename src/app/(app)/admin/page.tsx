@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "@/components/admin/user-management";
 import { SystemSettings } from "@/components/admin/system-settings";
+import { PrintSettings } from "@/components/admin/print-settings";
 import { ShieldAlert } from "lucide-react";
 
 export default function AdminPage() {
@@ -29,12 +30,16 @@ export default function AdminPage() {
             <TabsList>
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="settings">System Settings</TabsTrigger>
+                <TabsTrigger value="print">Print Settings</TabsTrigger>
             </TabsList>
             <TabsContent value="users" className="space-y-4">
                 <UserManagement />
             </TabsContent>
             <TabsContent value="settings" className="space-y-4">
                 <SystemSettings />
+            </TabsContent>
+             <TabsContent value="print" className="space-y-4">
+                <PrintSettings />
             </TabsContent>
         </Tabs>
     </div>
