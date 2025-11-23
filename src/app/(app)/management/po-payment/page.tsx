@@ -38,7 +38,7 @@ type PoFinancialSummary = {
 };
 
 type SortConfig = {
-    key: keyof PoFinancialSummary['po'] | 'totalAllocation' | 'totalExpenses' | 'profit';
+    key: keyof PoFinancialSummary['po'] | 'totalAllocation' | 'totalExpenses' | 'profit' | 'taxDeduction';
     direction: 'ascending' | 'descending';
 };
 
@@ -96,14 +96,13 @@ export default function PoPaymentPage() {
           }
 
           const amountDeposited = po.amountDeposited || 0;
-          const taxDeduction = po.taxDeduction || 0;
           
           return {
             id: po.id,
             po: po,
             totalAllocation,
             totalExpenses,
-            profit: amountDeposited - totalExpenses - taxDeduction,
+            profit: amountDeposited - totalExpenses,
             paymentStatus: po.paymentStatus,
           };
         });
@@ -162,13 +161,18 @@ export default function PoPaymentPage() {
             const aPo = a.po;
             const bPo = b.po;
 
-            if (['totalAllocation', 'totalExpenses', 'profit'].includes(sortConfig.key)) {
+            if (['totalAllocation', 'totalExpenses', 'profit', 'taxDeduction'].includes(sortConfig.key)) {
                 if(sortConfig.key === 'totalAllocation') {
                     aValue = a.totalAllocation;
                     bValue = b.totalAllocation;
                 } else if(sortConfig.key === 'totalExpenses') {
                     aValue = a.totalExpenses;
                     bValue = b.totalExpenses;
+                } else if (sortConfig.key === 'taxDeduction') {
+                    const aTax = a.totalAllocation - (aPo.amountDeposited || 0);
+                    const bTax = b.totalAllocation - (bPo.amountDeposited || 0);
+                    aValue = aTax;
+                    bValue = bTax;
                 } else { // profit
                     aValue = a.profit;
                     bValue = b.profit;
@@ -393,46 +397,49 @@ export default function PoPaymentPage() {
                   </TableRow>
                 ))
               ) : sortedAndFilteredSummaries.length > 0 ? (
-                sortedAndFilteredSummaries.map((summary) => (
-                  <TableRow key={summary.id}>
-                    <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
-                    <TableCell>{format(summary.po.date.toDate(), 'PPP')}</TableCell>
-                    <TableCell>{summary.po.careOf}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
-                    <TableCell className="text-right text-orange-600">{formatCurrency(summary.po.taxDeduction || 0)}</TableCell>
-                    <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
-                    <TableCell className={cn(
-                        "text-right font-bold",
-                        summary.profit >= 0 ? "text-green-600" : "text-red-600"
-                    )}>
-                        {formatCurrency(summary.profit)}
-                    </TableCell>
-                    <TableCell className="text-center">{getStatusBadge(summary.paymentStatus)}</TableCell>
-                    <TableCell className="text-right">
-                       <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                             <DropdownMenuItem onSelect={() => handleViewDetails(summary)}>
-                              <Eye className="mr-2 h-4 w-4" /> Manage Payment
-                            </DropdownMenuItem>
-                            {summary.po.entryType === 'manual' && (
-                                <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => setPoToDelete(summary)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
-                                </DropdownMenuItem>
-                                </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                sortedAndFilteredSummaries.map((summary) => {
+                    const taxDeduction = summary.totalAllocation - (summary.po.amountDeposited || 0);
+                    return (
+                        <TableRow key={summary.id}>
+                            <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
+                            <TableCell>{format(summary.po.date.toDate(), 'PPP')}</TableCell>
+                            <TableCell>{summary.po.careOf}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
+                            <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
+                            <TableCell className="text-right text-orange-600">{formatCurrency(taxDeduction)}</TableCell>
+                            <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
+                            <TableCell className={cn(
+                                "text-right font-bold",
+                                summary.profit >= 0 ? "text-green-600" : "text-red-600"
+                            )}>
+                                {formatCurrency(summary.profit)}
+                            </TableCell>
+                            <TableCell className="text-center">{getStatusBadge(summary.paymentStatus)}</TableCell>
+                            <TableCell className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleViewDetails(summary)}>
+                                    <Eye className="mr-2 h-4 w-4" /> Manage Payment
+                                    </DropdownMenuItem>
+                                    {summary.po.entryType === 'manual' && (
+                                        <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onSelect={() => setPoToDelete(summary)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
+                                        </DropdownMenuItem>
+                                        </>
+                                    )}
+                                </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="h-24 text-center">
@@ -484,3 +491,5 @@ export default function PoPaymentPage() {
     </>
   );
 }
+
+    

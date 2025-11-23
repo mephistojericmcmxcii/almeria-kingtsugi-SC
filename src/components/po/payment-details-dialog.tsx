@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -29,10 +30,6 @@ const formSchema = z.object({
   paymentDate: z.date().optional(),
   agency: z.string().optional(),
   careOf: z.string().min(1, "Care Of is required"),
-  taxDeduction: z.preprocess(
-    (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
-    z.number().optional()
-  ),
   amountDeposited: z.preprocess(
     (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
     z.number().optional()
@@ -89,7 +86,6 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
         paymentDate: po.paymentDate?.toDate(),
         agency: po.agency || '',
         careOf: po.careOf || '',
-        taxDeduction: po.taxDeduction,
         amountDeposited: po.amountDeposited,
         bank: po.bank || '',
         paymentStatus: po.paymentStatus || 'Unpaid',
@@ -122,8 +118,6 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
             }
         }
 
-        // Ensure empty strings for numbers become null or undefined in Firestore
-        if (values.taxDeduction === undefined) dataToUpdate.taxDeduction = null;
         if (values.amountDeposited === undefined) dataToUpdate.amountDeposited = null;
         if (isManualEntry) {
             dataToUpdate.totalAllocation = values.totalAllocation ?? 0;
@@ -185,9 +179,15 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     )} />
                 </div>
                 ) : (
-                    <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                        <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                    <div className="grid grid-cols-2 gap-x-8">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
+                            <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                            <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                        </div>
                     </div>
                 )}
             </div>
@@ -211,7 +211,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
 
             <FormField control={form.control} name="paymentDate" render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Date</FormLabel>
+                <FormLabel>Payment Date</FormLabel>
                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <div className="relative w-[240px]">
                       <FormControl>
@@ -250,13 +250,6 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
             )} />
             
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="taxDeduction" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Tax Deduction</FormLabel>
-                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
                  <FormField control={form.control} name="amountDeposited" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Amount Deposited</FormLabel>
@@ -264,35 +257,33 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     <FormMessage />
                 </FormItem>
                 )} />
-            </div>
-            
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="bank" render={({ field }) => (
+                 <FormField control={form.control} name="bank" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Bank</FormLabel>
                     <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )} />
-                <FormField control={form.control} name="paymentStatus" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {PAYMENT_STATUSES.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )} />
             </div>
+            
+            <FormField control={form.control} name="paymentStatus" render={({ field }) => (
+            <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                    <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                    {PAYMENT_STATUSES.map(status => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+                <FormMessage />
+            </FormItem>
+            )} />
 
             <div className="space-y-2">
                 <FormField
@@ -333,3 +324,5 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     </Dialog>
   );
 }
+
+    
