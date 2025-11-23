@@ -11,14 +11,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useParams, useRouter } from 'next/navigation';
 
-import { ChevronLeft, PackagePlus, MoreHorizontal, Trash2, Edit, Package, Boxes, Tag, Printer, X } from "lucide-react";
+import { ChevronLeft, PackagePlus, MoreHorizontal, Trash2, Edit, Package, Boxes, Tag, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +32,7 @@ import {
 const AddEditVariantDialog = lazy(() => import('@/components/inventory/add-edit-variant-dialog').then(module => ({ default: module.AddEditVariantDialog })));
 const PrintLayout = lazy(() => import('@/components/inventory/print-layout'));
 const PrintBrochureLayout = lazy(() => import('@/components/inventory/print-brochure-layout'));
-const PrintLabelLayout = lazy(() => import('@/components/inventory/print-label-layout'));
+
 
 export default function ItemVariantsPage() {
   const { firestore } = useFirebase();
@@ -50,9 +49,6 @@ export default function ItemVariantsPage() {
   const [item, setItem] = useState<InventoryItem | null>(null);
   const [variants, setVariants] = useState<InventoryVariant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const [isPrintMode, setIsPrintMode] = useState(false);
-  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(new Set());
 
   const fetchAllData = useCallback(async () => {
     if (!firestore || !itemId) return;
@@ -207,54 +203,6 @@ export default function ItemVariantsPage() {
     }
   };
   
-  const handlePrintSelected = () => {
-    if (selectedVariantIds.size === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Variants Selected",
-        description: "Please select at least one variant to print.",
-      });
-      return;
-    }
-    const selected = variants.filter(v => selectedVariantIds.has(v.id));
-    const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
-    const printWindow = window.open('', '_blank', features);
-    if (printWindow) {
-      printWindow.document.write('<div id="print-root"></div>');
-      printWindow.document.close();
-      const printRoot = printWindow.document.getElementById('print-root');
-      if (printRoot) {
-        const root = createRoot(printRoot);
-        root.render(
-          <Suspense fallback={<div>Loading print view...</div>}>
-            <PrintLabelLayout variants={selected} />
-          </Suspense>
-        );
-      }
-    }
-  };
-
-  const handleCheckboxChange = (variantId: string, checked: boolean | 'indeterminate') => {
-    setSelectedVariantIds(prev => {
-      const newSet = new Set(prev);
-      if (checked) {
-        newSet.add(variantId);
-      } else {
-        newSet.delete(variantId);
-      }
-      return newSet;
-    });
-  };
-  
-  const handleSelectAll = (checked: boolean | 'indeterminate') => {
-    if (checked) {
-      setSelectedVariantIds(new Set(variants.map(v => v.id)));
-    } else {
-      setSelectedVariantIds(new Set());
-    }
-  };
-
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
   };
@@ -268,9 +216,6 @@ export default function ItemVariantsPage() {
     }
     return <Badge className="bg-green-600 text-green-50 hover:bg-green-700 border-green-700">Good</Badge>;
   }
-  
-  const isAllSelected = selectedVariantIds.size > 0 && selectedVariantIds.size === variants.length;
-
 
   return (
     <div className="space-y-8">
@@ -334,30 +279,14 @@ export default function ItemVariantsPage() {
                     <CardDescription>All specific product variants under {item?.name || 'this item'}.</CardDescription>
                 </div>
                  <div className="flex items-center gap-2">
-                    {isPrintMode ? (
-                        <>
-                            <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedVariantIds(new Set()); }}>
-                                <X className="mr-2 h-4 w-4" /> Cancel
-                            </Button>
-                            <Button onClick={handlePrintSelected} disabled={selectedVariantIds.size === 0}>
-                                <Printer className="mr-2 h-4 w-4" /> Print Selected Labels
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                           {user?.role === 'admin' && (
-                                <Button onClick={() => setIsAddDialogOpen(true)}>
-                                    <PackagePlus className="mr-2 h-4 w-4" /> Add Variant
-                                </Button>
-                            )}
-                            <Button variant="outline" onClick={() => setIsPrintMode(true)} disabled={isLoading || variants.length === 0}>
-                                <Printer className="mr-2 h-4 w-4" /> Print Label
-                            </Button>
-                            <Button variant="outline" onClick={handlePrintList} disabled={isLoading || variants.length === 0}>
-                                <Printer className="mr-2 h-4 w-4" /> Print List
-                            </Button>
-                        </>
+                    {user?.role === 'admin' && (
+                        <Button onClick={() => setIsAddDialogOpen(true)}>
+                            <PackagePlus className="mr-2 h-4 w-4" /> Add Variant
+                        </Button>
                     )}
+                    <Button variant="outline" onClick={handlePrintList} disabled={isLoading || variants.length === 0}>
+                        <Printer className="mr-2 h-4 w-4" /> Print List
+                    </Button>
                  </div>
             </div>
         </CardHeader>
@@ -365,15 +294,6 @@ export default function ItemVariantsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                 {isPrintMode && (
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                      aria-label="Select all"
-                    />
-                  </TableHead>
-                )}
                 <TableHead>Variation</TableHead>
                 <TableHead>Brand</TableHead>
                 <TableHead>Model</TableHead>
@@ -390,7 +310,6 @@ export default function ItemVariantsPage() {
               {isLoading ? (
                 Array.from({ length: 2 }).map((_, i) => (
                   <TableRow key={i}>
-                    {isPrintMode && <TableCell><Skeleton className="h-5 w-5" /></TableCell>}
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -406,15 +325,6 @@ export default function ItemVariantsPage() {
               ) : variants?.length ? (
                 variants.map((variant) => (
                   <TableRow key={variant.id}>
-                    {isPrintMode && (
-                        <TableCell>
-                            <Checkbox
-                                checked={selectedVariantIds.has(variant.id)}
-                                onCheckedChange={(checked) => handleCheckboxChange(variant.id, checked)}
-                                aria-label={`Select variant ${variant.variation}`}
-                            />
-                        </TableCell>
-                    )}
                     <TableCell className="font-medium">{variant.variation}</TableCell>
                     <TableCell className="font-medium">{variant.brand}</TableCell>
                     <TableCell>{variant.model || 'N/A'}</TableCell>
@@ -425,7 +335,7 @@ export default function ItemVariantsPage() {
                     <TableCell className="text-right">{formatCurrency(variant.price)}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(variant.price * variant.quantity)}</TableCell>
                     <TableCell className="text-right">
-                       {user?.role === 'admin' && !isPrintMode && (
+                       {user?.role === 'admin' && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -456,7 +366,7 @@ export default function ItemVariantsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isPrintMode ? 11 : 10} className="h-24 text-center">
+                  <TableCell colSpan={10} className="h-24 text-center">
                     No variants found for this item.
                   </TableCell>
                 </TableRow>

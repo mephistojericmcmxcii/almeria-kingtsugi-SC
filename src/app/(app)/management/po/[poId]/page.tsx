@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
@@ -10,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'next/navigation';
 
-import { ChevronLeft, Plus, Trash2, Edit } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Edit, Printer, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,9 +20,11 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const AddPoItemDialog = lazy(() => import('@/components/po/add-po-item-dialog').then(module => ({ default: module.AddPoItemDialog })));
 const UpdateActualAmountDialog = lazy(() => import('@/components/po/update-actual-amount-dialog').then(module => ({ default: module.UpdateActualAmountDialog })));
+const PrintBoxListLayout = lazy(() => import('@/components/po/print-box-list-layout'));
 
 
 export default function PoDetailsPage() {
@@ -35,11 +38,13 @@ export default function PoDetailsPage() {
     const [itemToDelete, setItemToDelete] = useState<PurchaseOrderItem | null>(null);
     const [itemToUpdate, setItemToUpdate] = useState<PurchaseOrderItem | null>(null);
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-
-
+    
     const [po, setPo] = useState<PurchaseOrder | null>(null);
     const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [isPrintMode, setIsPrintMode] = useState(false);
+    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
     const refetchItems = async () => {
         if (!firestore || !poId) return;
@@ -104,6 +109,55 @@ export default function PoDetailsPage() {
         refetchItems();
     };
 
+    const handleCheckboxChange = (itemId: string, checked: boolean | 'indeterminate') => {
+        setSelectedItemIds(prev => {
+          const newSet = new Set(prev);
+          if (checked) {
+            newSet.add(itemId);
+          } else {
+            newSet.delete(itemId);
+          }
+          return newSet;
+        });
+    };
+  
+    const handleSelectAll = (checked: boolean | 'indeterminate') => {
+        if (checked) {
+          setSelectedItemIds(new Set(poItems.map(v => v.id)));
+        } else {
+          setSelectedItemIds(new Set());
+        }
+    };
+    
+    const handlePrintSelected = () => {
+        if (selectedItemIds.size === 0) {
+          toast({
+            variant: "destructive",
+            title: "No Items Selected",
+            description: "Please select at least one item to print.",
+          });
+          return;
+        }
+        const selected = poItems.filter(v => selectedItemIds.has(v.id));
+        const features = "width=800,height=600,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+        const printWindow = window.open('', '_blank', features);
+        if (printWindow) {
+          printWindow.document.write('<div id="print-root"></div>');
+          printWindow.document.close();
+          const printRoot = printWindow.document.getElementById('print-root');
+          if (printRoot) {
+            const root = createRoot(printRoot);
+            root.render(
+              <Suspense fallback={<div>Loading print view...</div>}>
+                <PrintBoxListLayout po={po} items={selected} />
+              </Suspense>
+            );
+          }
+        }
+    };
+
+    const isAllSelected = selectedItemIds.size > 0 && selectedItemIds.size === poItems.length;
+
     return (
         <div className="space-y-8">
             <div className="flex items-center gap-4">
@@ -126,17 +180,44 @@ export default function PoDetailsPage() {
                             <CardTitle>Purchase Order Items</CardTitle>
                             <CardDescription>List of all items included in this PO.</CardDescription>
                         </div>
-                        {user?.role === 'admin' && (
-                            <Button onClick={() => setIsAddDialogOpen(true)}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Items
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                             {isPrintMode ? (
+                                <>
+                                    <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedItemIds(new Set()); }}>
+                                        <X className="mr-2 h-4 w-4" /> Cancel
+                                    </Button>
+                                    <Button onClick={handlePrintSelected} disabled={selectedItemIds.size === 0}>
+                                        <Printer className="mr-2 h-4 w-4" /> Print Selected List
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    {user?.role === 'admin' && (
+                                        <Button onClick={() => setIsAddDialogOpen(true)}>
+                                            <Plus className="mr-2 h-4 w-4" /> Add Items
+                                        </Button>
+                                    )}
+                                     <Button variant="outline" onClick={() => setIsPrintMode(true)} disabled={isLoading || poItems.length === 0}>
+                                        <Printer className="mr-2 h-4 w-4" /> Print Box List
+                                    </Button>
+                                </>
+                             )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                {isPrintMode && (
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                        checked={isAllSelected}
+                                        onCheckedChange={handleSelectAll}
+                                        aria-label="Select all"
+                                        />
+                                    </TableHead>
+                                )}
                                 <TableHead className="w-[20%]">Item Name</TableHead>
                                 <TableHead className="w-[5%]">Unit</TableHead>
                                 <TableHead className="text-right w-[5%]">Quantity</TableHead>
@@ -145,13 +226,14 @@ export default function PoDetailsPage() {
                                 <TableHead className="text-right w-[10%]">Total Allocation</TableHead>
                                 <TableHead className="text-right w-[10%]">Total Actual Cost</TableHead>
                                 <TableHead>Description</TableHead>
-                                {user?.role === 'admin' && <TableHead className="text-right w-[5%]">Actions</TableHead>}
+                                {user?.role === 'admin' && !isPrintMode && <TableHead className="text-right w-[5%]">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
+                                        {isPrintMode && <TableCell><Skeleton className="h-5 w-5" /></TableCell>}
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
@@ -160,12 +242,21 @@ export default function PoDetailsPage() {
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                                        {user?.role === 'admin' && <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>}
+                                        {user?.role === 'admin' && !isPrintMode && <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>}
                                     </TableRow>
                                 ))
                             ) : poItems?.length ? (
                                 poItems.map((item) => (
                                     <TableRow key={item.id}>
+                                         {isPrintMode && (
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedItemIds.has(item.id)}
+                                                    onCheckedChange={(checked) => handleCheckboxChange(item.id, checked)}
+                                                    aria-label={`Select item ${item.name}`}
+                                                />
+                                            </TableCell>
+                                        )}
                                         <TableCell className="font-medium">{item.name}</TableCell>
                                         <TableCell><Badge variant="secondary">{item.unit}</Badge></TableCell>
                                         <TableCell className="text-right">{item.quantity}</TableCell>
@@ -174,7 +265,7 @@ export default function PoDetailsPage() {
                                         <TableCell className="text-right font-medium">{formatCurrency(item.amount * item.quantity)}</TableCell>
                                         <TableCell className="text-right font-medium">{formatCurrency((item.actualAmount || 0) * item.quantity)}</TableCell>
                                         <TableCell className="text-muted-foreground">{item.description || 'Brand/Model/etc.'}</TableCell>
-                                        {user?.role === 'admin' && (
+                                        {user?.role === 'admin' && !isPrintMode && (
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -201,7 +292,7 @@ export default function PoDetailsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">
+                                    <TableCell colSpan={isPrintMode ? 10 : 9} className="h-24 text-center">
                                         No items have been added to this purchase order yet.
                                     </TableCell>
                                 </TableRow>
@@ -248,5 +339,3 @@ export default function PoDetailsPage() {
         </div>
     );
 }
-
-    
