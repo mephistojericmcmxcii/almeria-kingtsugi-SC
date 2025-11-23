@@ -104,7 +104,7 @@ export type Order = {
   statusHistory?: StatusHistory[];
 };
 
-export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled';
+export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled' | 'For Delivery';
 export type PoPaymentStatus = 'Paid' | 'Unpaid';
 
 export type PurchaseOrderItem = {

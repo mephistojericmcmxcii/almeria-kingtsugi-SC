@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { PurchaseOrder } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
 import type { DisplayPurchaseOrder } from '@/app/(app)/management/po/page';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,6 +12,7 @@ import { useState } from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Download } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ const formatCurrency = (amount: number) => {
 export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
   const { updatePoStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<PurchaseOrderStatus | ''>('');
   const [salesInvoice, setSalesInvoice] = useState(po.salesInvoice || '');
   const [deliveryReceipt, setDeliveryReceipt] = useState(po.deliveryReceipt || '');
   const [siFile, setSiFile] = useState<File | null>(null);
@@ -35,15 +38,17 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   if (!po) return null;
 
   const handleUpdateStatus = async () => {
+    if (!selectedStatus) return;
     setIsUpdating(true);
-    const success = await updatePoStatus(po, 'Delivered', { salesInvoice, deliveryReceipt, salesInvoiceFile: siFile, deliveryReceiptFile: drFile });
+    const success = await updatePoStatus(po, selectedStatus, { salesInvoice, deliveryReceipt, salesInvoiceFile: siFile, deliveryReceiptFile: drFile });
     if (success) {
         onOpenChange(true); // Signal that a change was made
     }
     setIsUpdating(false);
   }
   
-  const isMarkAsDeliveredDisabled = isUpdating || !salesInvoice || !deliveryReceipt;
+  const isDeliveredDisabled = !salesInvoice || !deliveryReceipt;
+  const isSaveDisabled = isUpdating || !selectedStatus;
   const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
 
   return (
@@ -94,23 +99,23 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 </div>
             </div>
 
-            {(po.displayStatus === 'Completed' || po.displayStatus === 'Delivered') && (
+            {(po.displayStatus === 'Completed' || po.displayStatus === 'Delivered' || po.displayStatus === 'For Delivery') && (
                 <div className="space-y-4 border-t pt-4">
                     <h3 className="font-semibold text-foreground">Delivery Confirmation</h3>
                      <div className="space-y-4">
                          <div className="space-y-2">
                              <Label htmlFor="salesInvoice">Sales Invoice #</Label>
                              <div className="flex gap-2">
-                                <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
-                                <Input id="siFile" type="file" onChange={(e) => setSiFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
+                                <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} disabled={po.status === 'Delivered'} className="flex-grow"/>
+                                <Input id="siFile" type="file" onChange={(e) => setSiFile(e.target.files?.[0] ?? null)} disabled={po.status === 'Delivered'} className="flex-grow"/>
                              </div>
                              {po.salesInvoiceUrl && <a href={po.salesInvoiceUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded SI</Button></a>}
                          </div>
                          <div className="space-y-2">
                              <Label htmlFor="deliveryReceipt">Delivery Receipt #</Label>
                              <div className="flex gap-2">
-                                <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
-                                <Input id="drFile" type="file" onChange={(e) => setDrFile(e.target.files?.[0] ?? null)} disabled={po.displayStatus === 'Delivered'} className="flex-grow"/>
+                                <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} disabled={po.status === 'Delivered'} className="flex-grow"/>
+                                <Input id="drFile" type="file" onChange={(e) => setDrFile(e.target.files?.[0] ?? null)} disabled={po.status === 'Delivered'} className="flex-grow"/>
                              </div>
                              {po.deliveryReceiptUrl && <a href={po.deliveryReceiptUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded DR</Button></a>}
                          </div>
@@ -118,17 +123,26 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 </div>
             )}
         </div>
-        <DialogFooter className="sm:justify-between">
+        <DialogFooter className="sm:justify-between items-center">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
-          {po.displayStatus === 'Completed' && (
-            <Button onClick={handleUpdateStatus} disabled={isMarkAsDeliveredDisabled}>
-                {isUpdating ? 'Updating...' : 'Mark as Delivered'}
-            </Button>
+          {(po.displayStatus === 'Completed' || po.displayStatus === 'For Delivery') && (
+            <div className="flex items-center gap-2">
+                 <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as PurchaseOrderStatus)} disabled={isUpdating || po.status === 'Delivered'}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Update Status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="For Delivery">For Delivery</SelectItem>
+                        <SelectItem value="Delivered" disabled={isDeliveredDisabled}>Delivered</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button onClick={handleUpdateStatus} disabled={isSaveDisabled}>
+                    {isUpdating ? 'Saving...' : 'Save'}
+                </Button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    

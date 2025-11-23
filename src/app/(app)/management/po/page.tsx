@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
@@ -113,7 +114,7 @@ export default function PoPage() {
             totals[po.id] = poTotals;
             
             let displayStatus: PurchaseOrder['status'] = po.status;
-            if (po.status !== 'Cancelled' && po.status !== 'Delivered') { // Don't override these final statuses
+            if (po.status !== 'Cancelled' && po.status !== 'Delivered' && po.status !== 'For Delivery') {
                 if (generalItemsCount > 0 && generalItemsCount === generalItemsWithActualAmount) {
                     displayStatus = 'Completed';
                 } else if (generalItemsCount > 0) {
@@ -153,7 +154,7 @@ export default function PoPage() {
   }, [purchaseOrders, searchTerm]);
 
   const handleItemsAction = (po: DisplayPurchaseOrder) => {
-    if (po.displayStatus === 'Delivered') {
+    if (po.status === 'Delivered') {
         setPoItemsToView(po);
         setIsViewItemsDialogOpen(true);
     } else {
@@ -303,6 +304,7 @@ export default function PoPage() {
       case 'Completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
       case 'Lacking': return <Badge variant="secondary" className="bg-orange-500 text-orange-50">Lacking</Badge>;
       case 'Delivered': return <Badge className="bg-blue-500 text-blue-50">Delivered</Badge>;
+      case 'For Delivery': return <Badge className="bg-purple-500 text-purple-50">For Delivery</Badge>;
       case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }
@@ -459,7 +461,7 @@ export default function PoPage() {
                             </DropdownMenuItem>
                              <DropdownMenuItem onSelect={() => handleItemsAction(po)}>
                               <PackagePlus className="mr-2 h-4 w-4" /> 
-                              {po.displayStatus === 'Delivered' ? 'View Items' : 'Add/Manage Items'}
+                              {po.status === 'Delivered' ? 'View Items' : 'Add/Manage Items'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleEdit(po)}>
                               <Edit className="mr-2 h-4 w-4" /> Edit PO
