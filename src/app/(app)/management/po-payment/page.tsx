@@ -99,7 +99,7 @@ export default function PoPaymentPage() {
               }, { allocation: 0, expenses: 0});
 
               totalAllocation = po.totalAllocation ?? totals.allocation;
-              totalExpenses = po.totalExpenses ?? totals.expenses;
+              totalExpenses = totals.expenses;
           }
 
           const amountDeposited = po.amountDeposited || 0;
@@ -169,21 +169,24 @@ export default function PoPaymentPage() {
             const bPo = b.po;
 
             if (['totalAllocation', 'totalExpenses', 'profit', 'taxDeduction'].includes(sortConfig.key)) {
-                const aTax = (a.po.totalAllocation || a.totalAllocation) - (aPo.amountDeposited || 0);
-                const bTax = (b.po.totalAllocation || b.totalAllocation) - (bPo.amountDeposited || 0);
+                const aAllocation = a.po.totalAllocation ?? a.totalAllocation;
+                const bAllocation = b.po.totalAllocation ?? b.totalAllocation;
+                
+                const aTax = a.po.amountDeposited && a.po.amountDeposited > 0 ? aAllocation - (a.po.amountDeposited || 0) : 0;
+                const bTax = b.po.amountDeposited && b.po.amountDeposited > 0 ? bAllocation - (b.po.amountDeposited || 0) : 0;
 
                 if(sortConfig.key === 'totalAllocation') {
-                    aValue = a.po.totalAllocation || a.totalAllocation;
-                    bValue = b.po.totalAllocation || b.totalAllocation;
+                    aValue = aAllocation;
+                    bValue = bAllocation;
                 } else if(sortConfig.key === 'totalExpenses') {
-                    aValue = a.po.totalExpenses || a.totalExpenses;
-                    bValue = b.po.totalExpenses || b.totalExpenses;
+                    aValue = a.totalExpenses;
+                    bValue = b.totalExpenses;
                 } else if (sortConfig.key === 'taxDeduction') {
                     aValue = aTax;
                     bValue = bTax;
                 } else { // profit
-                    const aProfit = (a.po.totalAllocation || a.totalAllocation) - (a.po.totalExpenses || a.totalExpenses) - aTax;
-                    const bProfit = (b.po.totalAllocation || b.totalAllocation) - (b.po.totalExpenses || b.totalExpenses) - bTax;
+                    const aProfit = aAllocation - a.totalExpenses - aTax;
+                    const bProfit = bAllocation - b.totalExpenses - bTax;
                     aValue = aProfit;
                     bValue = bProfit;
                 }
@@ -215,8 +218,9 @@ export default function PoPaymentPage() {
                 acc.unpaidCount++;
             }
             const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
-            const expenses = summary.po.totalExpenses ?? summary.totalExpenses;
-            const taxDeduction = allocation - (summary.po.amountDeposited || 0);
+            const expenses = summary.totalExpenses;
+            
+            const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
 
             acc.totalTaxDeduction += taxDeduction;
             acc.totalProfitLoss += allocation - expenses - taxDeduction;
@@ -421,8 +425,8 @@ export default function PoPaymentPage() {
               ) : sortedAndFilteredSummaries.length > 0 ? (
                 sortedAndFilteredSummaries.map((summary) => {
                     const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
-                    const expenses = summary.po.totalExpenses ?? summary.totalExpenses;
-                    const taxDeduction = allocation - (summary.po.amountDeposited || 0);
+                    const expenses = summary.totalExpenses;
+                    const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
                     const profitLoss = allocation - expenses - taxDeduction;
                     return (
                         <TableRow key={summary.id}>
