@@ -59,7 +59,16 @@ function CartList() {
     const router = useRouter();
 
     if (isAuthLoading) {
-        return <div className="text-center py-12 text-muted-foreground">Loading your quotation...</div>;
+        return (
+             <Card>
+                <CardHeader>
+                    <CardTitle>Items to Quote</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">Loading your quotation...</div>
+                </CardContent>
+             </Card>
+        );
     }
     
     if (!cartItems || cartItems.length === 0) {
@@ -525,7 +534,13 @@ function RfqList() {
 
 
     if (isLoading) {
-        return <div className="text-center py-12 text-muted-foreground">Loading your quotation requests...</div>;
+        return (
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="text-center py-12 text-muted-foreground">Loading your quotation requests...</div>
+                </CardContent>
+            </Card>
+        );
     }
 
     if (rfqs.length === 0) {
@@ -770,11 +785,15 @@ export default function ProfilePage() {
                 </div>
                 <CartList />
                 {noQuotations && (
-                    <div className="text-center py-12 text-muted-foreground border rounded-lg">
-                        <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4">Your quotation list is empty.</p>
-                        <Button variant="link" onClick={() => router.push('/products')}>Add items to get a quote</Button>
-                    </div>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="text-center py-12 text-muted-foreground">
+                                <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
+                                <p className="mt-4">Your quotation list is empty.</p>
+                                <Button variant="link" onClick={() => router.push('/products')}>Add items to get a quote</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
                 {quotationOrders.length > 0 && (
                     <OrderList 
@@ -844,4 +863,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
