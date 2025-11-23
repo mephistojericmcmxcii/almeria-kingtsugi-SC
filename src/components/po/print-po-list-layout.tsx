@@ -12,10 +12,6 @@ interface PrintPoListLayoutProps {
 }
 
 const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poItems }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  };
-  
   const printDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -82,7 +78,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
           }
           th, td {
             border-bottom: 1px solid hsl(var(--border));
-            padding: 10px 8px;
+            padding: 10px 16px;
             text-align: left;
             vertical-align: top;
           }
@@ -135,7 +131,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
               padding: 0;
             }
             th, td {
-                padding: 8px 6px;
+                padding: 8px 12px;
             }
             .po-block {
                 border: 1px solid #ccc;
