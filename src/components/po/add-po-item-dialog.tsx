@@ -165,7 +165,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                       <FormItem>
                         {index === 0 && <label className="text-sm font-medium">Description</label>}
                         <FormControl>
-                          <Input placeholder="Optional details" {...field} />
+                          <Input placeholder="Brand/Model/etc." {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -208,5 +208,3 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
     </Dialog>
   );
 }
-
-    

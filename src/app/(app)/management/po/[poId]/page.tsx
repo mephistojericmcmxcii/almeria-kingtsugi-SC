@@ -173,7 +173,7 @@ export default function PoDetailsPage() {
                                         <TableCell className="text-right">{formatCurrency(item.actualAmount || 0)}</TableCell>
                                         <TableCell className="text-right font-medium">{formatCurrency(item.amount * item.quantity)}</TableCell>
                                         <TableCell className="text-right font-medium">{formatCurrency((item.actualAmount || 0) * item.quantity)}</TableCell>
-                                        <TableCell className="text-muted-foreground">{item.description || 'N/A'}</TableCell>
+                                        <TableCell className="text-muted-foreground">{item.description || 'Brand/Model/etc.'}</TableCell>
                                         {user?.role === 'admin' && (
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
