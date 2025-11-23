@@ -345,11 +345,11 @@ export default function PoPage() {
                             <Label className="pl-2 text-sm font-medium">Print Type:</Label>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="parentOnly" id="parentOnly" />
-                                <Label htmlFor="parentOnly">Parent Only</Label>
+                                <Label htmlFor="parentOnly">Purchase Orders</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="withChildren" id="withChildren" />
-                                <Label htmlFor="withChildren">With Children</Label>
+                                <Label htmlFor="withChildren">w/ PO Items</Label>
                             </div>
                         </RadioGroup>
                         <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedPoIds(new Set()); }}>
