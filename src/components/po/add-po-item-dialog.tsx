@@ -83,7 +83,6 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
   }, [isOpen, form]);
   
   useEffect(() => {
-    // When itemType changes, reset the fields array with the correct structure.
     if (itemType === 'general') {
       replace([{ name: '', unit: '', quantity: 1, amount: 0, description: '' }]);
     } else {
@@ -119,9 +118,8 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
       if (values.itemType === 'general') {
         dataToSave.unit = item.unit;
         dataToSave.quantity = item.quantity;
-        dataToSave.actualAmount = 0; // Default actualAmount for general items
+        dataToSave.actualAmount = 0;
       } else {
-        // For misc items, amount is the total cost
         dataToSave.actualAmount = item.amount;
       }
       
@@ -187,22 +185,9 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
               {fields.map((field, index) => {
                 return (
-                <div key={field.id} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex justify-end items-center">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className={cn(
-                    "grid items-end gap-2",
-                    itemType === 'general' ? "grid-cols-[2fr,1fr,1fr,1fr,2fr]" : "grid-cols-[2fr,2fr,1fr]"
+                <div key={field.id} className={cn(
+                    "grid items-end gap-2 p-4 border rounded-lg",
+                    itemType === 'general' ? "grid-cols-[2fr_1fr_1fr_1fr_2fr_auto]" : "grid-cols-[2fr_2fr_1fr_auto]"
                   )}>
                     <FormField control={form.control} name={`items.${index}.name`} render={({ field }) => (
                         <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="e.g., Bond Paper" {...field} /></FormControl><FormMessage /></FormItem>
@@ -233,8 +218,17 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                           <FormMessage />
                       </FormItem>
                     )}/>
+                     <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => remove(index)}
+                        disabled={fields.length <= 1}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
               )})}
             </div>
             {form.formState.errors.items?.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.root.message}</p>}
