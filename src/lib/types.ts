@@ -147,6 +147,8 @@ export type PurchaseOrder = {
   deliveryReceipt?: string;
   salesInvoiceUrl?: string;
   deliveryReceiptUrl?: string;
+  receivedBy?: string;
+  receivedDate?: Timestamp;
 };
 
 export type QuotationRequestItem = {

@@ -61,7 +61,7 @@ interface AuthContextType {
       rating?: number;
     }
 ) => Promise<boolean>;
-  updatePoStatus: (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null }) => Promise<boolean>;
+  updatePoStatus: (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null, receivedBy?: string, receivedDate?: Date }) => Promise<boolean>;
   uploadFile: (file: File, path: string, fileName?: string) => Promise<string | null>;
   deleteFileByUrl: (url: string) => Promise<void>;
   showCartBadge: boolean;
@@ -985,7 +985,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updatePoStatus = async (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null }): Promise<boolean> => {
+    const updatePoStatus = async (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null, receivedBy?: string, receivedDate?: Date }): Promise<boolean> => {
         const poRef = doc(firestore, 'purchase_orders', po.id);
         try {
             const dataToUpdate: any = {
@@ -996,6 +996,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (newStatus === 'Delivered') {
                 if (details?.salesInvoice) dataToUpdate.salesInvoice = details.salesInvoice;
                 if (details?.deliveryReceipt) dataToUpdate.deliveryReceipt = details.deliveryReceipt;
+                if (details?.receivedBy) dataToUpdate.receivedBy = details.receivedBy;
+                if (details?.receivedDate) dataToUpdate.receivedDate = Timestamp.fromDate(details.receivedDate);
 
                 if (details?.salesInvoiceFile) {
                     const url = await uploadFile(details.salesInvoiceFile, `po_documents/${po.poNumber}`, details.salesInvoice);
