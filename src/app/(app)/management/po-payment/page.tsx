@@ -91,13 +91,10 @@ export default function PoPaymentPage() {
               
               const totals = itemsSnapshot.docs.reduce((acc, itemDoc) => {
                 const item = itemDoc.data() as PurchaseOrderItem;
-                if (item.itemType === 'misc') {
-                    acc.allocation += item.amount || 0;
-                    acc.expenses += item.amount || 0;
-                } else {
-                    acc.allocation += (item.amount || 0) * (item.quantity || 0);
-                    acc.expenses += (item.actualAmount || 0) * (item.quantity || 0);
-                }
+                
+                acc.allocation += (item.amount || 0) * (item.quantity || 1);
+                acc.expenses += (item.actualAmount || 0) * (item.quantity || 1);
+                
                 return acc;
               }, { allocation: 0, expenses: 0});
 
