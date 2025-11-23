@@ -247,6 +247,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!firebaseUser) {
         setUser(null);
         setIsLoading(false);
+        if (pathname !== "/" && pathname !== "/login" && pathname !== "/products" && pathname !== "/about" && pathname !== "/reviews" && !pathname.startsWith('/products/')) {
+            router.push('/');
+        }
         return;
     }
 
@@ -297,7 +300,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe(); // Cleanup the listener
-}, [firebaseUser, isAuthLoading, firestore]);
+}, [firebaseUser, isAuthLoading, firestore, pathname, router]);
   
 
   const login = async (email: string, password: string) => {
