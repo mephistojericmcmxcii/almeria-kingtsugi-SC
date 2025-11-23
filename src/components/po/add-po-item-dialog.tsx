@@ -26,7 +26,7 @@ const poItemSchema = z.object({
     z.number().optional()
   ),
   amount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
+    (a) => parseFloat(z.string().parse(a === '' ? '0' : a)),
     z.number().min(0, 'Cost/Amount cannot be negative.')
   ),
   description: z.string().optional(),
@@ -42,6 +42,7 @@ const formSchema = z.object({
     return true;
 }, {
     message: "Unit and Quantity are required for General items.",
+    path: ['items']
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -182,56 +183,68 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                 )}
             />
 
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
-              {fields.map((field, index) => {
-                return (
-                <div key={field.id} className={cn(
-                    "grid items-end gap-2 p-4 border rounded-lg",
-                    itemType === 'general' ? "grid-cols-[2fr_1fr_1fr_1fr_2fr_auto]" : "grid-cols-[2fr_2fr_1fr_auto]"
-                  )}>
-                    <FormField control={form.control} name={`items.${index}.name`} render={({ field }) => (
-                        <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="e.g., Bond Paper" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    
-                    {itemType === 'general' && (
-                        <>
-                        <FormField control={form.control} name={`items.${index}.unit`} render={({ field }) => (
-                            <FormItem><FormLabel>Unit</FormLabel><FormControl><Input placeholder="ream" {...field} /></FormControl><FormMessage /></FormItem>
+            <div className="space-y-2">
+                <div className={cn(
+                    "grid items-end gap-2 px-1 text-xs font-medium text-muted-foreground",
+                     itemType === 'general' ? "grid-cols-[2fr_1fr_1fr_1fr_2fr_auto]" : "grid-cols-[2fr_2fr_1fr_auto]"
+                )}>
+                    <p>Name</p>
+                    {itemType === 'general' && <p>Unit</p>}
+                    {itemType === 'general' && <p>Qty</p>}
+                    <p>{itemType === 'general' ? 'Allocated' : 'Cost'}</p>
+                    <p>Description</p>
+                </div>
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
+                  {fields.map((field, index) => {
+                    return (
+                    <div key={field.id} className={cn(
+                        "grid items-start gap-2",
+                        itemType === 'general' ? "grid-cols-[2fr_1fr_1fr_1fr_2fr_auto]" : "grid-cols-[2fr_2fr_1fr_auto]"
+                      )}>
+                        <FormField control={form.control} name={`items.${index}.name`} render={({ field }) => (
+                            <FormItem><FormControl><Input placeholder="e.g., Bond Paper" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        
+                        {itemType === 'general' && (
+                            <>
+                            <FormField control={form.control} name={`items.${index}.unit`} render={({ field }) => (
+                                <FormItem><FormControl><Input placeholder="ream" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => (
+                                <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            </>
+                        )}
+                        
+                        <FormField control={form.control} name={`items.${index}.amount`} render={({ field }) => (
+                          <FormItem>
+                              <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                              <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
+                          <FormItem>
+                              <FormControl><Input placeholder={itemType === 'general' ? 'Brand/Model' : 'e.g., Transportation'} {...field} /></FormControl>
+                              <FormMessage />
+                          </FormItem>
                         )}/>
-                        <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => (
-                            <FormItem><FormLabel>Qty</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        </>
-                    )}
-                    
-                    <FormField control={form.control} name={`items.${index}.amount`} render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>{itemType === 'general' ? 'Allocated' : 'Cost'}</FormLabel>
-                          <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl><Input placeholder={itemType === 'general' ? 'Brand/Model' : 'e.g., Transportation'} {...field} /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                    )}/>
-                     <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-              )})}
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10"
+                            onClick={() => remove(index)}
+                            disabled={fields.length <= 1}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                  )})}
+                </div>
             </div>
             {form.formState.errors.items?.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.root.message}</p>}
+             {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>}
+
 
             <Button
               type="button"
