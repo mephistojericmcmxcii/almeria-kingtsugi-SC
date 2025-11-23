@@ -25,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog'));
@@ -374,7 +375,9 @@ export default function PoPage() {
         const root = createRoot(printRoot);
         root.render(
           <Suspense fallback={<div>Loading print view...</div>}>
-            <PrintPoListLayout pos={selectedPOs} totals={totalAmounts} poItems={poItems} />
+            <FirebaseClientProvider>
+                <PrintPoListLayout pos={selectedPOs} totals={totalAmounts} poItems={poItems} />
+            </FirebaseClientProvider>
           </Suspense>
         );
       }
@@ -674,7 +677,3 @@ export default function PoPage() {
     </>
   );
 }
-
-    
-
-    

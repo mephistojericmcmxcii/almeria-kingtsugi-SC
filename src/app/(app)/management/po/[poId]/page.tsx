@@ -23,6 +23,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const AddPoItemDialog = lazy(() => import('@/components/po/add-po-item-dialog').then(module => ({ default: module.AddPoItemDialog })));
 const UpdateActualAmountDialog = lazy(() => import('@/components/po/update-actual-amount-dialog').then(module => ({ default: module.UpdateActualAmountDialog })));
@@ -165,7 +166,9 @@ export default function PoDetailsPage() {
             const root = createRoot(printRoot);
             root.render(
               <Suspense fallback={<div>Loading print view...</div>}>
-                <PrintBoxListLayout po={po} items={selected} boxIdentity={boxIdentity} />
+                <FirebaseClientProvider>
+                    <PrintBoxListLayout po={po} items={selected} boxIdentity={boxIdentity} />
+                </FirebaseClientProvider>
               </Suspense>
             );
           }

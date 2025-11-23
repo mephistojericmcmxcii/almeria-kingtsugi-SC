@@ -31,6 +31,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const AddEditItemDialog = lazy(() => import('@/components/inventory/add-edit-item-dialog').then(module => ({ default: module.AddEditItemDialog })));
 const PrintInventoryListLayout = lazy(() => import('@/components/inventory/print-inventory-list-layout'));
@@ -211,7 +212,9 @@ export default function InventoryPage() {
                 const root = createRoot(printRoot);
                 root.render(
                     <Suspense fallback={<div>Loading print view...</div>}>
-                        <PrintInventoryListLayout items={selectedItems} variants={itemVariants} />
+                        <FirebaseClientProvider>
+                            <PrintInventoryListLayout items={selectedItems} variants={itemVariants} />
+                        </FirebaseClientProvider>
                     </Suspense>
                 );
             }
@@ -421,5 +424,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-
-    

@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const AddEditVariantDialog = lazy(() => import('@/components/inventory/add-edit-variant-dialog').then(module => ({ default: module.AddEditVariantDialog })));
 const PrintLayout = lazy(() => import('@/components/inventory/print-layout'));
@@ -177,7 +178,9 @@ export default function ItemVariantsPage() {
         const root = createRoot(printRoot);
         root.render(
           <Suspense fallback={<div>Loading print view...</div>}>
-            <PrintLayout item={item} variants={variants} />
+            <FirebaseClientProvider>
+                <PrintLayout item={item} variants={variants} />
+            </FirebaseClientProvider>
           </Suspense>
         );
       }
@@ -196,7 +199,9 @@ export default function ItemVariantsPage() {
         const root = createRoot(printRoot);
         root.render(
           <Suspense fallback={<div>Loading print view...</div>}>
-            <PrintBrochureLayout variant={variant} />
+            <FirebaseClientProvider>
+                <PrintBrochureLayout variant={variant} />
+            </FirebaseClientProvider>
           </Suspense>
         );
       }
