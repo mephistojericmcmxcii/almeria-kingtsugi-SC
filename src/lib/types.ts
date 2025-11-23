@@ -114,6 +114,7 @@ export type PurchaseOrderItem = {
   quantity: number;
   amount: number; // Allocated amount per unit
   actualAmount?: number; // Real cost per unit
+  miscCost?: number;
   description?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -140,6 +141,11 @@ export type PurchaseOrder = {
   // Manual entry fields
   totalAllocation?: number;
   totalExpenses?: number;
+  // Delivery confirmation
+  salesInvoice?: string;
+  deliveryReceipt?: string;
+  salesInvoiceUrl?: string;
+  deliveryReceiptUrl?: string;
 };
 
 export type QuotationRequestItem = {
@@ -168,7 +174,3 @@ export type CustomerFeedback = {
   review?: string;
   createdAt: any;
 };
-
-    
-
-    

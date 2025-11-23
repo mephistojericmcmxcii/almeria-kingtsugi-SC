@@ -19,6 +19,10 @@ const formSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().min(0, 'Actual amount cannot be negative.')
   ),
+  miscCost: z.preprocess(
+    (a) => a === '' ? 0 : parseFloat(z.string().parse(a)),
+    z.number().min(0, 'Miscellaneous cost cannot be negative.').optional()
+  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -31,6 +35,11 @@ interface UpdateActualAmountDialogProps {
   onSuccess: () => void;
 }
 
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+};
+
+
 export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onSuccess }: UpdateActualAmountDialogProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
@@ -40,12 +49,16 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     resolver: zodResolver(formSchema),
     defaultValues: {
       actualAmount: 0,
+      miscCost: 0,
     },
   });
 
   useEffect(() => {
     if (item) {
-      form.reset({ actualAmount: item.actualAmount || 0 });
+      form.reset({ 
+          actualAmount: item.actualAmount || 0,
+          miscCost: item.miscCost || 0,
+      });
     }
   }, [item, form, isOpen]);
 
@@ -56,19 +69,20 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     try {
       await updateDoc(itemRef, {
         actualAmount: values.actualAmount,
+        miscCost: values.miscCost || 0,
       });
       toast({
-        title: 'Actual Amount Updated',
-        description: `The actual cost for ${item.name} has been saved.`,
+        title: 'Costs Updated',
+        description: `The actual costs for ${item.name} have been saved.`,
       });
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Failed to update actual amount:', error);
+      console.error('Failed to update costs:', error);
       toast({
         variant: 'destructive',
         title: 'Update Failed',
-        description: error.message || 'Could not update the actual amount.',
+        description: error.message || 'Could not update the costs.',
       });
     } finally {
       setIsSubmitting(false);
@@ -79,13 +93,17 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Update Actual Amount</DialogTitle>
+          <DialogTitle>Update Item Costs</DialogTitle>
           <DialogDescription>
-            Enter the final cost for the item: <span className="font-semibold">{item.name}</span>.
+            Enter the final costs for the item: <span className="font-semibold">{item.name}</span>.
           </DialogDescription>
         </DialogHeader>
+        <div className="py-2 text-sm">
+            <span className="font-medium text-muted-foreground">Allocated Amount (per Unit): </span>
+            <span className="font-bold">{formatCurrency(item.amount)}</span>
+        </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="actualAmount"
@@ -99,12 +117,25 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
                 </FormItem>
               )}
             />
-            <DialogFooter>
+             <FormField
+              control={form.control}
+              name="miscCost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Miscellaneous Cost (Total)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Amount'}
+                {isSubmitting ? 'Saving...' : 'Save Costs'}
               </Button>
             </DialogFooter>
           </form>
