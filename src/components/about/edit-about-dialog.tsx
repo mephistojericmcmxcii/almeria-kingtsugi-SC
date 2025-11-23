@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useFirebase } from '@/firebase';
+import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,9 +61,9 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+    const aboutRef = doc(firestore, "system_settings", "about_page");
 
     try {
-        const aboutRef = doc(firestore, "system_settings", "about_page");
         await setDoc(aboutRef, values, { merge: true });
 
         toast({
@@ -74,12 +74,20 @@ export function EditAboutDialog({ isOpen, onOpenChange, content }: { isOpen: boo
         onOpenChange(false);
 
     } catch (err: any) {
-        console.error("An error occurred during submission:", err);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: err.message || "An unknown error occurred.",
-        });
+        if (err.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                path: aboutRef.path,
+                operation: 'update',
+                requestResourceData: values,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Error",
+                description: err.message || "An unknown error occurred.",
+            });
+        }
     } finally {
         setIsSubmitting(false);
     }
