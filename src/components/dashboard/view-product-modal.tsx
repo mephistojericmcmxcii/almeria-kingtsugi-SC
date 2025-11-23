@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import type { InventoryVariant, Specification } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useRouter } from 'next/navigation';
@@ -9,15 +10,13 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tag, Package, FileQuestion, Info, ListTree } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
 import { ScrollArea } from '../ui/scroll-area';
+import { DialogHeader, DialogTitle } from '../ui/dialog';
+import { LoginRedirectDialog } from '../auth/login-redirect-dialog';
 
 interface ViewProductModalProps {
   isOpen: boolean;
@@ -28,13 +27,13 @@ interface ViewProductModalProps {
 
 export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }: ViewProductModalProps) {
   const { user } = useAuth();
-  const router = useRouter();
+  const [isLoginRedirectOpen, setIsLoginRedirectOpen] = useState(false);
   
   if (!variant) return null;
 
   const handleAddToCartClick = () => {
     if (!user) {
-      router.push('/login');
+      setIsLoginRedirectOpen(true);
     } else {
       onAddToCart(variant);
     }
@@ -102,6 +101,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
 
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={true}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
@@ -182,5 +182,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
         </div>
       </DialogContent>
     </Dialog>
+    <LoginRedirectDialog isOpen={isLoginRedirectOpen} onOpenChange={setIsLoginRedirectOpen} />
+    </>
   );
 }
