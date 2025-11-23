@@ -91,11 +91,16 @@ export default function PoPage() {
             const poTotals = itemsSnapshot.docs.reduce((acc, doc) => {
                 const item = doc.data() as PurchaseOrderItem;
                 totalItems++;
-                if (item.actualAmount && item.actualAmount > 0) {
-                    itemsWithActualAmount++;
+
+                if (item.itemType === 'misc') {
+                    acc.utilized += item.amount || 0;
+                } else {
+                    if (item.actualAmount && item.actualAmount > 0) {
+                        itemsWithActualAmount++;
+                    }
+                    acc.allocated += (item.amount || 0) * (item.quantity || 0);
+                    acc.utilized += ((item.actualAmount || 0) * (item.quantity || 0)) + (item.miscCost || 0);
                 }
-                acc.allocated += (item.amount || 0) * (item.quantity || 0);
-                acc.utilized += (item.actualAmount || 0) * (item.quantity || 0);
                 return acc;
             }, { allocated: 0, utilized: 0, itemCount: 0 });
 
@@ -527,3 +532,4 @@ export default function PoPage() {
     
 
     
+
