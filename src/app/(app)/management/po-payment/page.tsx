@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp, Search } from "lucide-react";
+import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp, Search, ArrowUpDown } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -37,6 +37,11 @@ type PoFinancialSummary = {
   paymentStatus?: PoPaymentStatus;
 };
 
+type SortConfig = {
+    key: keyof PoFinancialSummary['po'] | 'totalAllocation' | 'totalExpenses' | 'profit';
+    direction: 'ascending' | 'descending';
+};
+
 const PesoIcon = () => <span className="font-bold">₱</span>;
 
 
@@ -53,10 +58,12 @@ export default function PoPaymentPage() {
   const [isAddManualDialogOpen, setIsAddManualDialogOpen] = useState(false);
   const [poToDelete, setPoToDelete] = useState<PoFinancialSummary | null>(null);
   
-  // Filter states
+  // Filter and Sort states
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedYear, setSelectedYear] = useState('all');
+  const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
   const [selectedQuarter, setSelectedQuarter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'date', direction: 'descending' });
+
 
   const fetchSummaries = async () => {
       if (!firestore || user?.role !== 'admin') {
@@ -125,11 +132,14 @@ export default function PoPaymentPage() {
   const availableYears = useMemo(() => {
     if (!summaries) return [];
     const years = new Set(summaries.map(s => s.po.date.toDate().getFullYear()));
-    return Array.from(years).sort((a, b) => b - a);
+    return ["all", ...Array.from(years).sort((a, b) => b - a).map(String)];
   }, [summaries]);
   
-  const filteredSummaries = useMemo(() => {
-    return summaries.filter(summary => {
+  const sortedAndFilteredSummaries = useMemo(() => {
+    let sortableItems = [...summaries];
+    
+    // Filtering
+    sortableItems = sortableItems.filter(summary => {
         const poDate = summary.po.date.toDate();
         const yearMatch = selectedYear === 'all' || poDate.getFullYear() === parseInt(selectedYear);
         const quarterMatch = selectedQuarter === 'all' || getQuarter(poDate) === parseInt(selectedQuarter);
@@ -142,12 +152,49 @@ export default function PoPaymentPage() {
 
         return yearMatch && quarterMatch && searchMatch;
     });
-  }, [summaries, searchTerm, selectedYear, selectedQuarter]);
+
+    // Sorting
+    if (sortConfig !== null) {
+        sortableItems.sort((a, b) => {
+            let aValue: any;
+            let bValue: any;
+            
+            const aPo = a.po;
+            const bPo = b.po;
+
+            if (['totalAllocation', 'totalExpenses', 'profit'].includes(sortConfig.key)) {
+                if(sortConfig.key === 'totalAllocation') {
+                    aValue = a.totalAllocation;
+                    bValue = b.totalAllocation;
+                } else if(sortConfig.key === 'totalExpenses') {
+                    aValue = a.totalExpenses;
+                    bValue = b.totalExpenses;
+                } else { // profit
+                    aValue = a.profit;
+                    bValue = b.profit;
+                }
+            } else {
+                 aValue = aPo[sortConfig.key as keyof PurchaseOrder];
+                 bValue = bPo[sortConfig.key as keyof PurchaseOrder];
+            }
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+
+    return sortableItems;
+  }, [summaries, searchTerm, selectedYear, selectedQuarter, sortConfig]);
   
-  const { paidCount, unpaidCount, totalProfitLoss } = useMemo(() => {
-    if (!filteredSummaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
+    const { paidCount, unpaidCount, totalProfitLoss } = useMemo(() => {
+    if (!sortedAndFilteredSummaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
     
-    return filteredSummaries.reduce((acc, summary) => {
+    return sortedAndFilteredSummaries.reduce((acc, summary) => {
         if (summary.paymentStatus === 'Paid') {
             acc.paidCount++;
         } else if (summary.paymentStatus === 'Unpaid') {
@@ -157,7 +204,25 @@ export default function PoPaymentPage() {
         return acc;
     }, { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 });
 
-  }, [filteredSummaries]);
+  }, [sortedAndFilteredSummaries]);
+  
+  const requestSort = (key: SortConfig['key']) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIcon = (key: SortConfig['key']) => {
+    if (!sortConfig || sortConfig.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
 
 
   const handleDeleteConfirm = async () => {
@@ -299,15 +364,15 @@ export default function PoPaymentPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>PO #</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Care Of</TableHead>
-                <TableHead className="text-right">Total Allocation</TableHead>
-                <TableHead className="text-right">Total Expenses</TableHead>
-                <TableHead className="text-right">Tax Deduction</TableHead>
-                <TableHead className="text-right">Amount Deposited</TableHead>
-                <TableHead className="text-right">Profit / Loss</TableHead>
-                <TableHead className="text-center">Payment Status</TableHead>
+                 <TableHead><Button variant="ghost" onClick={() => requestSort('poNumber')}>PO # {getSortIcon('poNumber')}</Button></TableHead>
+                <TableHead><Button variant="ghost" onClick={() => requestSort('date')}>Date {getSortIcon('date')}</Button></TableHead>
+                <TableHead><Button variant="ghost" onClick={() => requestSort('careOf')}>Care Of {getSortIcon('careOf')}</Button></TableHead>
+                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('totalAllocation')}>Total Allocation {getSortIcon('totalAllocation')}</Button></TableHead>
+                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('totalExpenses')}>Total Expenses {getSortIcon('totalExpenses')}</Button></TableHead>
+                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('taxDeduction')}>Tax Deduction {getSortIcon('taxDeduction')}</Button></TableHead>
+                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('amountDeposited')}>Amount Deposited {getSortIcon('amountDeposited')}</Button></TableHead>
+                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('profit')}>Profit / Loss {getSortIcon('profit')}</Button></TableHead>
+                <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('paymentStatus')}>Payment Status {getSortIcon('paymentStatus')}</Button></TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -327,8 +392,8 @@ export default function PoPaymentPage() {
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : filteredSummaries.length > 0 ? (
-                filteredSummaries.map((summary) => (
+              ) : sortedAndFilteredSummaries.length > 0 ? (
+                sortedAndFilteredSummaries.map((summary) => (
                   <TableRow key={summary.id}>
                     <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
                     <TableCell>{format(summary.po.date.toDate(), 'PPP')}</TableCell>
