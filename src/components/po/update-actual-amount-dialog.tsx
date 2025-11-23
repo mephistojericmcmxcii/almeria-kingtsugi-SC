@@ -19,10 +19,6 @@ const formSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().min(0, 'Actual amount cannot be negative.')
   ),
-  miscCost: z.preprocess(
-    (a) => a === '' ? 0 : parseFloat(z.string().parse(a)),
-    z.number().min(0, 'Miscellaneous cost cannot be negative.').optional()
-  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,7 +45,6 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     resolver: zodResolver(formSchema),
     defaultValues: {
       actualAmount: 0,
-      miscCost: 0,
     },
   });
 
@@ -57,7 +52,6 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     if (item) {
       form.reset({ 
           actualAmount: item.actualAmount || 0,
-          miscCost: item.miscCost || 0,
       });
     }
   }, [item, form, isOpen]);
@@ -69,11 +63,10 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     try {
       await updateDoc(itemRef, {
         actualAmount: values.actualAmount,
-        miscCost: values.miscCost || 0,
       });
       toast({
-        title: 'Costs Updated',
-        description: `The actual costs for ${item.name} have been saved.`,
+        title: 'Cost Updated',
+        description: `The actual cost for ${item.name} has been saved.`,
       });
       onSuccess();
       onOpenChange(false);
@@ -82,7 +75,7 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
       toast({
         variant: 'destructive',
         title: 'Update Failed',
-        description: error.message || 'Could not update the costs.',
+        description: error.message || 'Could not update the cost.',
       });
     } finally {
       setIsSubmitting(false);
@@ -93,9 +86,9 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Update Item Costs</DialogTitle>
+          <DialogTitle>Update Item Cost</DialogTitle>
           <DialogDescription>
-            Enter the final costs for the item: <span className="font-semibold">{item.name}</span>.
+            Enter the final cost for the item: <span className="font-semibold">{item.name}</span>.
           </DialogDescription>
         </DialogHeader>
         <div className="py-2 text-sm">
@@ -117,25 +110,12 @@ export function UpdateActualAmountDialog({ isOpen, onOpenChange, poId, item, onS
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="miscCost"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Miscellaneous Cost (Total)</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} />
-                  </FormControl>
-                   <FormMessage />
-                </FormItem>
-              )}
-            />
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Costs'}
+                {isSubmitting ? 'Saving...' : 'Save Cost'}
               </Button>
             </DialogFooter>
           </form>

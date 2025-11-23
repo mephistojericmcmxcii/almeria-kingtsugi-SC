@@ -251,7 +251,6 @@ export default function PoDetailsPage() {
                                 <TableHead className="text-right w-[10%]">Allocated Amount</TableHead>
                                 <TableHead className="text-right w-[10%]">Actual Amount</TableHead>
                                 <TableHead className="text-right w-[10%]">Total Allocation</TableHead>
-                                <TableHead className="text-right w-[10%]">Misc. Cost</TableHead>
                                 <TableHead className="text-right w-[10%]">Total Actual Cost</TableHead>
                                 <TableHead>Description</TableHead>
                                 {user?.role === 'admin' && !isPrintMode && <TableHead className="text-right w-[5%]">Actions</TableHead>}
@@ -262,7 +261,6 @@ export default function PoDetailsPage() {
                                 Array.from({ length: 2 }).map((_, i) => (
                                     <TableRow key={i}>
                                         {isPrintMode && <TableCell><Skeleton className="h-5 w-5" /></TableCell>}
-                                        <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
@@ -292,8 +290,7 @@ export default function PoDetailsPage() {
                                         <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.actualAmount || 0)}</TableCell>
                                         <TableCell className="text-right font-medium">{formatCurrency(item.amount * item.quantity!)}</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(item.miscCost || 0)}</TableCell>
-                                        <TableCell className="text-right font-medium">{formatCurrency(((item.actualAmount || 0) * item.quantity!) + (item.miscCost || 0))}</TableCell>
+                                        <TableCell className="text-right font-medium">{formatCurrency(((item.actualAmount || 0) * item.quantity!))}</TableCell>
                                         <TableCell className="text-muted-foreground">{item.description || 'Brand/Model/etc.'}</TableCell>
                                         {user?.role === 'admin' && !isPrintMode && (
                                             <TableCell className="text-right">
@@ -322,7 +319,7 @@ export default function PoDetailsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={isPrintMode ? 11 : 10} className="h-24 text-center">
+                                    <TableCell colSpan={isPrintMode ? 10 : 9} className="h-24 text-center">
                                         No general items have been added to this purchase order yet.
                                     </TableCell>
                                 </TableRow>
