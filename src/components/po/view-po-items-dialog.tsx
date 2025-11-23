@@ -77,7 +77,7 @@ export function ViewPoItemsDialog({ isOpen, onOpenChange, po }: ViewPoItemsDialo
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-4xl">
+                <DialogContent className="sm:max-w-4xl" showCloseButton={false}>
                     <DialogHeader className="flex-row items-center justify-between">
                         <div className="space-y-1.5">
                             <DialogTitle>Items for PO #{po.poNumber}</DialogTitle>
