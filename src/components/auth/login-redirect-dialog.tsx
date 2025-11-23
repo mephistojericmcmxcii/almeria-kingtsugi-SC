@@ -37,7 +37,7 @@ export function LoginRedirectDialog({ isOpen, onOpenChange }: LoginRedirectDialo
           <div className="font-brand text-4xl text-primary py-1 sm:text-center">
             KINTSUGI Variety Shop
           </div>
-          <AlertDialogDescription className="pt-2">
+          <AlertDialogDescription className="pt-2 sm:text-center">
             Register now to enjoy smoother transactions,
             <br />
             quick quotations, and easier order tracking.
