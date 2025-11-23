@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { getQuarter } from 'date-fns';
+import { getQuarter, format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -299,14 +299,16 @@ export default function PoPaymentPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[15%]">PO #</TableHead>
-                <TableHead className="w-[15%]">Source</TableHead>
-                <TableHead className="text-right w-[15%]">Total Allocation</TableHead>
-                <TableHead className="text-right w-[15%]">Total Expenses</TableHead>
-                <TableHead className="text-right w-[15%]">Amount Deposited</TableHead>
-                <TableHead className="text-right w-[15%]">Profit / Loss</TableHead>
-                <TableHead className="text-center w-[15%]">Payment Status</TableHead>
-                <TableHead className="text-right w-[10%]">Actions</TableHead>
+                <TableHead>PO #</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Care Of</TableHead>
+                <TableHead className="text-right">Total Allocation</TableHead>
+                <TableHead className="text-right">Total Expenses</TableHead>
+                <TableHead className="text-right">Tax Deduction</TableHead>
+                <TableHead className="text-right">Amount Deposited</TableHead>
+                <TableHead className="text-right">Profit / Loss</TableHead>
+                <TableHead className="text-center">Payment Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -315,6 +317,8 @@ export default function PoPaymentPage() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
@@ -327,9 +331,11 @@ export default function PoPaymentPage() {
                 filteredSummaries.map((summary) => (
                   <TableRow key={summary.id}>
                     <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
-                    <TableCell>{summary.po.source}</TableCell>
+                    <TableCell>{format(summary.po.date.toDate(), 'PPP')}</TableCell>
+                    <TableCell>{summary.po.careOf}</TableCell>
                     <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(summary.totalExpenses)}</TableCell>
+                    <TableCell className="text-right text-orange-600">{formatCurrency(summary.po.taxDeduction || 0)}</TableCell>
                     <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
                     <TableCell className={cn(
                         "text-right font-bold",
@@ -364,7 +370,7 @@ export default function PoPaymentPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={10} className="h-24 text-center">
                     No purchase orders found for the selected filters.
                   </TableCell>
                 </TableRow>
