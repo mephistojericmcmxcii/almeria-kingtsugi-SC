@@ -18,6 +18,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
     day: 'numeric'
   });
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+  };
+
   return (
     <>
       <style>{`
@@ -37,7 +41,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
           }
           .print-container {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: auto;
             background-color: white;
             padding: 2rem;
@@ -78,7 +82,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
           }
           th, td {
             border-bottom: 1px solid hsl(var(--border));
-            padding: 10px 16px;
+            padding: 10px 8px;
             text-align: left;
             vertical-align: top;
           }
@@ -107,8 +111,8 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
           }
           .child-table {
               margin-top: 1rem;
-              margin-left: 2rem;
-              width: calc(100% - 2rem);
+              margin-left: 1.5rem;
+              width: calc(100% - 1.5rem);
           }
           .child-table th, .child-table td {
               font-size: 9pt;
@@ -117,7 +121,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
           
           @media print {
             @page {
-              size: A4 landscape;
+              size: landscape;
               margin: 1cm;
             }
             body {
@@ -129,9 +133,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
               box-shadow: none;
               border-radius: 0;
               padding: 0;
+              max-width: none;
             }
             th, td {
-                padding: 8px 12px;
+                padding: 8px;
             }
             .po-block {
                 border: 1px solid #ccc;
@@ -148,7 +153,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
           
           <main>
             <div className="document-title">
-              <h2>Purchase Order Summary</h2>
+              <h2>Purchase Order Summary Report</h2>
             </div>
             
             {pos.length > 0 ? (
@@ -163,8 +168,9 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                             <th>PO #</th>
                                             <th>Date</th>
                                             <th>Care Of</th>
-                                            <th>Item Count</th>
-                                            <th className="text-right" style={{padding: '10px 16px'}}>Status</th>
+                                            <th className="text-right">Allocation</th>
+                                            <th className="text-right">Utilized</th>
+                                            <th className="text-right">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -172,8 +178,9 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                             <td className="font-medium">{po.poNumber}</td>
                                             <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
                                             <td>{po.careOf}</td>
-                                            <td>{totals[po.id]?.itemCount || 0}</td>
-                                            <td className="text-right" style={{padding: '10px 16px'}}>{(po as any).displayStatus || po.status}</td>
+                                            <td className="text-right">{formatCurrency(totals[po.id]?.allocated || 0)}</td>
+                                            <td className="text-right">{formatCurrency(totals[po.id]?.utilized || 0)}</td>
+                                            <td className="text-right">{(po as any).displayStatus || po.status}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -182,8 +189,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                         <thead>
                                             <tr>
                                                 <th>Item Name</th>
-                                                <th>Unit</th>
                                                 <th className="text-right">Qty</th>
+                                                <th className="text-right">Allocated Amt.</th>
+                                                <th className="text-right">Actual Amt.</th>
+                                                <th className="text-right">Total Actual</th>
                                                 <th>Description</th>
                                             </tr>
                                         </thead>
@@ -191,8 +200,10 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                             {children.map(child => (
                                                 <tr key={child.id}>
                                                     <td>{child.name}</td>
-                                                    <td>{child.unit}</td>
                                                     <td className="text-right">{child.quantity}</td>
+                                                    <td className="text-right">{formatCurrency(child.amount)}</td>
+                                                    <td className="text-right">{formatCurrency(child.actualAmount || 0)}</td>
+                                                    <td className="text-right font-medium">{formatCurrency((child.actualAmount || 0) * child.quantity)}</td>
                                                     <td>{child.description || 'N/A'}</td>
                                                 </tr>
                                             ))}
@@ -209,20 +220,25 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                       <th>PO #</th>
                       <th>Date</th>
                       <th>Care Of</th>
-                      <th>Item Count</th>
-                      <th className="text-right" style={{padding: '10px 16px'}}>Status</th>
+                      <th>Status</th>
+                      <th className="text-right">Total Allocation</th>
+                      <th className="text-right">Amount Utilized</th>
+                      <th className="text-right">Balance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pos.map((po) => {
                         const total = totals[po.id];
+                        const balance = (total?.allocated || 0) - (total?.utilized || 0);
                         return (
                             <tr key={po.id}>
                                 <td className="font-medium">{po.poNumber}</td>
                                 <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
                                 <td>{po.careOf}</td>
-                                <td>{total?.itemCount || 0}</td>
-                                <td className="text-right" style={{padding: '10px 16px'}}>{(po as any).displayStatus || po.status}</td>
+                                <td>{(po as any).displayStatus || po.status}</td>
+                                <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>
+                                <td className="text-right">{formatCurrency(total?.utilized || 0)}</td>
+                                <td className="text-right font-medium">{formatCurrency(balance)}</td>
                             </tr>
                         );
                     })}
