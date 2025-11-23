@@ -23,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 
@@ -84,11 +83,9 @@ export function ViewPoItemsDialog({ isOpen, onOpenChange, po }: ViewPoItemsDialo
                             <DialogTitle>Items for PO #{po.poNumber}</DialogTitle>
                             <DialogDescription>Read-only view of items for this delivered purchase order.</DialogDescription>
                         </div>
-                         <AlertDialogTrigger asChild>
-                            <Button variant="outline">
-                                <Edit className="mr-2 h-4 w-4" /> Edit PO Items
-                            </Button>
-                        </AlertDialogTrigger>
+                         <Button variant="outline" onClick={() => setIsConfirmOpen(true)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit PO Items
+                         </Button>
                     </DialogHeader>
                     <div className="max-h-[60vh] overflow-y-auto">
                         <Table>
@@ -144,7 +141,7 @@ export function ViewPoItemsDialog({ isOpen, onOpenChange, po }: ViewPoItemsDialo
                 </DialogContent>
             </Dialog>
 
-            <AlertDialog>
+            <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
