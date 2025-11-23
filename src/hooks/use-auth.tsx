@@ -192,6 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
+    // Admins get all orders, users only get their own.
     const ordersQuery = user.role === 'admin'
         ? collectionGroup(firestore, 'orders')
         : collection(firestore, 'users', user.id, 'orders');
@@ -210,12 +211,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Real-time order fetching
   useEffect(() => {
     if (!user || pathname === '/login') {
       setOrders(null);
       return;
     }
 
+    // Admins get all orders, users only get their own.
     const ordersQuery = user.role === 'admin'
         ? collectionGroup(firestore, 'orders')
         : collection(firestore, 'users', user.id, 'orders');
