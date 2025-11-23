@@ -245,7 +245,8 @@ export default function AllOrdersPage() {
     
     const isStatusUpdateDisabled = (order: Order | null): boolean => {
         if (!order) return true;
-        return ['completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
+        // The admin can no longer update a 'quote-ready' order. It must be confirmed by the customer.
+        return ['quote-ready', 'completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
     };
     
     const availableActions = selectedOrder ? STATUS_TRANSITIONS[selectedOrder.status] : [];
