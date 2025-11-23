@@ -210,7 +210,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                       <th>Date</th>
                       <th>Care Of</th>
                       <th>Item Count</th>
-                      <th className="text-right">Status</th>
+                      <th className="text-right" style={{padding: '10px 16px'}}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -222,7 +222,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                 <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
                                 <td>{po.careOf}</td>
                                 <td>{total?.itemCount || 0}</td>
-                                <td className="text-right">{(po as any).displayStatus || po.status}</td>
+                                <td className="text-right" style={{padding: '10px 16px'}}>{(po as any).displayStatus || po.status}</td>
                             </tr>
                         );
                     })}
@@ -243,6 +243,4 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
 };
 
 export default PrintPoListLayout;
-
-
 
