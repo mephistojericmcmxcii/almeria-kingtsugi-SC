@@ -2,7 +2,7 @@
 'use client';
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import {
   Sidebar,
@@ -39,11 +39,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { UserNav } from "../auth/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { LoginRedirectDialog } from "../auth/login-redirect-dialog";
 
 const MainSidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, showAdminOrderBadge, showAdminRfqBadge } = useAuth();
   const [managementOpen, setManagementOpen] = React.useState(false);
+  const [isLoginRedirectOpen, setIsLoginRedirectOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (pathname.startsWith('/management')) {
@@ -53,42 +56,57 @@ const MainSidebar = () => {
     }
   }, [pathname]);
 
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, isProtected: boolean) => {
+    if (isProtected && !user) {
+      e.preventDefault();
+      setIsLoginRedirectOpen(true);
+    } else {
+      router.push(href);
+    }
+  };
+
   const menuItems = [
     {
       href: "/",
       label: "Home",
       icon: Home,
       adminOnly: false,
+      isProtected: false,
     },
     {
       href: "/products",
       label: "Products",
       icon: Package,
       adminOnly: false,
+      isProtected: false,
     },
     {
       href: "/quotation-request",
       label: "Request for Quotation",
       icon: Send,
       adminOnly: false,
+      isProtected: true, // This route requires login
     },
     {
       href: "/reviews",
       label: "Customer Reviews",
       icon: Star,
       adminOnly: false,
+      isProtected: false,
     },
      {
       href: "/about",
       label: "About Us",
       icon: Info,
       adminOnly: false,
+      isProtected: false,
     },
     {
       href: "/admin",
       label: "Admin",
       icon: Settings,
       adminOnly: true,
+      isProtected: true,
     },
   ];
 
@@ -108,6 +126,7 @@ const MainSidebar = () => {
   );
 
   return (
+    <>
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2">
@@ -121,7 +140,7 @@ const MainSidebar = () => {
           }
           return (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href!}>
+              <Link href={item.href!} onClick={(e) => handleLinkClick(e, item.href!, item.isProtected)}>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
                   tooltip={item.label}
@@ -182,6 +201,8 @@ const MainSidebar = () => {
         )}
       </SidebarFooter>
     </Sidebar>
+    <LoginRedirectDialog isOpen={isLoginRedirectOpen} onOpenChange={setIsLoginRedirectOpen} />
+    </>
   );
 };
 
