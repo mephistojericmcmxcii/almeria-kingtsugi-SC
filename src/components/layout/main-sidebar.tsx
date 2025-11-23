@@ -67,7 +67,7 @@ const MainSidebar = () => {
       adminOnly: false,
     },
     {
-      href: "/products/quotation-request",
+      href: "/quotation-request",
       label: "Request for Quotation",
       icon: Send,
       adminOnly: false,

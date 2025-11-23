@@ -3,6 +3,8 @@
 
 import type { InventoryVariant } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
 
 import {
   Dialog,
@@ -23,11 +25,17 @@ interface ViewProductModalProps {
 }
 
 export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }: ViewProductModalProps) {
+  const { user } = useAuth();
+  const router = useRouter();
   
   if (!variant) return null;
 
   const handleAddToCartClick = () => {
-    onAddToCart(variant);
+    if (!user) {
+      router.push('/login');
+    } else {
+      onAddToCart(variant);
+    }
   }
 
   const getPlaceholderImage = (item: InventoryVariant) => {

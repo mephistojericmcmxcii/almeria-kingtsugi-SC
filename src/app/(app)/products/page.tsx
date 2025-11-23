@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { FileQuestion, Package, Search } from 'lucide-react';
+import { Eye, Package, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
@@ -42,12 +42,8 @@ export default function ProductsPage() {
     });
   }, [allVariants, searchTerm, selectedCategory]);
 
-  const handleGetQuoteClick = (variant: InventoryVariant) => {
-    if (!user) {
-        router.push('/login');
-    } else {
-        setSelectedVariant(variant);
-    }
+  const handleViewItemClick = (variant: InventoryVariant) => {
+    setSelectedVariant(variant);
   };
 
   const handleAddToCart = (variant: InventoryVariant) => {
@@ -127,7 +123,7 @@ export default function ProductsPage() {
                             <Card 
                                 key={variant.ref?.path || variant.id} 
                                 className="overflow-hidden group cursor-pointer flex flex-col"
-                                onClick={() => handleGetQuoteClick(variant)}
+                                onClick={() => handleViewItemClick(variant)}
                             >
                                 <div className="aspect-square relative w-full">
                                     <img
@@ -157,7 +153,7 @@ export default function ProductsPage() {
                                 </CardHeader>
                                 <CardContent className="p-4 pt-0 mt-auto">
                                     <Button variant="outline" size="sm" className="w-full">
-                                        <FileQuestion className="mr-2 h-4 w-4" /> Get a Quote
+                                        <Eye className="mr-2 h-4 w-4" /> View Item
                                     </Button>
                                 </CardContent>
                             </Card>
