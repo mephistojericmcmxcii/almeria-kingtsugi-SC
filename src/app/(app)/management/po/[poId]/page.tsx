@@ -84,6 +84,19 @@ export default function PoDetailsPage() {
         };
         fetchData();
     }, [firestore, poId, toast]);
+    
+    const { generalItems, miscItems } = useMemo(() => {
+        const general: PurchaseOrderItem[] = [];
+        const misc: PurchaseOrderItem[] = [];
+        poItems.forEach(item => {
+            if (item.itemType === 'misc') {
+                misc.push(item);
+            } else {
+                general.push(item);
+            }
+        });
+        return { generalItems: general, miscItems: misc };
+    }, [poItems]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -180,8 +193,8 @@ export default function PoDetailsPage() {
                 <CardHeader>
                     <div className="flex items-start justify-between">
                         <div>
-                            <CardTitle>Purchase Order Items</CardTitle>
-                            <CardDescription>List of all items included in this PO.</CardDescription>
+                            <CardTitle>General Items</CardTitle>
+                            <CardDescription>List of all general items included in this PO.</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
                              {isPrintMode ? (
@@ -246,7 +259,7 @@ export default function PoDetailsPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: 3 }).map((_, i) => (
+                                Array.from({ length: 2 }).map((_, i) => (
                                     <TableRow key={i}>
                                         {isPrintMode && <TableCell><Skeleton className="h-5 w-5" /></TableCell>}
                                         <TableCell><Skeleton className="h-5 w-full" /></TableCell>
@@ -261,8 +274,8 @@ export default function PoDetailsPage() {
                                         {user?.role === 'admin' && !isPrintMode && <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>}
                                     </TableRow>
                                 ))
-                            ) : poItems?.length ? (
-                                poItems.map((item) => (
+                            ) : generalItems?.length ? (
+                                generalItems.map((item) => (
                                     <TableRow key={item.id}>
                                          {isPrintMode && (
                                             <TableCell>
@@ -278,9 +291,9 @@ export default function PoDetailsPage() {
                                         <TableCell className="text-right">{item.quantity}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.actualAmount || 0)}</TableCell>
-                                        <TableCell className="text-right font-medium">{formatCurrency(item.amount * item.quantity)}</TableCell>
+                                        <TableCell className="text-right font-medium">{formatCurrency(item.amount * item.quantity!)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(item.miscCost || 0)}</TableCell>
-                                        <TableCell className="text-right font-medium">{formatCurrency(((item.actualAmount || 0) * item.quantity) + (item.miscCost || 0))}</TableCell>
+                                        <TableCell className="text-right font-medium">{formatCurrency(((item.actualAmount || 0) * item.quantity!) + (item.miscCost || 0))}</TableCell>
                                         <TableCell className="text-muted-foreground">{item.description || 'Brand/Model/etc.'}</TableCell>
                                         {user?.role === 'admin' && !isPrintMode && (
                                             <TableCell className="text-right">
@@ -310,8 +323,53 @@ export default function PoDetailsPage() {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={isPrintMode ? 11 : 10} className="h-24 text-center">
-                                        No items have been added to this purchase order yet.
+                                        No general items have been added to this purchase order yet.
                                     </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Miscellaneous Costs</CardTitle>
+                    <CardDescription>Additional costs like transportation, services, etc.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-1/3">Name</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Cost</TableHead>
+                                {user?.role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4}><Skeleton className="h-5 w-full" /></TableCell>
+                                </TableRow>
+                            ) : miscItems.length > 0 ? (
+                                miscItems.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="font-medium">{item.name}</TableCell>
+                                        <TableCell className="text-muted-foreground">{item.description}</TableCell>
+                                        <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
+                                        {user?.role === 'admin' && (
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item)} className="text-destructive hover:bg-destructive/10">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">No miscellaneous costs added.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

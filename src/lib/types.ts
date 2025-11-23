@@ -110,14 +110,15 @@ export type PoPaymentStatus = 'Paid' | 'Unpaid';
 export type PurchaseOrderItem = {
   id: string;
   name: string;
-  unit: string;
-  quantity: number;
-  amount: number; // Allocated amount per unit
+  unit?: string;
+  quantity?: number;
+  amount: number; // Allocated amount per unit OR total cost for misc
   actualAmount?: number; // Real cost per unit
   miscCost?: number;
   description?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  itemType?: 'general' | 'misc';
 }
 
 export type PurchaseOrder = {
