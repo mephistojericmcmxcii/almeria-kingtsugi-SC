@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFirebase } from '@/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import type { CustomerFeedback } from '@/lib/types';
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Star, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -35,6 +36,7 @@ export default function CustomerReviewsPage() {
     const { firestore } = useFirebase();
     const [reviews, setReviews] = useState<CustomerFeedback[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedRating, setSelectedRating] = useState('all');
 
     useEffect(() => {
         const fetchReviews = async () => {
@@ -57,16 +59,40 @@ export default function CustomerReviewsPage() {
 
         fetchReviews();
     }, [firestore]);
+    
+    const filteredReviews = useMemo(() => {
+        if (selectedRating === 'all') {
+            return reviews;
+        }
+        return reviews.filter(review => String(review.rating) === selectedRating);
+    }, [reviews, selectedRating]);
 
     return (
         <div className="space-y-8">
-            <div className="text-center">
-                <h1 className="text-4xl font-bold tracking-tight font-headline text-primary">
-                    Customer Reviews & Testimonials
-                </h1>
-                <p className="mt-2 text-lg text-muted-foreground">
-                    See what our valued customers are saying about their experience.
-                </p>
+            <div className="space-y-4">
+                <div className="text-center">
+                    <h1 className="text-4xl font-bold tracking-tight font-headline text-primary">
+                        Customer Reviews & Testimonials
+                    </h1>
+                    <p className="mt-2 text-lg text-muted-foreground">
+                        See what our valued customers are saying about their experience.
+                    </p>
+                </div>
+                 <div className="flex justify-center">
+                    <Select value={selectedRating} onValueChange={setSelectedRating}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by rating" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Stars</SelectItem>
+                        <SelectItem value="5">5 Stars</SelectItem>
+                        <SelectItem value="4">4 Stars</SelectItem>
+                        <SelectItem value="3">3 Stars</SelectItem>
+                        <SelectItem value="2">2 Stars</SelectItem>
+                        <SelectItem value="1">1 Star</SelectItem>
+                      </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {isLoading ? (
@@ -89,9 +115,9 @@ export default function CustomerReviewsPage() {
                         </Card>
                     ))}
                 </div>
-            ) : reviews.length > 0 ? (
+            ) : filteredReviews.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {reviews.map((review: any) => (
+                    {filteredReviews.map((review: any) => (
                         <Card key={review.id} className="flex flex-col">
                             <CardHeader className="flex flex-row items-center gap-4">
                                 <Avatar className="h-12 w-12">
@@ -120,8 +146,10 @@ export default function CustomerReviewsPage() {
             ) : (
                 <div className="text-center py-24 border rounded-lg bg-muted/20">
                     <MessageSquare className="mx-auto h-16 w-16 text-muted-foreground" />
-                    <h2 className="mt-6 text-2xl font-semibold">No Reviews Yet</h2>
-                    <p className="mt-2 text-muted-foreground">Be the first to leave a review after a purchase!</p>
+                    <h2 className="mt-6 text-2xl font-semibold">No Reviews Found</h2>
+                    <p className="mt-2 text-muted-foreground">
+                        There are no reviews matching your filter.
+                    </p>
                 </div>
             )}
         </div>
