@@ -278,7 +278,7 @@ export default function InventoryPage() {
                         <>
                             <RadioGroup value={printType} onValueChange={(v) => setPrintType(v as any)} className="flex items-center gap-4 border p-1.5 pr-3 rounded-lg bg-muted/50">
                                 <Label className="pl-2 text-sm font-medium">Print Type:</Label>
-                                <div className="flex items-center space-x-2"><RadioGroupItem value="parentOnly" id="parentOnly" /><Label htmlFor="parentOnly">Parent Only</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="parentOnly" id="parentOnly" /><Label htmlFor="parentOnly">Main Item</Label></div>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="withVariants" id="withVariants" /><Label htmlFor="withVariants">With Variants</Label></div>
                             </RadioGroup>
                             <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedItemIds(new Set()); }}><X className="mr-2 h-4 w-4" /> Cancel</Button>
@@ -421,3 +421,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    
