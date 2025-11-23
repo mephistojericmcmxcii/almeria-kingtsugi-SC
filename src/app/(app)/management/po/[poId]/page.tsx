@@ -21,6 +21,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const AddPoItemDialog = lazy(() => import('@/components/po/add-po-item-dialog').then(module => ({ default: module.AddPoItemDialog })));
 const UpdateActualAmountDialog = lazy(() => import('@/components/po/update-actual-amount-dialog').then(module => ({ default: module.UpdateActualAmountDialog })));
@@ -45,6 +47,7 @@ export default function PoDetailsPage() {
 
     const [isPrintMode, setIsPrintMode] = useState(false);
     const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+    const [boxIdentity, setBoxIdentity] = useState('');
 
     const refetchItems = async () => {
         if (!firestore || !poId) return;
@@ -149,7 +152,7 @@ export default function PoDetailsPage() {
             const root = createRoot(printRoot);
             root.render(
               <Suspense fallback={<div>Loading print view...</div>}>
-                <PrintBoxListLayout po={po} items={selected} />
+                <PrintBoxListLayout po={po} items={selected} boxIdentity={boxIdentity} />
               </Suspense>
             );
           }
@@ -175,7 +178,7 @@ export default function PoDetailsPage() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between">
                         <div>
                             <CardTitle>Purchase Order Items</CardTitle>
                             <CardDescription>List of all items included in this PO.</CardDescription>
@@ -183,7 +186,7 @@ export default function PoDetailsPage() {
                         <div className="flex items-center gap-2">
                              {isPrintMode ? (
                                 <>
-                                    <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedItemIds(new Set()); }}>
+                                    <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedItemIds(new Set()); setBoxIdentity(''); }}>
                                         <X className="mr-2 h-4 w-4" /> Cancel
                                     </Button>
                                     <Button onClick={handlePrintSelected} disabled={selectedItemIds.size === 0}>
@@ -204,6 +207,17 @@ export default function PoDetailsPage() {
                              )}
                         </div>
                     </div>
+                     {isPrintMode && (
+                        <div className="mt-4 space-y-2 max-w-xs">
+                            <Label htmlFor="box-identity">Box Identity</Label>
+                            <Input
+                                id="box-identity"
+                                placeholder="e.g., Box 2 of 4"
+                                value={boxIdentity}
+                                onChange={(e) => setBoxIdentity(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -339,3 +353,4 @@ export default function PoDetailsPage() {
         </div>
     );
 }
+

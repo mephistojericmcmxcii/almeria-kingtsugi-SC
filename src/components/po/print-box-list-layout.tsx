@@ -8,9 +8,10 @@ import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
 interface PrintBoxListLayoutProps {
   po: PurchaseOrder | null;
   items: PurchaseOrderItem[];
+  boxIdentity: string;
 }
 
-const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items }) => {
+const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxIdentity }) => {
   const printDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -49,6 +50,15 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items }) =>
               border-bottom: 2px solid #333;
               padding-bottom: 0.5rem;
               margin-bottom: 1rem;
+          }
+          .box-identity {
+              font-size: 14pt;
+              font-weight: bold;
+              text-align: center;
+              margin-bottom: 1rem;
+              padding: 0.5rem;
+              border: 1px dashed #999;
+              background-color: #f3f4f6;
           }
           .po-info {
               display: grid;
@@ -117,6 +127,11 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items }) =>
           </header>
           
           <main>
+            {boxIdentity && (
+              <div className="box-identity">
+                {boxIdentity}
+              </div>
+            )}
             {po && (
                 <div className="po-info">
                     <div>
