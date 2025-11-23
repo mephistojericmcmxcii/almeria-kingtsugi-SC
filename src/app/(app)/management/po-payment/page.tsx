@@ -88,16 +88,21 @@ export default function PoPaymentPage() {
           } else {
               const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
               const itemsSnapshot = await getDocs(itemsCollectionRef);
-              itemsSnapshot.forEach(itemDoc => {
+              
+              const totals = itemsSnapshot.docs.reduce((acc, itemDoc) => {
                 const item = itemDoc.data() as PurchaseOrderItem;
                 if (item.itemType === 'misc') {
-                    totalExpenses += item.amount || 0; // Add misc cost to expenses
-                    totalAllocation += item.amount || 0; // Also add to allocation
+                    acc.allocation += item.amount || 0;
+                    acc.expenses += item.amount || 0;
                 } else {
-                    totalAllocation += (item.amount || 0) * (item.quantity || 0);
-                    totalExpenses += (item.actualAmount || 0) * (item.quantity || 0);
+                    acc.allocation += (item.amount || 0) * (item.quantity || 0);
+                    acc.expenses += (item.actualAmount || 0) * (item.quantity || 0);
                 }
-              });
+                return acc;
+              }, { allocation: 0, expenses: 0});
+
+              totalAllocation = po.totalAllocation ?? totals.allocation;
+              totalExpenses = po.totalExpenses ?? totals.expenses;
           }
 
           const amountDeposited = po.amountDeposited || 0;
