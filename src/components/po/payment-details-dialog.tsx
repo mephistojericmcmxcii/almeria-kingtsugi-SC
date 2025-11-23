@@ -99,6 +99,9 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     }
   }, [po, isOpen, form, totalAllocation, totalExpenses]);
 
+  const watchedValues = form.watch();
+  const balance = (watchedValues.totalAllocation || 0) - (watchedValues.totalExpenses || 0);
+
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     const poRef = doc(firestore, 'purchase_orders', po.id);
@@ -164,7 +167,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4 py-4 border-y">
+            <div className="grid grid-cols-3 gap-x-8 gap-y-4 py-4 border-y">
                 {isManualEntry ? (
                 <>
                     <FormField control={form.control} name="totalAllocation" render={({ field }) => (
@@ -181,6 +184,10 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                         <FormMessage />
                     </FormItem>
                     )} />
+                     <div className="space-y-1">
+                        <p className="text-sm font-medium">Balance</p>
+                        <p className="text-lg font-bold">{formatCurrency(balance)}</p>
+                    </div>
                 </>
                 ) : (
                     <>
@@ -191,6 +198,10 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
                         <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                    </div>
+                     <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Balance</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalAllocation - totalExpenses)}</p>
                     </div>
                     </>
                 )}
