@@ -119,7 +119,10 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                     <DialogHeader className="space-y-2">
                         <div className='flex items-center justify-between'>
                             <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
-                            {getStatusBadge(variant)}
+                            <div className="flex items-center gap-2">
+                                {getStatusBadge(variant)}
+                                {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
+                            </div>
                         </div>
                         <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
                         <DialogDescription className="text-xl font-semibold">{variant.brand}{variant.model && ` - ${variant.model}`}</DialogDescription>
