@@ -31,13 +31,13 @@ export function LoginRedirectDialog({ isOpen, onOpenChange }: LoginRedirectDialo
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader className="text-center">
-          <AlertDialogTitle className="font-headline text-xl font-normal">
+          <AlertDialogTitle className="font-headline text-xl font-normal sm:text-center">
             Create an account with
           </AlertDialogTitle>
-          <div className="font-headline text-3xl text-primary py-1">
+          <div className="font-headline text-3xl text-primary py-1 sm:text-center">
             KINTSUGI Variety Shop
           </div>
-          <AlertDialogDescription className="pt-2">
+          <AlertDialogDescription className="pt-2 sm:text-left">
             Register now to enjoy smoother transactions, quick quotations, and easier order tracking.
           </AlertDialogDescription>
         </AlertDialogHeader>
