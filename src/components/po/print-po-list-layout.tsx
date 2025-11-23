@@ -183,8 +183,8 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                             <tr>
                                                 <th>Item Name</th>
                                                 <th>Unit</th>
-                                                <th>Description</th>
                                                 <th className="text-right">Qty</th>
+                                                <th>Description</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -192,8 +192,8 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                                 <tr key={child.id}>
                                                     <td>{child.name}</td>
                                                     <td>{child.unit}</td>
-                                                    <td>{child.description || 'N/A'}</td>
                                                     <td className="text-right">{child.quantity}</td>
+                                                    <td>{child.description || 'N/A'}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -243,5 +243,6 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
 };
 
 export default PrintPoListLayout;
+
 
 
