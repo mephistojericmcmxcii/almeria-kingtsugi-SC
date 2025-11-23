@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -55,7 +54,7 @@ const formatCurrency = (amount: number) => {
 
 
 function CartList() {
-    const { user, cart: cartItems, isLoading: isAuthLoading, updateCartItemQuantity, removeCartItem } = useAuth();
+    const { user, cart, isLoading: isAuthLoading, updateCartItemQuantity, removeCartItem } = useAuth();
     const router = useRouter();
 
     if (isAuthLoading) {
@@ -71,7 +70,7 @@ function CartList() {
         );
     }
     
-    if (!cartItems || cartItems.length === 0) {
+    if (!cart || cart.length === 0) {
         return null;
     }
     
@@ -84,7 +83,7 @@ function CartList() {
             <CardContent>
                 <div className="space-y-4">
                     <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-                        {cartItems.map(item => {
+                        {cart.map(item => {
                             const isStockLimitReached = item.quantity >= (item.stock || 0);
                             return (
                             <div key={item.id} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
@@ -121,7 +120,7 @@ function CartList() {
                 </div>
             </CardContent>
              <CardFooter className="flex justify-end p-6 pt-0">
-                <Button onClick={() => router.push('/checkout')} disabled={!cartItems || cartItems.length === 0}>Request Quotation</Button>
+                <Button onClick={() => router.push('/checkout')} disabled={!cart || cart.length === 0}>Request Quotation</Button>
             </CardFooter>
         </Card>
     );
@@ -451,11 +450,12 @@ function RfqList() {
     const [viewingRfq, setViewingRfq] = useState<QuotationRequest | null>(null);
 
     useEffect(() => {
+        if (!user?.id || !firestore) {
+            setIsLoading(false);
+            return;
+        }
+
         const fetchRfqs = async () => {
-            if (!user || !firestore) {
-                setIsLoading(false);
-                return;
-            };
             setIsLoading(true);
             try {
                 const q = query(collection(firestore, 'users', user.id, 'rfq'));
@@ -469,8 +469,9 @@ function RfqList() {
                 setIsLoading(false);
             }
         };
+
         fetchRfqs();
-    }, [user, firestore]);
+    }, [user?.id, firestore]); // Depend on user.id (a stable string) instead of the whole user object
     
      const renderRfqDetailsModal = () => {
         if (!viewingRfq) return null;
