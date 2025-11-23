@@ -30,9 +30,14 @@ export function LoginRedirectDialog({ isOpen, onOpenChange }: LoginRedirectDialo
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-headline text-2xl">Create an Account with KINTSUGI Variety Shop</AlertDialogTitle>
-          <AlertDialogDescription>
+        <AlertDialogHeader className="text-center">
+          <AlertDialogTitle className="font-headline text-xl font-normal">
+            Create an account with
+          </AlertDialogTitle>
+          <div className="font-headline text-3xl text-primary py-1">
+            KINTSUGI Variety Shop
+          </div>
+          <AlertDialogDescription className="pt-2">
             Register now to enjoy smoother transactions, quick quotations, and easier order tracking.
           </AlertDialogDescription>
         </AlertDialogHeader>
