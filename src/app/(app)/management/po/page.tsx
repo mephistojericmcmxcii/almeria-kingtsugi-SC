@@ -229,7 +229,7 @@ export default function PoPage() {
         return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
     }
     if (sortConfig.direction === 'ascending') {
-        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+        return <ArrowUpDown className="ml-2 h-4 w-4" />; // Using same icon for both for simplicity
     }
     return <ArrowUpDown className="ml-2 h-4 w-4" />; // Using same icon for both for simplicity
   };
@@ -418,51 +418,51 @@ export default function PoPage() {
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className='flex items-center gap-4 w-full flex-wrap'>
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search by PO #, Care Of..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10"
-                  />
-                </div>
-                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder="Filter by status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PO_STATUS_OPTIONS.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {status === 'all' ? 'All Statuses' : status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-full md:w-[120px]">
-                        <SelectValue placeholder="Select Year" />
+                <div className='flex items-center gap-2 flex-wrap'>
+                    <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by PO #, Care Of..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10"
+                    />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full md:w-[150px]">
+                        <SelectValue placeholder="Filter by status..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {availableYears.map(year => (
-                            <SelectItem key={year} value={String(year)}>{year === 'all' ? 'All Years' : year}</SelectItem>
+                        {PO_STATUS_OPTIONS.map(status => (
+                        <SelectItem key={status} value={status}>
+                            {status === 'all' ? 'All Statuses' : status}
+                        </SelectItem>
                         ))}
                     </SelectContent>
-                </Select>
-                 <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-                    <SelectTrigger className="w-full md:w-[150px]">
-                        <SelectValue placeholder="Select Quarter" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Quarters</SelectItem>
-                        <SelectItem value="1">Quarter 1</SelectItem>
-                        <SelectItem value="2">Quarter 2</SelectItem>
-                        <SelectItem value="3">Quarter 3</SelectItem>
-                        <SelectItem value="4">Quarter 4</SelectItem>
-                    </SelectContent>
-                </Select>
-              </div>
+                    </Select>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-full md:w-[120px]">
+                            <SelectValue placeholder="Select Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={String(year)}>{year === 'all' ? 'All Years' : year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                        <SelectTrigger className="w-full md:w-[150px]">
+                            <SelectValue placeholder="Select Quarter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Quarters</SelectItem>
+                            <SelectItem value="1">Quarter 1</SelectItem>
+                            <SelectItem value="2">Quarter 2</SelectItem>
+                            <SelectItem value="3">Quarter 3</SelectItem>
+                            <SelectItem value="4">Quarter 4</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
               <div className="flex items-center gap-2 self-start md:self-center">
                  {isPrintMode ? (
                      <>
@@ -674,5 +674,7 @@ export default function PoPage() {
     </>
   );
 }
+
+    
 
     
