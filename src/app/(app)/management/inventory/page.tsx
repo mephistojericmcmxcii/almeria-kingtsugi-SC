@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, getDocs, writeBatch, collectionGroup } from 'firebase/firestore';
@@ -9,7 +10,7 @@ import type { InventoryItem, InventoryVariant } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
-import { Boxes, PackageSearch, PackagePlus, DollarSign, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
+import { Boxes, PackageSearch, PackagePlus, MoreHorizontal, Trash2, Edit, Eye, Printer, X, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,8 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const AddEditItemDialog = lazy(() => import('@/components/inventory/add-edit-item-dialog').then(module => ({ default: module.AddEditItemDialog })));
+const PrintInventoryListLayout = lazy(() => import('@/components/inventory/print-inventory-list-layout'));
+
 
 export default function InventoryPage() {
   const { firestore } = useFirebase();
@@ -45,6 +51,12 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalInventoryValue, setTotalInventoryValue] = useState<number>(0);
   const [isTotalValueLoading, setIsTotalValueLoading] = useState(true);
+
+  // Print Mode State
+  const [isPrintMode, setIsPrintMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [printType, setPrintType] = useState<'parentOnly' | 'withVariants'>('parentOnly');
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -149,6 +161,64 @@ export default function InventoryPage() {
     setIsAddDialogOpen(false);
     setItemToEdit(null);
   };
+  
+  const handleCheckboxChange = (itemId: string, checked: boolean | 'indeterminate') => {
+      setSelectedItemIds(prev => {
+        const newSet = new Set(prev);
+        if (checked) {
+          newSet.add(itemId);
+        } else {
+          newSet.delete(itemId);
+        }
+        return newSet;
+      });
+    };
+
+    const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if (checked) {
+        setSelectedItemIds(new Set(filteredItems.map(item => item.id)));
+      } else {
+        setSelectedItemIds(new Set());
+      }
+    };
+    
+    const handlePrintSelected = async () => {
+        if (selectedItemIds.size === 0) {
+            toast({ variant: "destructive", title: "No Items Selected", description: "Please select at least one item to print." });
+            return;
+        }
+
+        const selectedItems = inventoryItems.filter(item => selectedItemIds.has(item.id));
+        let itemVariants: Record<string, InventoryVariant[]> | undefined;
+
+        if (printType === 'withVariants') {
+            itemVariants = {};
+            toast({ title: "Fetching Variant Data...", description: "Please wait while we prepare your document." });
+            for (const item of selectedItems) {
+                const variantsCollectionRef = collection(firestore, 'inventory', item.id, 'variants');
+                const variantsSnapshot = await getDocs(variantsCollectionRef);
+                itemVariants[item.id] = variantsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as InventoryVariant));
+            }
+        }
+
+        const features = "width=1100,height=800,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+        const printWindow = window.open('', '_blank', features);
+        if (printWindow) {
+            printWindow.document.write('<div id="print-root"></div>');
+            printWindow.document.close();
+            const printRoot = printWindow.document.getElementById('print-root');
+            if (printRoot) {
+                const root = createRoot(printRoot);
+                root.render(
+                    <Suspense fallback={<div>Loading print view...</div>}>
+                        <PrintInventoryListLayout items={selectedItems} variants={itemVariants} />
+                    </Suspense>
+                );
+            }
+        }
+    };
+
+    const isAllSelected = selectedItemIds.size > 0 && selectedItemIds.size === filteredItems.length;
 
   return (
     <div className="space-y-8">
@@ -203,17 +273,37 @@ export default function InventoryPage() {
                         className="w-full"
                     />
                 </div>
-                 {user?.role === 'admin' && (
-                    <Button onClick={() => setIsAddDialogOpen(true)}>
-                        <PackagePlus className="mr-2 h-4 w-4" /> Add Parent Item
-                    </Button>
-                 )}
+                 <div className="flex items-center gap-2">
+                    {isPrintMode ? (
+                        <>
+                            <RadioGroup value={printType} onValueChange={(v) => setPrintType(v as any)} className="flex items-center gap-4 border p-1.5 pr-3 rounded-lg bg-muted/50">
+                                <Label className="pl-2 text-sm font-medium">Print Type:</Label>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="parentOnly" id="parentOnly" /><Label htmlFor="parentOnly">Parent Only</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="withVariants" id="withVariants" /><Label htmlFor="withVariants">With Variants</Label></div>
+                            </RadioGroup>
+                            <Button variant="outline" onClick={() => { setIsPrintMode(false); setSelectedItemIds(new Set()); }}><X className="mr-2 h-4 w-4" /> Cancel</Button>
+                            <Button onClick={handlePrintSelected} disabled={selectedItemIds.size === 0}><FileText className="mr-2 h-4 w-4" /> Print Selected</Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button variant="outline" onClick={() => setIsPrintMode(true)}><Printer className="mr-2 h-4 w-4" /> Inventory Print List</Button>
+                             {user?.role === 'admin' && (
+                                <Button onClick={() => setIsAddDialogOpen(true)}>
+                                    <PackagePlus className="mr-2 h-4 w-4" /> Add Parent Item
+                                </Button>
+                             )}
+                        </>
+                    )}
+                 </div>
             </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                 {isPrintMode && (
+                    <TableHead className="w-[50px]"><Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} aria-label="Select all" /></TableHead>
+                 )}
                 <TableHead>Item Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead># Variants</TableHead>
@@ -226,6 +316,7 @@ export default function InventoryPage() {
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
+                    {isPrintMode && <TableCell><Skeleton className="h-5 w-5" /></TableCell>}
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
@@ -236,7 +327,10 @@ export default function InventoryPage() {
                 ))
               ) : filteredItems.length > 0 ? (
                 filteredItems.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} data-state={selectedItemIds.has(item.id) && "selected"}>
+                     {isPrintMode && (
+                        <TableCell><Checkbox checked={selectedItemIds.has(item.id)} onCheckedChange={(checked) => handleCheckboxChange(item.id, checked)} /></TableCell>
+                     )}
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{item.category}</Badge>
@@ -285,7 +379,7 @@ export default function InventoryPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={isPrintMode ? 7 : 6} className="h-24 text-center">
                     No parent items found.
                   </TableCell>
                 </TableRow>
