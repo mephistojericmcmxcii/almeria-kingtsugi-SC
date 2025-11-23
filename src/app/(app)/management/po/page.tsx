@@ -18,12 +18,13 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2, Edit, PackagePlus, Printer, X } from "lucide-react";
+import { FileText, Plus, Search, MoreHorizontal, Eye, Trash2, Edit, PackagePlus, Printer, X, ArrowUpDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const AddEditPoDialog = lazy(() => import('@/components/po/add-edit-po-dialog'));
@@ -42,6 +43,11 @@ export type DisplayPurchaseOrder = PurchaseOrder & {
     displayStatus: PurchaseOrder['status'];
 };
 
+type SortConfig = {
+    key: keyof DisplayPurchaseOrder | 'totalAllocation' | 'amountUtilized' | 'balance';
+    direction: 'ascending' | 'descending';
+};
+
 
 export default function PoPage() {
   const { firestore } = useFirebase();
@@ -50,6 +56,9 @@ export default function PoPage() {
   const router = useRouter();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'date', direction: 'descending' });
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [poToEdit, setPoToEdit] = useState<PurchaseOrder | null>(null);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
@@ -100,7 +109,7 @@ export default function PoPage() {
                         generalItemsWithActualAmount++;
                     }
                     acc.allocated += (item.amount || 0) * (item.quantity || 0);
-                    acc.utilized += ((item.actualAmount || 0) * (item.quantity || 0)) + (item.miscCost || 0);
+                    acc.utilized += ((item.actualAmount || 0) * (item.quantity || 0));
                 }
                 return acc;
             }, { allocated: 0, utilized: 0, itemCount: 0 });
@@ -114,11 +123,9 @@ export default function PoPage() {
             totals[po.id] = poTotals;
             
             let displayStatus: PurchaseOrder['status'] = po.status;
-            if (po.status !== 'Cancelled' && po.status !== 'Delivered' && po.status !== 'For Delivery') {
-                if (generalItemsCount > 0 && generalItemsCount === generalItemsWithActualAmount) {
+             if (po.status === 'Lacking') {
+                 if (generalItemsCount > 0 && generalItemsCount === generalItemsWithActualAmount) {
                     displayStatus = 'Completed';
-                } else if (generalItemsCount > 0) {
-                    displayStatus = 'Lacking';
                 }
             }
 
@@ -145,13 +152,76 @@ export default function PoPage() {
   }, [firestore, toast]);
   
 
-  const filteredPos = useMemo(() => {
-    if (!purchaseOrders) return [];
-    return purchaseOrders.filter(po => 
-      po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.careOf.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [purchaseOrders, searchTerm]);
+  const sortedAndFilteredPos = useMemo(() => {
+    let sortableItems = [...purchaseOrders];
+
+    // Filtering
+    sortableItems = sortableItems.filter(po => {
+        const searchMatch = po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            po.careOf.toLowerCase().includes(searchTerm.toLowerCase());
+        const statusMatch = statusFilter === 'all' || po.displayStatus === statusFilter;
+        return searchMatch && statusMatch;
+    });
+
+    // Sorting
+    if (sortConfig !== null) {
+        sortableItems.sort((a, b) => {
+            let aValue: any;
+            let bValue: any;
+
+            if (['totalAllocation', 'amountUtilized', 'balance'].includes(sortConfig.key)) {
+                const aTotals = totalAmounts[a.id] || { allocated: 0, utilized: 0 };
+                const bTotals = totalAmounts[b.id] || { allocated: 0, utilized: 0 };
+
+                if (sortConfig.key === 'totalAllocation') {
+                    aValue = aTotals.allocated;
+                    bValue = bTotals.allocated;
+                } else if (sortConfig.key === 'amountUtilized') {
+                    aValue = aTotals.utilized;
+                    bValue = bTotals.utilized;
+                } else { // balance
+                    aValue = aTotals.allocated - aTotals.utilized;
+                    bValue = bTotals.allocated - bTotals.utilized;
+                }
+            } else {
+                aValue = a[sortConfig.key as keyof DisplayPurchaseOrder];
+                bValue = b[sortConfig.key as keyof DisplayPurchaseOrder];
+            }
+
+            if (aValue === null || aValue === undefined) aValue = '';
+            if (bValue === null || bValue === undefined) bValue = '';
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+
+    return sortableItems;
+  }, [purchaseOrders, totalAmounts, searchTerm, statusFilter, sortConfig]);
+  
+  const requestSort = (key: SortConfig['key']) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortConfig['key']) => {
+    if (!sortConfig || sortConfig.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return <ArrowUpDown className="ml-2 h-4 w-4" />; // Using same icon for both for simplicity
+  };
+
 
   const handleItemsAction = (po: DisplayPurchaseOrder) => {
     if (po.status === 'Delivered') {
@@ -251,7 +321,7 @@ export default function PoPage() {
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
       if (checked) {
-          setSelectedPoIds(new Set(filteredPos.map(po => po.id)));
+          setSelectedPoIds(new Set(sortedAndFilteredPos.map(po => po.id)));
       } else {
           setSelectedPoIds(new Set());
       }
@@ -323,7 +393,8 @@ export default function PoPage() {
     );
   }
   
-  const isAllSelected = selectedPoIds.size > 0 && selectedPoIds.size === filteredPos.length;
+  const isAllSelected = selectedPoIds.size > 0 && selectedPoIds.size === sortedAndFilteredPos.length;
+  const PO_STATUS_OPTIONS = ['all', 'Completed', 'Lacking', 'Delivered', 'For Delivery', 'Cancelled'];
 
   return (
     <>
@@ -335,16 +406,28 @@ export default function PoPage() {
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className='w-full md:w-1/3'>
-                <div className="relative">
+              <div className='flex items-center gap-4 w-full md:w-auto'>
+                <div className="relative flex-1 md:flex-none">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input 
                     placeholder="Search by PO #, Care Of..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10"
+                    className="w-full pl-10 md:w-80"
                   />
                 </div>
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Filter by status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PO_STATUS_OPTIONS.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status === 'all' ? 'All Statuses' : status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center gap-2">
                  {isPrintMode ? (
@@ -393,13 +476,41 @@ export default function PoPage() {
                       />
                     </TableHead>
                   )}
-                  <TableHead>PO #</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Care Of</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total Allocation</TableHead>
-                  <TableHead className="text-right">Amount Utilized</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('poNumber')}>
+                      PO # {getSortIcon('poNumber')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('date')}>
+                        Date {getSortIcon('date')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('careOf')}>
+                      Care Of {getSortIcon('careOf')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('displayStatus')}>
+                      Status {getSortIcon('displayStatus')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Button variant="ghost" onClick={() => requestSort('totalAllocation')}>
+                      Total Allocation {getSortIcon('totalAllocation')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Button variant="ghost" onClick={() => requestSort('amountUtilized')}>
+                      Amount Utilized {getSortIcon('amountUtilized')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Button variant="ghost" onClick={() => requestSort('balance')}>
+                      Balance {getSortIcon('balance')}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -418,8 +529,8 @@ export default function PoPage() {
                       <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                     </TableRow>
                   ))
-                ) : filteredPos.length > 0 ? (
-                  filteredPos.map((po) => (
+                ) : sortedAndFilteredPos.length > 0 ? (
+                  sortedAndFilteredPos.map((po) => (
                     <TableRow key={po.id} data-state={selectedPoIds.has(po.id) && "selected"}>
                        {isPrintMode && (
                         <TableCell>
@@ -529,11 +640,3 @@ export default function PoPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
-
-    
