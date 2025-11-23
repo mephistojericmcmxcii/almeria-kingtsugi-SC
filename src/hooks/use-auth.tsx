@@ -1079,7 +1079,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     await signOut(auth);
     setUser(null);
-    router.push('/login');
+    router.push('/');
   };
   
   const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, deleteFileByUrl, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
