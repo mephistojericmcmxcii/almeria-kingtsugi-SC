@@ -19,7 +19,6 @@ import type { PurchaseOrderItem } from '@/lib/types';
 
 
 const poItemSchema = z.object({
-  itemType: z.enum(['general', 'misc']),
   name: z.string().min(1, 'Item name is required.'),
   unit: z.string().optional(),
   quantity: z.preprocess(
@@ -34,17 +33,15 @@ const poItemSchema = z.object({
 });
 
 const formSchema = z.object({
+  itemType: z.enum(['general', 'misc']),
   items: z.array(poItemSchema).min(1, 'You must add at least one item.'),
 }).refine(data => {
-    return data.items.every(item => {
-        if (item.itemType === 'general') {
-            return item.unit && item.unit.length > 0 && item.quantity && item.quantity > 0;
-        }
-        return true;
-    });
+    if (data.itemType === 'general') {
+        return data.items.every(item => item.unit && item.unit.length > 0 && item.quantity && item.quantity > 0);
+    }
+    return true;
 }, {
     message: "Unit and Quantity are required for General items.",
-    // This path is tricky for field arrays. We'll show a general error at the bottom.
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,33 +61,43 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: [{ itemType: 'general', name: '', unit: '', quantity: 1, amount: 0, description: '' }],
+      itemType: 'general',
+      items: [{ name: '', unit: '', quantity: 1, amount: 0, description: '' }],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'items',
   });
   
-  const watchedItems = form.watch('items');
+  const itemType = form.watch('itemType');
 
   useEffect(() => {
     if (!isOpen) {
-      form.reset({ items: [{ itemType: 'general', name: '', unit: '', quantity: 1, amount: 0, description: '' }] });
+      form.reset({
+        itemType: 'general',
+        items: [{ name: '', unit: '', quantity: 1, amount: 0, description: '' }] 
+      });
     }
   }, [isOpen, form]);
+  
+  useEffect(() => {
+    // When itemType changes, reset the fields array with the correct structure.
+    if (itemType === 'general') {
+      replace([{ name: '', unit: '', quantity: 1, amount: 0, description: '' }]);
+    } else {
+      replace([{ name: '', amount: 0, description: '' }]);
+    }
+  }, [itemType, replace]);
+
 
   const handleAddRow = () => {
-    const lastItemType = watchedItems[watchedItems.length - 1]?.itemType || 'general';
-    append({
-        itemType: lastItemType,
-        name: '',
-        unit: '',
-        quantity: 1,
-        amount: 0,
-        description: ''
-    });
+    if (itemType === 'general') {
+        append({ name: '', unit: '', quantity: 1, amount: 0, description: '' });
+    } else {
+        append({ name: '', amount: 0, description: '' });
+    }
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -101,7 +108,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
     values.items.forEach(item => {
       const newItemRef = doc(poItemsCollectionRef);
       const dataToSave: Partial<PurchaseOrderItem> = {
-          itemType: item.itemType,
+          itemType: values.itemType,
           name: item.name,
           amount: item.amount,
           description: item.description,
@@ -109,7 +116,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
           updatedAt: serverTimestamp(),
       };
       
-      if (item.itemType === 'general') {
+      if (values.itemType === 'general') {
         dataToSave.unit = item.unit;
         dataToSave.quantity = item.quantity;
         dataToSave.actualAmount = 0; // Default actualAmount for general items
@@ -150,36 +157,38 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+            <FormField
+                control={form.control}
+                name="itemType"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Item Type</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex items-center space-x-4"
+                            >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="general" /></FormControl>
+                                    <FormLabel className="font-normal">General Item</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="misc" /></FormControl>
+                                    <FormLabel className="font-normal">Miscellaneous Cost</FormLabel>
+                                </FormItem>
+                            </RadioGroup>
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
               {fields.map((field, index) => {
-                const itemType = watchedItems[index]?.itemType;
                 return (
                 <div key={field.id} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex justify-between items-center">
-                    <FormField
-                        control={form.control}
-                        name={`items.${index}.itemType`}
-                        render={({ field }) => (
-                           <FormItem>
-                                <FormControl>
-                                    <RadioGroup
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                    className="flex items-center space-x-4"
-                                    >
-                                        <FormItem className="flex items-center space-x-2 space-y-0">
-                                            <FormControl><RadioGroupItem value="general" /></FormControl>
-                                            <FormLabel className="font-normal">General Item</FormLabel>
-                                        </FormItem>
-                                        <FormItem className="flex items-center space-x-2 space-y-0">
-                                            <FormControl><RadioGroupItem value="misc" /></FormControl>
-                                            <FormLabel className="font-normal">Miscellaneous Cost</FormLabel>
-                                        </FormItem>
-                                    </RadioGroup>
-                                </FormControl>
-                           </FormItem>
-                        )}
-                    />
+                  <div className="flex justify-end items-center">
                     <Button
                         type="button"
                         variant="ghost"
