@@ -185,7 +185,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
 
             <div className="space-y-2">
                 <div className={cn(
-                    "grid items-end gap-2 px-1 text-xs font-medium text-muted-foreground",
+                    "grid items-end gap-2 px-1 text-sm font-semibold text-foreground",
                      itemType === 'general' ? "grid-cols-[2fr_1fr_1fr_1fr_2fr_auto]" : "grid-cols-[2fr_2fr_1fr_auto]"
                 )}>
                     <p>Name</p>
