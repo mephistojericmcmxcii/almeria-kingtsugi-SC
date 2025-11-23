@@ -34,7 +34,7 @@ export function LoginRedirectDialog({ isOpen, onOpenChange }: LoginRedirectDialo
           <AlertDialogTitle className="font-headline text-xl font-normal sm:text-center">
             Create an account with
           </AlertDialogTitle>
-          <div className="font-headline text-3xl text-primary py-1 sm:text-center">
+          <div className="font-brand text-4xl text-primary py-1 sm:text-center">
             KINTSUGI Variety Shop
           </div>
           <AlertDialogDescription className="pt-2 sm:text-left">
