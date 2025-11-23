@@ -85,24 +85,25 @@ export default function PoPage() {
             const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
             const itemsSnapshot = await getDocs(itemsCollectionRef);
             
-            let totalItems = 0;
-            let itemsWithActualAmount = 0;
+            let generalItemsCount = 0;
+            let generalItemsWithActualAmount = 0;
 
             const poTotals = itemsSnapshot.docs.reduce((acc, doc) => {
                 const item = doc.data() as PurchaseOrderItem;
-                totalItems++;
 
                 if (item.itemType === 'misc') {
                     acc.utilized += item.amount || 0;
                 } else {
+                    generalItemsCount++;
                     if (item.actualAmount && item.actualAmount > 0) {
-                        itemsWithActualAmount++;
+                        generalItemsWithActualAmount++;
                     }
                     acc.allocated += (item.amount || 0) * (item.quantity || 0);
                     acc.utilized += ((item.actualAmount || 0) * (item.quantity || 0)) + (item.miscCost || 0);
                 }
                 return acc;
             }, { allocated: 0, utilized: 0, itemCount: 0 });
+
 
             if (po.totalAllocation !== undefined && po.totalAllocation !== null) {
                 poTotals.allocated = po.totalAllocation;
@@ -113,9 +114,9 @@ export default function PoPage() {
             
             let displayStatus: PurchaseOrder['status'] = po.status;
             if (po.status !== 'Cancelled' && po.status !== 'Delivered') { // Don't override these final statuses
-                if (totalItems > 0 && totalItems === itemsWithActualAmount) {
+                if (generalItemsCount > 0 && generalItemsCount === generalItemsWithActualAmount) {
                     displayStatus = 'Completed';
-                } else if (totalItems > 0) {
+                } else if (generalItemsCount > 0) {
                     displayStatus = 'Lacking';
                 }
             }
@@ -533,3 +534,4 @@ export default function PoPage() {
 
     
 
+    
