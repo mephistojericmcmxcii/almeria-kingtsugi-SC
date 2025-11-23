@@ -18,32 +18,45 @@ import { cn } from '@/lib/utils';
 import type { PurchaseOrderItem } from '@/lib/types';
 
 
-const poItemSchema = z.object({
+const generalItemSchema = z.object({
   name: z.string().min(1, 'Item name is required.'),
-  unit: z.string().optional(),
-  quantity: z.preprocess(
-    (val) => (val === '' ? undefined : parseInt(String(val), 10)),
-    z.number().optional()
-  ),
-  amount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a === '' ? '0' : a)),
-    z.number().min(0, 'Cost/Amount cannot be negative.')
-  ),
+  unit: z.string().min(1, 'Unit is required.'),
+  quantity: z.coerce.number().int().min(1, 'Qty must be at least 1.'),
+  amount: z.coerce.number().min(0, 'Cost cannot be negative.'),
+  description: z.string().optional(),
+});
+
+const miscItemSchema = z.object({
+  name: z.string().min(1, 'Item name is required.'),
+  unit: z.string().optional(), // Not used, but keep for type consistency
+  quantity: z.number().optional(), // Not used
+  amount: z.coerce.number().min(0, 'Cost cannot be negative.'),
   description: z.string().optional(),
 });
 
 const formSchema = z.object({
   itemType: z.enum(['general', 'misc']),
-  items: z.array(poItemSchema).min(1, 'You must add at least one item.'),
-}).refine(data => {
-    if (data.itemType === 'general') {
-        return data.items.every(item => item.unit && item.unit.length > 0 && item.quantity && item.quantity > 0);
-    }
-    return true;
-}, {
-    message: "Unit and Quantity are required for General items.",
-    path: ['items']
+  items: z.array(z.union([generalItemSchema, miscItemSchema]))
+}).superRefine((data, ctx) => {
+    data.items.forEach((item, index) => {
+        let result;
+        if (data.itemType === 'general') {
+            result = generalItemSchema.safeParse(item);
+        } else {
+            result = miscItemSchema.safeParse(item);
+        }
+
+        if (!result.success) {
+            result.error.errors.forEach((error) => {
+                ctx.addIssue({
+                    ...error,
+                    path: ['items', index, ...error.path],
+                });
+            });
+        }
+    });
 });
+
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -75,11 +88,12 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
   const itemType = form.watch('itemType');
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
       form.reset({
         itemType: 'general',
         items: [{ name: '', unit: '', quantity: 1, amount: 0, description: '' }] 
       });
+      form.clearErrors();
     }
   }, [isOpen, form]);
   
@@ -89,7 +103,8 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
     } else {
       replace([{ name: '', amount: 0, description: '' }]);
     }
-  }, [itemType, replace]);
+    form.clearErrors();
+  }, [itemType, replace, form]);
 
 
   const handleAddRow = () => {
@@ -184,15 +199,15 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
             />
 
             <div className="space-y-2">
-                <div className={cn(
+                 <div className={cn(
                     "grid items-end gap-2 px-1 text-sm font-semibold text-foreground",
                      itemType === 'general' ? "grid-cols-[2fr_1fr_1fr_1fr_2fr_auto]" : "grid-cols-[2fr_2fr_1fr_auto]"
                 )}>
-                    <p>Name</p>
-                    {itemType === 'general' && <p>Unit</p>}
-                    {itemType === 'general' && <p>Qty</p>}
-                    <p>{itemType === 'general' ? 'Allocated' : 'Cost'}</p>
-                    <p>Description</p>
+                    <p className="font-bold text-sm">Name</p>
+                    {itemType === 'general' && <p className="font-bold text-sm">Unit</p>}
+                    {itemType === 'general' && <p className="font-bold text-sm">Qty</p>}
+                    <p className="font-bold text-sm">{itemType === 'general' ? 'Allocated' : 'Cost'}</p>
+                    <p className="font-bold text-sm">Description</p>
                 </div>
                 <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
                   {fields.map((field, index) => {
@@ -242,10 +257,7 @@ export function AddPoItemDialog({ isOpen, onOpenChange, poId, onSuccess }: AddPo
                   )})}
                 </div>
             </div>
-            {form.formState.errors.items?.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.root.message}</p>}
-             {form.formState.errors.items && typeof form.formState.errors.items === 'object' && !Array.isArray(form.formState.errors.items) && <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>}
-
-
+            
             <Button
               type="button"
               variant="outline"
