@@ -391,6 +391,7 @@ export default function PoPage() {
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total Allocation</TableHead>
                   <TableHead className="text-right">Amount Utilized</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -403,6 +404,7 @@ export default function PoPage() {
                       <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -429,6 +431,13 @@ export default function PoPage() {
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {areTotalsLoading ? <Skeleton className="h-5 w-24 ml-auto" /> : formatCurrency(totalAmounts[po.id]?.utilized || 0)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {areTotalsLoading ? (
+                            <Skeleton className="h-5 w-24 ml-auto" />
+                        ) : (
+                            formatCurrency((totalAmounts[po.id]?.allocated || 0) - (totalAmounts[po.id]?.utilized || 0))
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -460,7 +469,7 @@ export default function PoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={isPrintMode ? 8 : 7} className="h-24 text-center">
+                    <TableCell colSpan={isPrintMode ? 9 : 8} className="h-24 text-center">
                       No purchase orders found.
                     </TableCell>
                   </TableRow>
@@ -512,6 +521,8 @@ export default function PoPage() {
     </>
   );
 }
+
+    
 
     
 
