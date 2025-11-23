@@ -102,8 +102,8 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl" showCloseButton={false}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col" showCloseButton={false}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-hidden">
             <div className="aspect-square relative">
                 <img
                     src={placeholder.imageUrl}
@@ -112,7 +112,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                     data-ai-hint={placeholder.imageHint}
                 />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col overflow-y-auto pr-4 -mr-4">
                 <DialogHeader className="space-y-2">
                     <div className='flex items-center justify-between'>
                         <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
@@ -122,7 +122,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                     <DialogDescription className="text-xl font-semibold">{variant.brand}{variant.model && ` - ${variant.model}`}</DialogDescription>
                 </DialogHeader>
                 
-                <div className="space-y-6 text-sm flex-grow overflow-y-auto mt-4 pr-2">
+                <div className="space-y-6 text-sm flex-grow mt-4">
                    {variant.description && (
                        <div className="space-y-2">
                             <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><Info className="w-4 h-4"/>Description</h4>
