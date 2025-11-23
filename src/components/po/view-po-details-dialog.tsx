@@ -44,6 +44,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   }
   
   const isMarkAsDeliveredDisabled = isUpdating || !salesInvoice || !deliveryReceipt;
+  const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => onOpenChange(false)}>
@@ -78,7 +79,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
+            <div className="grid grid-cols-3 gap-4 border-t pt-4">
                 <div>
                     <p className="text-sm font-semibold text-muted-foreground">Total Allocation</p>
                     <p className="font-bold text-lg">{formatCurrency(totals?.allocated || po.totalAllocation || 0)}</p>
@@ -86,6 +87,10 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 <div>
                     <p className="text-sm font-semibold text-muted-foreground">Amount Utilized</p>
                     <p className="font-bold text-lg">{formatCurrency(totals?.utilized || 0)}</p>
+                </div>
+                 <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Balance</p>
+                    <p className="font-bold text-lg">{formatCurrency(balance)}</p>
                 </div>
             </div>
 
