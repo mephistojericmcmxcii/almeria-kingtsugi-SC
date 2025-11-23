@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tag, Package, FileQuestion, Info, ListTree } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface ViewProductModalProps {
   isOpen: boolean;
@@ -102,9 +103,9 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col" showCloseButton={false}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0" showCloseButton={true}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-hidden">
-            <div className="aspect-square relative">
+            <div className="aspect-square relative m-6 mr-0">
                 <img
                     src={placeholder.imageUrl}
                     alt={placeholder.description || 'Product Image'}
@@ -112,38 +113,43 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                     data-ai-hint={placeholder.imageHint}
                 />
             </div>
-            <div className="flex flex-col overflow-y-auto pr-4 -mr-4">
-                <DialogHeader className="space-y-2">
-                    <div className='flex items-center justify-between'>
-                        <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
-                        {getStatusBadge(variant)}
-                    </div>
-                    <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
-                    <DialogDescription className="text-xl font-semibold">{variant.brand}{variant.model && ` - ${variant.model}`}</DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-6 text-sm flex-grow mt-4">
-                   {variant.description && (
-                       <div className="space-y-2">
-                            <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><Info className="w-4 h-4"/>Description</h4>
-                            <p className="text-sm text-muted-foreground">{variant.description}</p>
-                       </div>
-                   )}
-                   {renderSpecifications()}
-                </div>
-                
-                 <div className="flex items-center justify-between text-base pt-6 mt-auto">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Tag className="w-5 h-5" />
-                        <span className="font-bold text-xl text-foreground">Price on Request</span>
+            <div className="flex flex-col overflow-y-auto">
+               <ScrollArea className="flex-grow">
+                 <div className="space-y-6 pr-6 py-6">
+                    <DialogHeader className="space-y-2">
+                        <div className='flex items-center justify-between'>
+                            <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
+                            {getStatusBadge(variant)}
+                        </div>
+                        <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
+                        <DialogDescription className="text-xl font-semibold">{variant.brand}{variant.model && ` - ${variant.model}`}</DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6 text-sm flex-grow">
+                       {variant.description && (
+                           <div className="space-y-2">
+                                <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><Info className="w-4 h-4"/>Description</h4>
+                                <p className="text-sm text-muted-foreground">{variant.description}</p>
+                           </div>
+                       )}
+                       {renderSpecifications()}
                     </div>
                 </div>
+               </ScrollArea>
+                
+                 <div className="px-6 pb-6 mt-auto border-t pt-6 space-y-4">
+                     <div className="flex items-center justify-between text-base">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <Tag className="w-5 h-5" />
+                            <span className="font-bold text-xl text-foreground">Price on Request</span>
+                        </div>
+                    </div>
 
-                <div className="pt-4 flex flex-col gap-2">
-                    <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
-                        <FileQuestion className="mr-2" /> Add to Quotation
-                    </Button>
-                    <Button size="lg" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                    <div className="flex flex-col gap-2">
+                        <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
+                            <FileQuestion className="mr-2" /> Add to Quotation
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
