@@ -53,9 +53,12 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
         const itemToUpdate = items.find(item => item.id === itemId);
         if (!itemToUpdate) return;
         
+        // If the item is a custom RFQ item, it has no stock limit.
+        const isCustomRfqItem = itemToUpdate.variantId === 'custom-rfq';
+
         if (newQuantity < 1) {
             setItems(items.filter(item => item.id !== itemId));
-        } else if (itemToUpdate.stock && newQuantity > itemToUpdate.stock) {
+        } else if (!isCustomRfqItem && itemToUpdate.stock && newQuantity > itemToUpdate.stock) {
             toast({
                 variant: 'destructive',
                 title: 'Stock Limit Exceeded',
@@ -272,3 +275,5 @@ export function ConfirmOrderDialog({ isOpen, onOpenChange, order }: ConfirmOrder
         </Dialog>
     );
 }
+
+    
