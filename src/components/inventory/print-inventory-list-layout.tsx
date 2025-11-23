@@ -17,10 +17,6 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
     day: 'numeric'
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
-  };
-
   return (
     <>
       <style>{`
@@ -165,17 +161,19 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                                         <thead>
                                             <tr>
                                                 <th>Variation</th>
+                                                <th>Brand</th>
+                                                <th>Model</th>
                                                 <th className="text-right">Qty</th>
-                                                <th className="text-right">Price</th>
                                                 <th style={{width: '100px'}}>Physical Count</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {itemVariants.map(variant => (
                                                 <tr key={variant.id}>
-                                                    <td>{variant.brand} {variant.model && `- ${variant.model}`}</td>
+                                                    <td>{variant.variation}</td>
+                                                    <td>{variant.brand}</td>
+                                                    <td>{variant.model || 'N/A'}</td>
                                                     <td className="text-right">{variant.quantity}</td>
-                                                    <td className="text-right">{formatCurrency(variant.price)}</td>
                                                     <td style={{border: '1px solid #ccc'}}></td>
                                                 </tr>
                                             ))}
