@@ -91,7 +91,7 @@ export default function PoPaymentPage() {
               itemsSnapshot.forEach(itemDoc => {
                 const item = itemDoc.data() as PurchaseOrderItem;
                 totalAllocation += (item.amount || 0) * (item.quantity || 0);
-                totalExpenses += (item.actualAmount || 0) * (item.quantity || 0);
+                totalExpenses += ((item.actualAmount || 0) * (item.quantity || 0)) + (item.miscCost || 0);
               });
           }
 
@@ -146,7 +146,7 @@ export default function PoPaymentPage() {
         const lowerSearchTerm = searchTerm.toLowerCase();
         const searchMatch = !searchTerm ||
                               summary.po.poNumber.toLowerCase().includes(lowerSearchTerm) ||
-                              summary.po.source.toLowerCase().includes(lowerSearchTerm) ||
+                              (summary.po.source && summary.po.source.toLowerCase().includes(lowerSearchTerm)) ||
                               summary.po.careOf.toLowerCase().includes(lowerSearchTerm);
 
         return yearMatch && quarterMatch && searchMatch;
@@ -162,6 +162,9 @@ export default function PoPaymentPage() {
             const bPo = b.po;
 
             if (['totalAllocation', 'totalExpenses', 'profit', 'taxDeduction'].includes(sortConfig.key)) {
+                const aTax = a.totalAllocation - (aPo.amountDeposited || 0);
+                const bTax = b.totalAllocation - (bPo.amountDeposited || 0);
+
                 if(sortConfig.key === 'totalAllocation') {
                     aValue = a.totalAllocation;
                     bValue = b.totalAllocation;
@@ -169,13 +172,11 @@ export default function PoPaymentPage() {
                     aValue = a.totalExpenses;
                     bValue = b.totalExpenses;
                 } else if (sortConfig.key === 'taxDeduction') {
-                    const aTax = a.totalAllocation - (aPo.amountDeposited || 0);
-                    const bTax = b.totalAllocation - (bPo.amountDeposited || 0);
                     aValue = aTax;
                     bValue = bTax;
                 } else { // profit
-                    aValue = a.profit;
-                    bValue = b.profit;
+                    aValue = a.totalAllocation - a.totalExpenses - aTax;
+                    bValue = b.totalAllocation - b.totalExpenses - bTax;
                 }
             } else {
                  aValue = aPo[sortConfig.key as keyof PurchaseOrder];
@@ -196,19 +197,20 @@ export default function PoPaymentPage() {
   }, [summaries, searchTerm, selectedYear, selectedQuarter, sortConfig]);
   
     const { paidCount, unpaidCount, totalProfitLoss } = useMemo(() => {
-    if (!sortedAndFilteredSummaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
-    
-    return sortedAndFilteredSummaries.reduce((acc, summary) => {
-        if (summary.paymentStatus === 'Paid') {
-            acc.paidCount++;
-        } else if (summary.paymentStatus === 'Unpaid') {
-            acc.unpaidCount++;
-        }
-        acc.totalProfitLoss += summary.profit;
-        return acc;
-    }, { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 });
+        if (!sortedAndFilteredSummaries) return { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 };
+        
+        return sortedAndFilteredSummaries.reduce((acc, summary) => {
+            if (summary.paymentStatus === 'Paid') {
+                acc.paidCount++;
+            } else if (summary.paymentStatus === 'Unpaid') {
+                acc.unpaidCount++;
+            }
+            const taxDeduction = summary.totalAllocation - (summary.po.amountDeposited || 0);
+            acc.totalProfitLoss += (summary.totalAllocation - summary.totalExpenses - taxDeduction);
+            return acc;
+        }, { paidCount: 0, unpaidCount: 0, totalProfitLoss: 0 });
 
-  }, [sortedAndFilteredSummaries]);
+    }, [sortedAndFilteredSummaries]);
   
   const requestSort = (key: SortConfig['key']) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -399,6 +401,7 @@ export default function PoPaymentPage() {
               ) : sortedAndFilteredSummaries.length > 0 ? (
                 sortedAndFilteredSummaries.map((summary) => {
                     const taxDeduction = summary.totalAllocation - (summary.po.amountDeposited || 0);
+                    const profitLoss = summary.totalAllocation - summary.totalExpenses - taxDeduction;
                     return (
                         <TableRow key={summary.id}>
                             <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
@@ -410,9 +413,9 @@ export default function PoPaymentPage() {
                             <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
                             <TableCell className={cn(
                                 "text-right font-bold",
-                                summary.profit >= 0 ? "text-green-600" : "text-red-600"
+                                profitLoss >= 0 ? "text-green-600" : "text-red-600"
                             )}>
-                                {formatCurrency(summary.profit)}
+                                {formatCurrency(profitLoss)}
                             </TableCell>
                             <TableCell className="text-center">{getStatusBadge(summary.paymentStatus)}</TableCell>
                             <TableCell className="text-right">
