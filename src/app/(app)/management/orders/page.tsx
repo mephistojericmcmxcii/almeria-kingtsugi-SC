@@ -245,7 +245,7 @@ export default function AllOrdersPage() {
     
     const isStatusUpdateDisabled = (order: Order | null): boolean => {
         if (!order) return true;
-        return ['completed', 'cancelled', 'declined', 'quote-ready'].includes(order.status) || isUpdating;
+        return ['completed', 'cancelled', 'declined'].includes(order.status) || isUpdating;
     };
     
     const availableActions = selectedOrder ? STATUS_TRANSITIONS[selectedOrder.status] : [];

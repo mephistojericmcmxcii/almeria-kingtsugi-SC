@@ -192,8 +192,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // Admins get all orders, users only get their own.
-    const ordersQuery = user.role === 'admin'
+    // Admins see all orders on admin pages, but ONLY their own on their profile.
+    const isAdminOnAdminPage = user.role === 'admin' && pathname.startsWith('/management');
+    const ordersQuery = isAdminOnAdminPage
         ? collectionGroup(firestore, 'orders')
         : collection(firestore, 'users', user.id, 'orders');
 
@@ -218,10 +219,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Admins get all orders, users only get their own.
-    const ordersQuery = user.role === 'admin'
-        ? collectionGroup(firestore, 'orders')
-        : collection(firestore, 'users', user.id, 'orders');
+    // This is the critical fix. The profile page should ONLY ever query the user's own subcollection.
+    // The admin page for all orders (/management/orders) will fetch its own data separately.
+    const ordersQuery = collection(firestore, 'users', user.id, 'orders');
     
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
         const fetchedOrders = snapshot.docs.map(doc => ({
@@ -1098,3 +1098,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
