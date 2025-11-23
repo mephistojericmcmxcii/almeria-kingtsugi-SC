@@ -38,7 +38,9 @@ export function LoginRedirectDialog({ isOpen, onOpenChange }: LoginRedirectDialo
             KINTSUGI Variety Shop
           </div>
           <AlertDialogDescription className="pt-2 sm:text-left">
-            Register now to enjoy smoother transactions, quick quotations, and easier order tracking.
+            Register now to enjoy smoother transactions,
+            <br />
+            quick quotations, and easier order tracking.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
