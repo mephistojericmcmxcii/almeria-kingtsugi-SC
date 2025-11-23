@@ -61,7 +61,6 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
           body {
             font-family: 'PT Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
-            padding: 2rem;
             font-size: 10pt;
             background-color: #f9fafb;
             color: #111827;
@@ -70,23 +69,25 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
           .print-container {
             width: 100%;
             max-width: ${useLandscape ? '1200px' : '800px'};
-            margin: auto;
+            margin: 2rem auto;
             background-color: white;
-            padding: 2rem;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 4rem);
           }
           .print-header img, .print-footer img {
             width: 100%;
             height: auto;
+            display: block;
           }
           .print-header {
-             margin-bottom: 2rem;
+             margin-bottom: 0;
           }
            .print-footer {
-              margin-top: 2rem;
+              margin-top: auto; /* Pushes footer to the bottom */
               padding-top: 1rem;
-              border-top: 1px solid #e5e7eb;
               text-align: center;
               font-size: 9pt;
               color: #6b7280;
@@ -101,6 +102,10 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
               margin: 0 0 1rem 0;
               font-size: 10pt;
               color: #6b7280;
+          }
+          main {
+            flex-grow: 1;
+            padding: 2rem;
           }
           table {
             width: 100%;
@@ -136,7 +141,7 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
           @media print {
             @page {
               size: ${useLandscape ? 'A4 landscape' : 'A4 portrait'};
-              margin: 1cm;
+              margin: 0;
             }
             body {
               background-color: white;
@@ -147,7 +152,13 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
               box-shadow: none;
               border-radius: 0;
               padding: 0;
+              margin: 0;
+              width: 100%;
               max-width: none;
+              min-height: 100vh;
+            }
+            main {
+              padding: 1.5cm; /* Re-apply padding to main content only */
             }
              th, td {
                 padding: 8px;
@@ -164,20 +175,21 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
             </header>
           )}
           
-          {title && (
-            <div className="document-title">
-              <h2>{title}</h2>
-            </div>
-          )}
-
-          {children}
+            <main>
+                {title && (
+                    <div className="document-title">
+                    <h2>{title}</h2>
+                    </div>
+                )}
+                {children}
+            </main>
 
           {settings.footerImageUrl ? (
              <footer className="print-footer">
                 <img src={settings.footerImageUrl} alt="Company Footer" />
              </footer>
           ) : (
-            <footer className="print-footer">
+            <footer className="print-footer" style={{paddingBottom: '1rem'}}>
                 Date Printed: {printDate}
             </footer>
           )}
