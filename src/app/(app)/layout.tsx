@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { SidebarProvider, Sidebar, SidebarInset, useSidebar } from '@/components/ui/sidebar';
@@ -31,8 +31,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
-  if (isLoading) {
+  if (isClient && isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="p-8 space-y-4 flex flex-col items-center">
