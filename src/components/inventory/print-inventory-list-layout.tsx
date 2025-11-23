@@ -40,8 +40,6 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
             margin: auto;
             background-color: white;
             padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
           }
           .header, .footer {
             text-align: center;
@@ -51,7 +49,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
           .header {
              border-bottom: 1px solid #e5e7eb;
              padding-bottom: 1rem;
-             margin-bottom: 2rem;
+             margin-bottom: 1rem;
           }
           .header h1 {
               font-family: 'Playfair Display', serif;
@@ -64,6 +62,31 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
               padding-top: 1rem;
               border-top: 1px solid #e5e7eb;
            }
+          .document-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+          }
+          .document-header .info-block {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          }
+           .document-header .info-item {
+            display: flex;
+            align-items: baseline;
+          }
+          .document-header .info-label {
+            font-weight: bold;
+            width: 120px;
+          }
+          .document-header .info-value {
+            border-bottom: 1px solid #ccc;
+            flex-grow: 1;
+            min-width: 200px;
+          }
           .document-title h2 {
             font-family: 'Playfair Display', serif;
             font-size: 20pt;
@@ -139,11 +162,25 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
         <div className="print-container">
           <header className="header">
              <h1>Kintsugi Variety Shop</h1>
+             <p>Inventory Checklist</p>
           </header>
           
           <main>
-            <div className="document-title">
-              <h2>Inventory Checklist</h2>
+            <div className="document-header">
+              <div className="info-block">
+                <div className="info-item">
+                  <span className="info-label">Date:</span>
+                  <span className="info-value"></span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Inventoried By:</span>
+                  <span className="info-value"></span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Checked By:</span>
+                  <span className="info-value"></span>
+                </div>
+              </div>
             </div>
             
             {items.length > 0 ? (
@@ -164,6 +201,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                                                 <th>Brand</th>
                                                 <th>Model</th>
                                                 <th className="text-right">Qty</th>
+                                                <th style={{width: '100px'}}>Location</th>
                                                 <th style={{width: '100px'}}>Physical Count</th>
                                             </tr>
                                         </thead>
@@ -174,6 +212,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                                                     <td>{variant.brand}</td>
                                                     <td>{variant.model || 'N/A'}</td>
                                                     <td className="text-right">{variant.quantity}</td>
+                                                    <td style={{border: '1px solid #ccc'}}></td>
                                                     <td style={{border: '1px solid #ccc'}}></td>
                                                 </tr>
                                             ))}
@@ -190,6 +229,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                       <th>Item Name</th>
                       <th>Category</th>
                       <th className="text-right">Total Stock</th>
+                      <th style={{width: '120px'}}>Location</th>
                       <th style={{width: '120px'}}>Physical Count</th>
                     </tr>
                   </thead>
@@ -199,6 +239,7 @@ const PrintInventoryListLayout: React.FC<PrintInventoryListLayoutProps> = ({ ite
                             <td className="font-medium">{item.name}</td>
                             <td>{item.category}</td>
                             <td className="text-right">{item.totalStock || 0}</td>
+                            <td style={{border: '1px solid #ccc'}}></td>
                             <td style={{border: '1px solid #ccc'}}></td>
                         </tr>
                     ))}
