@@ -153,11 +153,11 @@ const MainSidebar = () => {
     <>
     <Sidebar>
       <SidebarHeader className="h-16 border-b-2 border-b-foreground/20">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 w-full h-full justify-center">
             {isLoadingLogo ? (
                 <Skeleton className="h-10 w-48" />
             ) : logoUrl ? (
-                <img src={logoUrl} alt="Kintsugi Brand Logo" className="h-10 object-contain" />
+                <img src={logoUrl} alt="Kintsugi Brand Logo" className="h-14 object-contain" />
             ) : (
                 <>
                     <Gem className="h-8 w-8 text-primary"/>
