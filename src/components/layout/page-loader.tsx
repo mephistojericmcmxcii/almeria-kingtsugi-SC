@@ -18,7 +18,6 @@ export function PageLoader() {
   }, []);
 
   useEffect(() => {
-    // We need to wait for the client to be ready before starting the loading logic
     if (!isClient) return;
 
     setIsPageLoading(true);
@@ -26,11 +25,11 @@ export function PageLoader() {
 
     const timer = setTimeout(() => {
         setIsPageLoading(false);
-    }, 1200); // Duration of the loading screen
+    }, 1200);
 
     const fadeOutTimer = setTimeout(() => {
         setIsVisible(false);
-    }, 1500); // Delay fade out to allow for animation
+    }, 1500); 
 
     return () => {
         clearTimeout(timer);
