@@ -45,6 +45,8 @@ import { LoginRedirectDialog } from "../auth/login-redirect-dialog";
 import { doc, getDoc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 
+const LOGO_CACHE_KEY = 'brandLogoUrl';
+
 const MainSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
@@ -52,28 +54,46 @@ const MainSidebar = () => {
   const { firestore } = useFirebase();
   const [managementOpen, setManagementOpen] = React.useState(false);
   const [isLoginRedirectOpen, setIsLoginRedirectOpen] = React.useState(false);
-  const [logoUrl, setLogoUrl] = React.useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = React.useState<string | null | undefined>(undefined);
   const [isLoadingLogo, setIsLoadingLogo] = React.useState(true);
 
   React.useEffect(() => {
+    // Attempt to load from cache first
+    const cachedLogoUrl = localStorage.getItem(LOGO_CACHE_KEY);
+    if (cachedLogoUrl) {
+      setLogoUrl(cachedLogoUrl);
+      setIsLoadingLogo(false);
+    } else {
+      // Set to null if not in cache to show fallback immediately while fetching
+      setLogoUrl(null);
+    }
+
     const fetchLogo = async () => {
       if (!firestore) return;
-      setIsLoadingLogo(true);
+      
       try {
         const brandSettingsRef = doc(firestore, 'system_settings', 'brand_logo');
         const docSnap = await getDoc(brandSettingsRef);
-        if (docSnap.exists()) {
-          setLogoUrl(docSnap.data().logoUrl);
+        const fetchedUrl = docSnap.exists() ? docSnap.data().logoUrl : null;
+
+        if (fetchedUrl) {
+            localStorage.setItem(LOGO_CACHE_KEY, fetchedUrl);
+            setLogoUrl(fetchedUrl);
         } else {
-          setLogoUrl(null);
+            localStorage.removeItem(LOGO_CACHE_KEY);
+            setLogoUrl(null);
         }
       } catch (error) {
         console.error("Error fetching brand logo:", error);
-        setLogoUrl(null);
+        setLogoUrl(null); // Fallback on error
       } finally {
-        setIsLoadingLogo(false);
+        // Only set loading to false here if we didn't have a cached version
+        if (cachedLogoUrl === null) {
+            setIsLoadingLogo(false);
+        }
       }
     };
+    
     fetchLogo();
   }, [firestore]);
 
@@ -153,7 +173,7 @@ const MainSidebar = () => {
     <>
     <Sidebar>
       <SidebarHeader className="h-16 border-b-2 border-b-foreground/20">
-        <Link href="/" className="flex items-center gap-2 w-full h-full justify-center">
+        <Link href="/" className="flex items-center w-full h-full justify-center">
             {isLoadingLogo ? (
                 <Skeleton className="h-10 w-48" />
             ) : logoUrl ? (
