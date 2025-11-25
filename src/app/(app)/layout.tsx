@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setIsClient(true);
   }, []);
   
-  if (isClient && isLoading) {
+  if (!isClient || isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="p-8 space-y-4 flex flex-col items-center">
