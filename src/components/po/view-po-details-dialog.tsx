@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
+import { FormControl, FormField } from '../ui/form';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
@@ -61,13 +62,6 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
     setIsUpdating(false);
   }
   
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const date = new Date(e.target.value);
-    if (!isNaN(date.getTime())) {
-      setReceivedDate(date);
-    }
-  };
-
   const isDeliveredDisabled = !salesInvoice || !deliveryReceipt || !receivedBy || !receivedDate;
   const isSaveDisabled = isUpdating || !selectedStatus;
   const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
@@ -152,13 +146,39 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                              </div>
                              <div className="space-y-2">
                                 <Label>Date Received</Label>
-                                <Input 
-                                    type="date"
-                                    value={receivedDate ? format(receivedDate, 'yyyy-MM-dd') : ''}
-                                    onChange={handleDateChange}
-                                    className="w-full"
-                                    disabled={isDelivered}
-                                />
+                                <div className="relative flex items-center">
+                                    <Input
+                                        value={receivedDate ? format(receivedDate, 'dd/MM/yyyy') : ''}
+                                        onChange={(e) => {
+                                            try {
+                                                const parsedDate = parse(e.target.value, 'dd/MM/yyyy', new Date());
+                                                setReceivedDate(isNaN(parsedDate.getTime()) ? undefined : parsedDate);
+                                            } catch {
+                                                setReceivedDate(undefined);
+                                            }
+                                        }}
+                                        placeholder="dd/MM/yyyy"
+                                        disabled={isDelivered}
+                                    />
+                                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" size="icon" className="absolute right-1 h-8 w-8" disabled={isDelivered}>
+                                                <CalendarIcon className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={receivedDate}
+                                                onSelect={(date) => {
+                                                    setReceivedDate(date);
+                                                    setIsCalendarOpen(false);
+                                                }}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
                              </div>
                          </div>
                      </div>

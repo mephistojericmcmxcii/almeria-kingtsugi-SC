@@ -93,13 +93,6 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
 
   const watchedValues = form.watch();
   
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const date = new Date(e.target.value);
-    if (!isNaN(date.getTime())) {
-      form.setValue('paymentDate', date, { shouldValidate: true });
-    }
-  };
-
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     const poRef = doc(firestore, 'purchase_orders', po.id);
@@ -197,26 +190,56 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Agency / Company</p>
-                    <p className="font-semibold">{po.source}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">Agency / Company</p>
+                    <p>{po.source}</p>
                 </div>
                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Care Of</p>
-                    <p className="font-semibold">{po.careOf}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">Care Of</p>
+                    <p>{po.careOf}</p>
                 </div>
             </div>
 
             <FormField control={form.control} name="paymentDate" render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Payment Date</FormLabel>
-                 <FormControl>
-                    <Input 
-                        type="date" 
-                        value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                        onChange={handleDateChange}
-                        className="w-[240px]"
-                    />
-                </FormControl>
+                 <div className="relative flex items-center w-[240px]">
+                    <FormControl>
+                        <Input
+                            value={field.value ? format(field.value, 'dd/MM/yyyy') : ''}
+                            onChange={(e) => {
+                                try {
+                                    const parsedDate = parse(e.target.value, 'dd/MM/yyyy', new Date());
+                                    if (!isNaN(parsedDate.getTime())) {
+                                        field.onChange(parsedDate);
+                                    } else {
+                                            field.onChange(undefined);
+                                    }
+                                } catch {
+                                    field.onChange(undefined);
+                                }
+                            }}
+                            placeholder="dd/MM/yyyy"
+                        />
+                    </FormControl>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="icon" className="absolute right-1 h-8 w-8">
+                                <CalendarIcon className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsCalendarOpen(false);
+                                }}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
                 <FormMessage />
               </FormItem>
             )} />

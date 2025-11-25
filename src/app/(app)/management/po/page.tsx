@@ -513,39 +513,39 @@ export default function PoPage() {
                       />
                     </TableHead>
                   )}
-                  <TableHead className="px-2">
-                    <Button variant="ghost" className="p-2" onClick={() => requestSort('poNumber')}>
-                      {getSortIcon('poNumber')} PO #
+                  <TableHead className="px-4">
+                    <Button variant="ghost" className="p-0" onClick={() => requestSort('poNumber')}>
+                      PO #<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
-                  <TableHead className="px-2">
-                    <Button variant="ghost" className="p-2" onClick={() => requestSort('date')}>
-                        {getSortIcon('date')} Date
+                  <TableHead className="px-4">
+                    <Button variant="ghost" className="p-0" onClick={() => requestSort('date')}>
+                        Date<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
-                  <TableHead className="px-2">
-                    <Button variant="ghost" className="p-2" onClick={() => requestSort('careOf')}>
-                      {getSortIcon('careOf')} Care Of
+                  <TableHead className="px-4">
+                    <Button variant="ghost" className="p-0" onClick={() => requestSort('careOf')}>
+                      Care Of<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
-                  <TableHead className="px-2">
-                     <Button variant="ghost" className="p-2" onClick={() => requestSort('displayStatus')}>
-                      {getSortIcon('displayStatus')} Status
+                  <TableHead className="px-4">
+                     <Button variant="ghost" className="p-0" onClick={() => requestSort('displayStatus')}>
+                      Status<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
-                  <TableHead className="text-right px-2">
-                    <Button variant="ghost" className="p-2 justify-end w-full" onClick={() => requestSort('totalAllocation')}>
-                      {getSortIcon('totalAllocation')} Total Allocation
+                  <TableHead className="text-right px-4">
+                    <Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalAllocation')}>
+                      Total Allocation<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
-                  <TableHead className="text-right px-2">
-                    <Button variant="ghost" className="p-2 justify-end w-full" onClick={() => requestSort('amountUtilized')}>
-                      {getSortIcon('amountUtilized')} Amount Utilized
+                  <TableHead className="text-right px-4">
+                    <Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('amountUtilized')}>
+                      Amount Utilized<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
-                  <TableHead className="text-right px-2">
-                    <Button variant="ghost" className="p-2 justify-end w-full" onClick={() => requestSort('balance')}>
-                      {getSortIcon('balance')} Balance
+                  <TableHead className="text-right px-4">
+                    <Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('balance')}>
+                      Balance<ArrowUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </TableHead>
                   <TableHead className="text-right px-4">Actions</TableHead>
@@ -677,6 +677,3 @@ export default function PoPage() {
     </>
   );
 }
-
-
-

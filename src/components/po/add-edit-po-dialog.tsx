@@ -26,7 +26,7 @@ const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
-  source: z.string().min(2, 'Agency/Company is required.'),
+  source: z.string().min(2, 'Agency / Company is required.'),
   totalAllocation: z.preprocess(
     (val) => (val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val)),
     z.number().optional()
@@ -79,13 +79,6 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
       }
     }
   }, [poToEdit, isOpen, form]);
-  
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const date = new Date(e.target.value);
-    if (!isNaN(date.getTime())) {
-      form.setValue('date', date, { shouldValidate: true });
-    }
-  };
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -160,14 +153,44 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="date" 
-                      value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                      onChange={handleDateChange}
-                      className="w-full"
-                    />
-                  </FormControl>
+                    <div className="relative flex items-center">
+                        <FormControl>
+                            <Input
+                                value={field.value ? format(field.value, 'dd/MM/yyyy') : ''}
+                                onChange={(e) => {
+                                    try {
+                                        const parsedDate = parse(e.target.value, 'dd/MM/yyyy', new Date());
+                                        if (!isNaN(parsedDate.getTime())) {
+                                            field.onChange(parsedDate);
+                                        } else {
+                                             field.onChange(undefined);
+                                        }
+                                    } catch {
+                                        field.onChange(undefined);
+                                    }
+                                }}
+                                placeholder="dd/MM/yyyy"
+                            />
+                        </FormControl>
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="icon" className="absolute right-1 h-8 w-8">
+                                    <CalendarIcon className="h-4 w-4" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={(date) => {
+                                        field.onChange(date);
+                                        setIsCalendarOpen(false);
+                                    }}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                   <FormMessage />
                 </FormItem>
               )}
