@@ -179,10 +179,6 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
                             <td>Category</td>
                             <td>{variant.parentCategory}</td>
                         </tr>
-                        <tr>
-                            <td>Price</td>
-                            <td>{formatCurrency(variant.price)}</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
