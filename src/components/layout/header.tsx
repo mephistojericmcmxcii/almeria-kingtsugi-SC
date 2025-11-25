@@ -21,7 +21,7 @@ const Header = () => {
   }, []);
   
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-muted px-4 md:px-6 w-full">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-b-primary bg-secondary px-4 md:px-6 w-full">
       <SidebarTrigger className="hidden md:flex" />
       <div className="flex-1">
         <h1 className="text-lg font-semibold md:hidden">
