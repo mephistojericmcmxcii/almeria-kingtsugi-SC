@@ -62,7 +62,15 @@ export default function PoPaymentPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
   const [selectedQuarter, setSelectedQuarter] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'date', direction: 'descending' });
+
+  // Reset month filter when quarter changes to 'all'
+  useEffect(() => {
+    if (selectedQuarter === 'all') {
+      setSelectedMonth('all');
+    }
+  }, [selectedQuarter]);
 
 
   const fetchSummaries = async () => {
@@ -140,6 +148,20 @@ export default function PoPaymentPage() {
     const years = new Set(summaries.map(s => s.po.date.toDate().getFullYear()));
     return ["all", ...Array.from(years).sort((a, b) => b - a).map(String)];
   }, [summaries]);
+
+  const QUARTER_MONTHS: Record<string, { name: string; value: number }[]> = {
+    '1': [{ name: 'January', value: 0 }, { name: 'February', value: 1 }, { name: 'March', value: 2 }],
+    '2': [{ name: 'April', value: 3 }, { name: 'May', value: 4 }, { name: 'June', value: 5 }],
+    '3': [{ name: 'July', value: 6 }, { name: 'August', value: 7 }, { name: 'September', value: 8 }],
+    '4': [{ name: 'October', value: 9 }, { name: 'November', value: 10 }, { name: 'December', value: 11 }],
+  };
+
+  const availableMonths = useMemo(() => {
+    if (selectedQuarter === 'all' || !QUARTER_MONTHS[selectedQuarter]) {
+        return [];
+    }
+    return [{ name: 'All Months', value: 'all' }, ...QUARTER_MONTHS[selectedQuarter]];
+  }, [selectedQuarter]);
   
   const sortedAndFilteredSummaries = useMemo(() => {
     let sortableItems = [...summaries];
@@ -149,6 +171,7 @@ export default function PoPaymentPage() {
         const poDate = summary.po.date.toDate();
         const yearMatch = selectedYear === 'all' || poDate.getFullYear() === parseInt(selectedYear);
         const quarterMatch = selectedQuarter === 'all' || getQuarter(poDate) === parseInt(selectedQuarter);
+        const monthMatch = selectedMonth === 'all' || poDate.getMonth() === parseInt(selectedMonth);
         
         const lowerSearchTerm = searchTerm.toLowerCase();
         const searchMatch = !searchTerm ||
@@ -156,7 +179,7 @@ export default function PoPaymentPage() {
                               (summary.po.source && summary.po.source.toLowerCase().includes(lowerSearchTerm)) ||
                               summary.po.careOf.toLowerCase().includes(lowerSearchTerm);
 
-        return yearMatch && quarterMatch && searchMatch;
+        return yearMatch && quarterMatch && monthMatch && searchMatch;
     });
 
     // Sorting
@@ -206,7 +229,7 @@ export default function PoPaymentPage() {
     }
 
     return sortableItems;
-  }, [summaries, searchTerm, selectedYear, selectedQuarter, sortConfig]);
+  }, [summaries, searchTerm, selectedYear, selectedQuarter, selectedMonth, sortConfig]);
   
     const { paidCount, unpaidCount, totalTaxDeduction, totalProfitLoss } = useMemo(() => {
         if (!sortedAndFilteredSummaries) return { paidCount: 0, unpaidCount: 0, totalTaxDeduction: 0, totalProfitLoss: 0 };
@@ -387,6 +410,18 @@ export default function PoPaymentPage() {
                             <SelectItem value="4">Quarter 4</SelectItem>
                         </SelectContent>
                     </Select>
+                    {selectedQuarter !== 'all' && (
+                        <Select value={String(selectedMonth)} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Select Month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableMonths.map(month => (
+                                    <SelectItem key={month.value} value={String(month.value)}>{month.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
                 </div>
             </div>
         </CardHeader>
@@ -522,4 +557,5 @@ export default function PoPaymentPage() {
 }
 
     
+
 
