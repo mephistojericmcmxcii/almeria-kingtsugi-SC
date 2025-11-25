@@ -129,8 +129,8 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                           <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
                               <FileQuestion className="mr-2" /> Add to Quotation
                           </Button>
-                           <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
-                              <X className="mr-2"/> Close
+                           <Button variant="secondary" size="lg" onClick={() => onOpenChange(false)}>
+                              Close
                            </Button>
                       </div>
                 </div>
