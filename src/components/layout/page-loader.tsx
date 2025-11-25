@@ -10,21 +10,22 @@ const KintsugiLoader = () => (
         <style>{`
             .kintsugi-loader .crack {
                 stroke: hsl(var(--primary));
-                stroke-width: 0.5;
+                stroke-width: 0.3;
                 fill: none;
                 stroke-linecap: round;
-                stroke-dasharray: 400;
-                stroke-dashoffset: 400;
-                animation: draw 2.5s ease-in-out forwards;
+                stroke-linejoin: round;
+                stroke-dasharray: 1200;
+                stroke-dashoffset: 1200;
+                animation: draw 2s ease-out forwards;
             }
             .kintsugi-loader .crack-1 { animation-delay: 0s; }
-            .kintsugi-loader .crack-2 { animation-delay: 0.1s; }
-            .kintsugi-loader .crack-3 { animation-delay: 0.2s; }
-            .kintsugi-loader .crack-4 { animation-delay: 0.3s; }
-            .kintsugi-loader .crack-5 { animation-delay: 0.4s; }
+            .kintsugi-loader .crack-2 { animation-delay: 0.2s; }
+            .kintsugi-loader .crack-3 { animation-delay: 0.4s; }
+            .kintsugi-loader .crack-4 { animation-delay: 0.1s; }
+            .kintsugi-loader .crack-5 { animation-delay: 0.3s; }
             .kintsugi-loader .crack-6 { animation-delay: 0.5s; }
             .kintsugi-loader .crack-7 { animation-delay: 0.6s; }
-            .kintsugi-loader .crack-8 { animation-delay: 0.7s; }
+            .kintsugi-loader .crack-8 { animation-delay: 0.25s; }
 
             @keyframes draw {
                 to {
@@ -33,19 +34,17 @@ const KintsugiLoader = () => (
             }
         `}</style>
         <g>
-            {/* Main vertical and horizontal cracks */}
-            <path className="crack crack-1" d="M50 0 V 100" />
-            <path className="crack crack-2" d="M0 50 H 100" />
-            
-            {/* Cracks from center to corners */}
-            <path className="crack crack-3" d="M50 50 L 0 0" />
-            <path className="crack crack-4" d="M50 50 L 100 0" />
-            <path className="crack crack-5" d="M50 50 L 0 100" />
-            <path className="crack crack-6" d="M50 50 L 100 100" />
+            {/* Main diagonal crack */}
+            <path className="crack crack-1" d="M-5 105 Q 40 60, 60 40 T 105 -5" />
 
-            {/* Additional branching cracks */}
-            <path className="crack crack-7" d="M25 25 L 10 40" />
-            <path className="crack crack-8" d="M75 75 L 90 60" />
+            {/* Branching cracks */}
+            <path className="crack crack-2" d="M50 50 Q 55 45, 65 35 Q 70 30, 80 20" />
+            <path className="crack crack-3" d="M45 55 Q 35 65, 20 80 T 5 95" />
+            <path className="crack crack-4" d="M60 40 Q 70 42, 85 45 T 95 60" />
+            <path className="crack crack-5" d="M30 70 Q 25 65, 20 55 T 15 30" />
+            <path className="crack crack-6" d="M80 20 Q 85 15, 95 5" />
+            <path className="crack crack-7" d="M5 95 Q 15 90, 30 88" />
+            <path className="crack crack-8" d="M50 50 Q 40 40, 25 25 T 10 10" />
         </g>
     </svg>
 );
