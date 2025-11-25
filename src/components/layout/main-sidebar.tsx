@@ -128,7 +128,6 @@ const MainSidebar = () => {
           <Gem className="text-primary"/>
           <h1 className="font-bold text-lg font-ink-free text-primary">KINTSUGI</h1>
         </div>
-        <SidebarTrigger />
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         {menuItems.map((item) => {
