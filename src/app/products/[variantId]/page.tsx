@@ -85,7 +85,7 @@ export default function ProductDetailsPage() {
   
   if (isProductsLoading) {
     return (
-      <div className="p-4 md:p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Skeleton className="aspect-square w-full rounded-lg" />
@@ -119,23 +119,40 @@ export default function ProductDetailsPage() {
 
   return (
     <>
-    <div className="p-4 md:p-8 space-y-6">
+    <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
         <Link href="/products"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Catalog</Link>
       </Button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        {/* Left Column: Image */}
-        <div className="aspect-square relative w-full">
-          <img
-            src={placeholder.imageUrl}
-            alt={placeholder.description || 'Product Image'}
-            className="object-cover rounded-lg w-full h-full"
-            data-ai-hint={placeholder.imageHint}
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
+        {/* Left Column: Image & Actions */}
+        <div className="space-y-6 sticky top-8">
+          <div className="aspect-square relative w-full">
+            <img
+              src={placeholder.imageUrl}
+              alt={placeholder.description || 'Product Image'}
+              className="object-cover rounded-lg w-full h-full"
+              data-ai-hint={placeholder.imageHint}
+            />
+          </div>
+          <div className="mt-6 pt-6 border-t space-y-4">
+            <div className="flex items-center justify-between text-base">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <Tag className="w-5 h-5" />
+                    <span className="font-bold text-xl text-foreground">Price on Request</span>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                {getStatusBadge(variant)}
+                {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
+            </div>
+            <Button size="lg" className="w-full" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
+                <FileQuestion className="mr-2" /> Add to Quotation
+            </Button>
+          </div>
         </div>
 
-        {/* Right Column: Details & Actions */}
+        {/* Right Column: Details */}
         <div className="space-y-6">
           <div className="space-y-2">
             <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
@@ -159,22 +176,6 @@ export default function ProductDetailsPage() {
             )}
             
             {renderSpecifications()}
-          </div>
-          
-          <div className="mt-6 pt-6 border-t space-y-4">
-            <div className="flex items-center justify-between text-base">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <Tag className="w-5 h-5" />
-                    <span className="font-bold text-xl text-foreground">Price on Request</span>
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                {getStatusBadge(variant)}
-                {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
-            </div>
-            <Button size="lg" className="w-full" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
-                <FileQuestion className="mr-2" /> Add to Quotation
-            </Button>
           </div>
         </div>
       </div>
