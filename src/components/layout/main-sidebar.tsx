@@ -123,7 +123,7 @@ const MainSidebar = () => {
   return (
     <>
     <Sidebar>
-      <SidebarHeader>
+      <SidebarHeader className="h-16">
         <div className="flex items-center gap-2">
           <Gem className="text-primary"/>
           <h1 className="font-bold text-lg font-ink-free text-primary">KINTSUGI</h1>
