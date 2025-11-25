@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -13,6 +14,7 @@ export default {
         body: ['PT Sans', 'sans-serif'],
         headline: ['Playfair Display', 'serif'],
         brand: ['Yuji Syuku', 'serif'],
+        'ink-free': ['Ink Free', 'cursive'],
         code: ['monospace'],
       },
       colors: {
