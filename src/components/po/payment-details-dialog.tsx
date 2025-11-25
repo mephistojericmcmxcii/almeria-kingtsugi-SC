@@ -156,8 +156,18 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-            <div className="py-4 border-y">
-                {isManualEntry ? (
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-y">
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Agency / Company</p>
+                    <p className="text-base font-semibold">{po.source}</p>
+                </div>
+                 <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Care Of</p>
+                    <p className="text-base font-semibold">{po.careOf}</p>
+                </div>
+            </div>
+
+            {isManualEntry ? (
                 <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                     <FormField control={form.control} name="totalAllocation" render={({ field }) => (
                     <FormItem>
@@ -174,37 +184,25 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     </FormItem>
                     )} />
                 </div>
-                ) : (
-                    <div className="grid grid-cols-2 gap-x-8">
-                        <div className="space-y-1">
-                            <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
-                            <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                            <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
-                        </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-x-8">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
                     </div>
-                )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                    <p className="text-sm font-semibold text-muted-foreground">Agency / Company</p>
-                    <p>{po.source}</p>
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                    </div>
                 </div>
-                 <div className="space-y-1">
-                    <p className="text-sm font-semibold text-muted-foreground">Care Of</p>
-                    <p>{po.careOf}</p>
-                </div>
-            </div>
+            )}
 
             <FormField control={form.control} name="paymentDate" render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Payment Date</FormLabel>
                  <div className="relative flex items-center w-[240px]">
                     <FormControl>
-                        <Input
+                         <Input
                             value={field.value ? format(field.value, 'dd-MMM-yyyy') : ''}
                             onChange={(e) => {
                                 try {
