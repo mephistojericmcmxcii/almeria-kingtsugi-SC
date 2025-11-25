@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import Link from 'next/link';
 import { useFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, deleteDoc, getDoc, getDocs, orderBy, query } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +54,8 @@ export default function PoDetailsPage() {
         if (!firestore || !poId) return;
         try {
             const itemsCollectionRef = collection(firestore, 'purchase_orders', poId, 'items');
-            const itemsSnap = await getDocs(itemsCollectionRef);
+            const q = query(itemsCollectionRef, orderBy('createdAt', 'desc'));
+            const itemsSnap = await getDocs(q);
             setPoItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem)));
         } catch (error) {
              toast({ variant: "destructive", title: "Error", description: "Could not refresh item list." });
@@ -73,7 +74,8 @@ export default function PoDetailsPage() {
                 }
 
                 const itemsCollectionRef = collection(firestore, 'purchase_orders', poId, 'items');
-                const itemsSnap = await getDocs(itemsCollectionRef);
+                const q = query(itemsCollectionRef, orderBy('createdAt', 'desc'));
+                const itemsSnap = await getDocs(q);
                 setPoItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem)));
 
             } catch (error) {
