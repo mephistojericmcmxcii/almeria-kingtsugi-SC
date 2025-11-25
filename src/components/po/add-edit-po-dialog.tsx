@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -58,6 +57,8 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
     },
   });
 
+  const [dateString, setDateString] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       if (poToEdit) {
@@ -68,14 +69,17 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
           source: poToEdit.source,
           totalAllocation: poToEdit.totalAllocation || 0,
         });
+        setDateString(format(poToEdit.date.toDate(), 'dd-MMM-yyyy'));
       } else {
+        const newDate = new Date();
         form.reset({
           poNumber: '',
-          date: new Date(),
+          date: newDate,
           careOf: '',
           source: '',
           totalAllocation: 0,
         });
+        setDateString(format(newDate, 'dd-MMM-yyyy'));
       }
     }
   }, [poToEdit, isOpen, form]);
@@ -155,18 +159,21 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
                   <FormLabel>Date</FormLabel>
                     <div className="relative flex items-center">
                         <FormControl>
-                            <Input
-                                value={field.value ? format(field.value, 'dd-MMM-yyyy') : ''}
-                                onChange={(e) => {
+                             <Input
+                                value={dateString}
+                                onChange={(e) => setDateString(e.target.value)}
+                                onBlur={(e) => {
                                     try {
                                         const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
                                         if (!isNaN(parsedDate.getTime())) {
                                             field.onChange(parsedDate);
                                         } else {
-                                             field.onChange(undefined);
+                                            // Revert if invalid
+                                            setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
                                         }
                                     } catch {
-                                        field.onChange(undefined);
+                                        // Revert if parsing throws error
+                                        setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
                                     }
                                 }}
                                 placeholder="dd-MMM-yyyy"
@@ -183,7 +190,10 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
                                     mode="single"
                                     selected={field.value}
                                     onSelect={(date) => {
-                                        field.onChange(date);
+                                        if (date) {
+                                            field.onChange(date);
+                                            setDateString(format(date, 'dd-MMM-yyyy'));
+                                        }
                                         setIsCalendarOpen(false);
                                     }}
                                     initialFocus

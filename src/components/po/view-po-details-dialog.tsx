@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -40,6 +39,8 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   const [siFile, setSiFile] = useState<File | null>(null);
   const [drFile, setDrFile] = useState<File | null>(null);
   const [receivedBy, setReceivedBy] = useState(po.receivedBy || '');
+  
+  const [receivedDateString, setReceivedDateString] = useState(po.receivedDate ? format(po.receivedDate.toDate(), 'dd-MMM-yyyy') : '');
   const [receivedDate, setReceivedDate] = useState<Date | undefined>(po.receivedDate?.toDate());
 
 
@@ -63,7 +64,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   }
   
   const isDeliveredDisabled = !salesInvoice || !deliveryReceipt || !receivedBy || !receivedDate;
-  const isSaveDisabled = isUpdating || !selectedStatus;
+  const isSaveDisabled = isUpdating || !selectedStatus || (selectedStatus === 'Delivered' && isDeliveredDisabled);
   const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
   const isDelivered = po.status === 'Delivered';
 
@@ -148,13 +149,18 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                 <Label>Date Received</Label>
                                 <div className="relative flex items-center">
                                     <Input
-                                        value={receivedDate ? format(receivedDate, 'dd-MMM-yyyy') : ''}
-                                        onChange={(e) => {
+                                        value={receivedDateString}
+                                        onChange={(e) => setReceivedDateString(e.target.value)}
+                                        onBlur={(e) => {
                                             try {
                                                 const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
-                                                setReceivedDate(isNaN(parsedDate.getTime()) ? undefined : parsedDate);
+                                                if (!isNaN(parsedDate.getTime())) {
+                                                    setReceivedDate(parsedDate);
+                                                } else {
+                                                    setReceivedDateString(receivedDate ? format(receivedDate, 'dd-MMM-yyyy') : '');
+                                                }
                                             } catch {
-                                                setReceivedDate(undefined);
+                                                setReceivedDateString(receivedDate ? format(receivedDate, 'dd-MMM-yyyy') : '');
                                             }
                                         }}
                                         placeholder="dd-MMM-yyyy"
@@ -171,7 +177,10 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                                 mode="single"
                                                 selected={receivedDate}
                                                 onSelect={(date) => {
-                                                    setReceivedDate(date);
+                                                    if (date) {
+                                                        setReceivedDate(date);
+                                                        setReceivedDateString(format(date, 'dd-MMM-yyyy'));
+                                                    }
                                                     setIsCalendarOpen(false);
                                                 }}
                                                 initialFocus

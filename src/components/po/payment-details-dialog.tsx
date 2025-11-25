@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -72,6 +71,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { po, totalAllocation, totalExpenses } = summary;
   const isManualEntry = po.entryType === 'manual';
+  const [dateString, setDateString] = useState('');
 
 
   const form = useForm<FormValues>({
@@ -80,14 +80,16 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
 
   useEffect(() => {
     if (isOpen && po) {
+      const pDate = po.paymentDate?.toDate();
       form.reset({
-        paymentDate: po.paymentDate?.toDate(),
+        paymentDate: pDate,
         amountDeposited: po.amountDeposited,
         bank: po.bank || '',
         paymentStatus: po.paymentStatus || 'Unpaid',
         totalAllocation: po.totalAllocation ?? totalAllocation,
         totalExpenses: po.totalExpenses ?? totalExpenses,
       });
+      setDateString(pDate ? format(pDate, 'dd-MMM-yyyy') : '');
     }
   }, [po, isOpen, form, totalAllocation, totalExpenses]);
 
@@ -203,17 +205,18 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                  <div className="relative flex items-center w-[240px]">
                     <FormControl>
                          <Input
-                            value={field.value ? format(field.value, 'dd-MMM-yyyy') : ''}
-                            onChange={(e) => {
+                            value={dateString}
+                            onChange={(e) => setDateString(e.target.value)}
+                            onBlur={(e) => {
                                 try {
                                     const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
                                     if (!isNaN(parsedDate.getTime())) {
                                         field.onChange(parsedDate);
                                     } else {
-                                            field.onChange(undefined);
+                                        setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
                                     }
                                 } catch {
-                                    field.onChange(undefined);
+                                    setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
                                 }
                             }}
                             placeholder="dd-MMM-yyyy"
@@ -230,7 +233,10 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                                 mode="single"
                                 selected={field.value}
                                 onSelect={(date) => {
-                                    field.onChange(date);
+                                    if (date) {
+                                      field.onChange(date);
+                                      setDateString(format(date, 'dd-MMM-yyyy'));
+                                    }
                                     setIsCalendarOpen(false);
                                 }}
                                 initialFocus
