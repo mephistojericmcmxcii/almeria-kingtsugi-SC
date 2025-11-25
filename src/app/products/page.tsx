@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, Package, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
@@ -23,6 +24,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
+  const isMobile = useIsMobile();
 
   const categories = useMemo(() => {
     if (!allVariants) return [];
@@ -43,7 +45,11 @@ export default function ProductsPage() {
   }, [allVariants, searchTerm, selectedCategory]);
 
   const handleViewItemClick = (variant: InventoryVariant) => {
-    setSelectedVariant(variant);
+    if (isMobile) {
+      router.push(`/products/${variant.id}`);
+    } else {
+      setSelectedVariant(variant);
+    }
   };
 
   const handleAddToCart = (variant: InventoryVariant) => {
@@ -172,7 +178,7 @@ export default function ProductsPage() {
       </Card>
     </div>
 
-    {selectedVariant && (
+    {!isMobile && selectedVariant && (
         <Suspense fallback={<div>Loading...</div>}>
             <ViewProductModal 
                 isOpen={!!selectedVariant}
