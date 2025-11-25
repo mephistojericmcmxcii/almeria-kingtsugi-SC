@@ -61,6 +61,13 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
     setIsUpdating(false);
   }
   
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    if (!isNaN(date.getTime())) {
+      setReceivedDate(date);
+    }
+  };
+
   const isDeliveredDisabled = !salesInvoice || !deliveryReceipt || !receivedBy || !receivedDate;
   const isSaveDisabled = isUpdating || !selectedStatus;
   const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
@@ -81,7 +88,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 </div>
                  <div>
                     <p className="text-sm font-semibold text-muted-foreground">Date</p>
-                    <p>{format(po.date.toDate(), 'PPP')}</p>
+                    <p>{format(po.date.toDate(), 'dd/MM/yyyy')}</p>
                 </div>
                  <div>
                     <p className="text-sm font-semibold text-muted-foreground">Care Of</p>
@@ -144,36 +151,14 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                  <Input id="receivedBy" value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} disabled={isDelivered}/>
                              </div>
                              <div className="space-y-2">
-                                 <Label>Date Received</Label>
-                                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                                    <div className="relative">
-                                        <Input
-                                          value={receivedDate ? format(receivedDate, 'PPP') : ''}
-                                          readOnly
-                                          onFocus={() => setIsCalendarOpen(true)}
-                                          placeholder="Select a date"
-                                          className="pl-3 pr-10 text-left font-normal"
-                                          disabled={isDelivered}
-                                        />
-                                      <PopoverTrigger asChild>
-                                         <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground" disabled={isDelivered}>
-                                            <CalendarIcon className="h-4 w-4" />
-                                         </Button>
-                                      </PopoverTrigger>
-                                    </div>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar
-                                        mode="single"
-                                        selected={receivedDate}
-                                        onSelect={(date) => {
-                                          if (date) setReceivedDate(date);
-                                          setIsCalendarOpen(false);
-                                        }}
-                                        initialFocus
-                                        disabled={isDelivered}
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
+                                <Label>Date Received</Label>
+                                <Input 
+                                    type="date"
+                                    value={receivedDate ? format(receivedDate, 'yyyy-MM-dd') : ''}
+                                    onChange={handleDateChange}
+                                    className="w-full"
+                                    disabled={isDelivered}
+                                />
                              </div>
                          </div>
                      </div>

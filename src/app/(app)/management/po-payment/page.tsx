@@ -431,7 +431,7 @@ export default function PoPaymentPage() {
                     return (
                         <TableRow key={summary.id}>
                             <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
-                            <TableCell>{format(summary.po.date.toDate(), 'PPP')}</TableCell>
+                            <TableCell>{format(summary.po.date.toDate(), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{summary.po.careOf}</TableCell>
                             <TableCell className="text-right">{formatCurrency(allocation)}</TableCell>
                             <TableCell className="text-right font-semibold">{formatCurrency(expenses)}</TableCell>

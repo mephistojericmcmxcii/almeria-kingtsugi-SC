@@ -401,7 +401,7 @@ export default function AllOrdersPage() {
                                     <div className="font-medium">{t.transactionType === 'order' ? (t as Order).userDisplayName : (t as QuotationRequest).customerName}</div>
                                     <div className="text-xs text-muted-foreground">{t.transactionType === 'order' ? (t as Order).userEmail : (t as QuotationRequest).emailAddress}</div>
                                 </TableCell>
-                                <TableCell>{format(t.transactionType === 'order' ? (t as Order).orderDate.toDate() : (t as QuotationRequest).createdAt.toDate(), 'MMM d, yyyy')}</TableCell>
+                                <TableCell>{format(t.transactionType === 'order' ? (t as Order).orderDate.toDate() : (t as QuotationRequest).createdAt.toDate(), 'dd/MM/yyyy')}</TableCell>
                                 <TableCell>{t.transactionType === 'order' ? formatCurrency((t as Order).totalAmount) : <span className="text-muted-foreground">N/A</span>}</TableCell>
                                 <TableCell>{t.transactionType === 'order' ? getStatusBadge((t as Order).status) : <Badge variant="outline">Submitted</Badge>}</TableCell>
                                 <TableCell className="text-right">
@@ -448,7 +448,7 @@ export default function AllOrdersPage() {
                             </div>
                              <div>
                                 <h3 className="font-semibold mb-2">Order Info</h3>
-                                <p>{format(selectedOrder.orderDate.toDate(), 'MMMM d, yyyy, h:mm a')}</p>
+                                <p>{format(selectedOrder.orderDate.toDate(), 'dd/MM/yyyy, h:mm a')}</p>
                                 <p className="text-sm text-muted-foreground">Payment: {selectedOrder.paymentMethod}</p>
                             </div>
                         </div>

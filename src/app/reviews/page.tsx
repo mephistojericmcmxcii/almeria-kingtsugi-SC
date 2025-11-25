@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -127,7 +128,7 @@ export default function CustomerReviewsPage() {
                                     <CardTitle className="text-lg">{review.userName}</CardTitle>
                                     {review.createdAt && (
                                         <p className="text-xs text-muted-foreground">
-                                            {format(review.createdAt.toDate(), 'MMMM d, yyyy')}
+                                            {format(review.createdAt.toDate(), 'dd/MM/yyyy')}
                                         </p>
                                     )}
                                 </div>

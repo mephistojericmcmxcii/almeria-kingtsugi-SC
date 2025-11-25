@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -71,6 +72,13 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
     }
   }, [isOpen, form]);
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    if (!isNaN(date.getTime())) {
+      form.setValue('date', date, { shouldValidate: true });
+    }
+  };
+
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     const docId = doc(collection(firestore, 'purchase_orders')).id;
@@ -137,40 +145,14 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
              <FormField control={form.control} name="date" render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Date</FormLabel>
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                    <div className="relative">
-                      <FormControl>
-                        <Input
-                          value={field.value ? format(field.value, 'PPP') : ''}
-                          onChange={(e) => {
-                              const parsedDate = parse(e.target.value, 'PPP', new Date());
-                              if (!isNaN(parsedDate.getTime())) {
-                                  field.onChange(parsedDate);
-                              }
-                          }}
-                          onFocus={() => setIsCalendarOpen(true)}
-                          placeholder="Select a date"
-                          className="pl-3 pr-10 text-left font-normal"
-                        />
-                      </FormControl>
-                      <PopoverTrigger asChild>
-                         <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground">
-                            <CalendarIcon className="h-4 w-4" />
-                         </Button>
-                      </PopoverTrigger>
-                    </div>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={(date) => {
-                          if (date) field.onChange(date);
-                          setIsCalendarOpen(false);
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <FormControl>
+                    <Input 
+                      type="date" 
+                      value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                      onChange={handleDateChange}
+                      className="w-full"
+                    />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
