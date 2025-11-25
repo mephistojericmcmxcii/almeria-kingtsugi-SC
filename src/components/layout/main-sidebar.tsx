@@ -130,7 +130,8 @@ const MainSidebar = () => {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2">
-            <KintsugiLogo />
+          <Gem className="size-6 text-primary" />
+          <h1 className="font-bold text-lg font-brand">KINTSUGI</h1>
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1">
