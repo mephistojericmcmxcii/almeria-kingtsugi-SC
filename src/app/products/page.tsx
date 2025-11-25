@@ -159,8 +159,7 @@ export default function ProductsPage() {
                                 </CardHeader>
                                 <CardContent className="p-4 pt-0 mt-auto">
                                     <Button variant="outline" size="sm" className="w-full">
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        <span className="sm:inline">View Item</span>
+                                        View
                                     </Button>
                                 </CardContent>
                             </Card>
