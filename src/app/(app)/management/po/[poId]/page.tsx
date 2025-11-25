@@ -54,7 +54,7 @@ export default function PoDetailsPage() {
         if (!firestore || !poId) return;
         try {
             const itemsCollectionRef = collection(firestore, 'purchase_orders', poId, 'items');
-            const q = query(itemsCollectionRef, orderBy('createdAt', 'desc'));
+            const q = query(itemsCollectionRef, orderBy('createdAt', 'asc'));
             const itemsSnap = await getDocs(q);
             setPoItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem)));
         } catch (error) {
@@ -74,7 +74,7 @@ export default function PoDetailsPage() {
                 }
 
                 const itemsCollectionRef = collection(firestore, 'purchase_orders', poId, 'items');
-                const q = query(itemsCollectionRef, orderBy('createdAt', 'desc'));
+                const q = query(itemsCollectionRef, orderBy('createdAt', 'asc'));
                 const itemsSnap = await getDocs(q);
                 setPoItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem)));
 
