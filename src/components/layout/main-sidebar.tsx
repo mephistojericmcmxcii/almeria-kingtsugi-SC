@@ -125,8 +125,8 @@ const MainSidebar = () => {
     <Sidebar>
       <SidebarHeader className="h-16">
         <div className="flex items-center gap-2">
-          <Gem className="text-primary"/>
-          <h1 className="font-bold text-lg font-ink-free text-primary">KINTSUGI</h1>
+          <Gem className="h-6 w-6 text-primary"/>
+          <h1 className="font-bold text-2xl font-ink-free text-primary">KINTSUGI</h1>
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1">
