@@ -83,10 +83,14 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                     <p className="text-sm font-semibold text-muted-foreground">Date</p>
                     <p>{format(po.date.toDate(), 'PPP')}</p>
                 </div>
-            </div>
-             <div>
-                <p className="text-sm font-semibold text-muted-foreground">Care Of</p>
-                <p>{po.careOf}</p>
+                 <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Care Of</p>
+                    <p>{po.careOf}</p>
+                </div>
+                 <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Agency / Company</p>
+                    <p>{po.source}</p>
+                </div>
             </div>
              <div className="grid grid-cols-2 gap-4">
                 <div>
