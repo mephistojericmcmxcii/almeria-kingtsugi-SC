@@ -6,14 +6,22 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { PageLoader } from '@/components/layout/page-loader';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 
 function AppWrapper({ children }: { children: React.ReactNode }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <>
-      <Suspense fallback={null}>
-        <PageLoader />
-      </Suspense>
+      {isMounted && (
+        <Suspense fallback={null}>
+          <PageLoader />
+        </Suspense>
+      )}
       {children}
     </>
   );
