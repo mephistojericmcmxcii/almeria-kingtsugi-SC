@@ -146,7 +146,7 @@ export default function PoPaymentPage() {
   const availableYears = useMemo(() => {
     if (!summaries) return [];
     const years = new Set(summaries.map(s => s.po.date.toDate().getFullYear()));
-    return ["all", ...Array.from(years).sort((a, b) => b - a).map(String)];
+    return Array.from(years).sort((a, b) => b - a).map(String);
   }, [summaries]);
 
   const QUARTER_MONTHS: Record<string, { name: string; value: number }[]> = {
@@ -394,7 +394,7 @@ export default function PoPaymentPage() {
                         <SelectContent>
                             <SelectItem value="all">All Years</SelectItem>
                             {availableYears.map(year => (
-                                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -557,5 +557,6 @@ export default function PoPaymentPage() {
 }
 
     
+
 
 
