@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
@@ -128,7 +127,7 @@ export default function PoPage() {
             let displayStatus: PurchaseOrder['status'] = po.status;
              if (po.status === 'Lacking') {
                  if (generalItemsCount > 0 && generalItemsCount === generalItemsWithActualAmount) {
-                    displayStatus = 'Completed';
+                    displayStatus = 'For Delivery';
                 }
             }
 
@@ -677,3 +676,5 @@ export default function PoPage() {
     </>
   );
 }
+
+    
