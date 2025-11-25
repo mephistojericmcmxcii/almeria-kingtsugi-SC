@@ -75,7 +75,7 @@ export default function AboutPage() {
                 </div>
                 <Card>
                     <CardContent className="p-6">
-                        <div className="grid md:grid-cols-2 gap-8 items-center">
+                        <div className="grid md:grid-cols-2 gap-8 items-start">
                             <div className="space-y-4">
                                 <h2 className="text-2xl font-semibold font-headline text-primary">{displayContent.heading}</h2>
                                 {isLoading ? (
