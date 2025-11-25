@@ -26,6 +26,7 @@ const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
+  source: z.string().min(2, 'Agency/Company is required.'),
   totalAllocation: z.preprocess(
     (val) => (val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val)),
     z.number().optional()
@@ -52,6 +53,7 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
     defaultValues: {
       poNumber: '',
       careOf: '',
+      source: '',
       totalAllocation: 0,
     },
   });
@@ -63,6 +65,7 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
           poNumber: poToEdit.poNumber,
           date: poToEdit.date.toDate(),
           careOf: poToEdit.careOf,
+          source: poToEdit.source,
           totalAllocation: poToEdit.totalAllocation || 0,
         });
       } else {
@@ -70,6 +73,7 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
           poNumber: '',
           date: new Date(),
           careOf: '',
+          source: '',
           totalAllocation: 0,
         });
       }
@@ -84,7 +88,6 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
     const dataToSave: Partial<PurchaseOrder> = {
       ...values,
       date: Timestamp.fromDate(values.date),
-      source: '', // Set source to empty string
       updatedAt: serverTimestamp(),
     };
     
@@ -195,6 +198,13 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
                 <FormMessage />
               </FormItem>
             )} />
+            <FormField control={form.control} name="source" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Agency / Company</FormLabel>
+                <FormControl><Input placeholder="e.g. DepEd, Local Supplier" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <FormField control={form.control} name="totalAllocation" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Total Amount Allocated (Optional)</FormLabel>
@@ -215,5 +225,3 @@ export default function AddEditPoDialog({ isOpen, onOpenChange, poToEdit }: AddE
     </Dialog>
   );
 }
-
-    
