@@ -27,8 +27,6 @@ const PAYMENT_STATUSES: PoPaymentStatus[] = ['Paid', 'Unpaid'];
 
 const formSchema = z.object({
   paymentDate: z.date().optional(),
-  agency: z.string().optional(),
-  careOf: z.string().min(1, "Care Of is required"),
   amountDeposited: z.preprocess(
     (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
     z.number().optional()
@@ -83,8 +81,6 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     if (isOpen && po) {
       form.reset({
         paymentDate: po.paymentDate?.toDate(),
-        agency: po.agency || po.source || '',
-        careOf: po.careOf || '',
         amountDeposited: po.amountDeposited,
         bank: po.bank || '',
         paymentStatus: po.paymentStatus || 'Unpaid',
@@ -192,20 +188,14 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="agency" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Agency / Company</FormLabel>
-                    <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
-                 <FormField control={form.control} name="careOf" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Care Of</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
+                <div className="space-y-2">
+                    <p className="text-sm font-medium">Agency / Company</p>
+                    <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted min-h-[40px]">{po.source}</p>
+                </div>
+                 <div className="space-y-2">
+                    <p className="text-sm font-medium">Care Of</p>
+                    <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted min-h-[40px]">{po.careOf}</p>
+                </div>
             </div>
 
             <FormField control={form.control} name="paymentDate" render={({ field }) => (
