@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -29,7 +28,7 @@ const formSchema = z.object({
   poNumber: z.string().min(1, 'PO Number is required.'),
   date: z.date({ required_error: 'A date is required.' }),
   careOf: z.string().min(2, 'Care Of is required.'),
-  source: z.string().min(2, 'Source/Supplier is required.'),
+  source: z.string().min(2, 'Agency / Company is required.'),
   status: z.enum(PO_STATUSES),
   paymentStatus: z.enum(PAYMENT_STATUSES),
 });
@@ -123,7 +122,7 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
             )} />
              <FormField control={form.control} name="source" render={({ field }) => (
               <FormItem>
-                <FormLabel>Source / Supplier</FormLabel>
+                <FormLabel>Agency / Company</FormLabel>
                 <FormControl><Input placeholder="e.g., National Bookstore" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -223,4 +222,3 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
     </Dialog>
   );
 }
-

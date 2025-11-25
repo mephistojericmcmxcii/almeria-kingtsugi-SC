@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -84,7 +83,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     if (isOpen && po) {
       form.reset({
         paymentDate: po.paymentDate?.toDate(),
-        agency: po.agency || '',
+        agency: po.agency || po.source || '',
         careOf: po.careOf || '',
         amountDeposited: po.amountDeposited,
         bank: po.bank || '',
@@ -195,7 +194,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="agency" render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Agency / Institution</FormLabel>
+                    <FormLabel>Agency / Company</FormLabel>
                     <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
@@ -324,5 +323,3 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     </Dialog>
   );
 }
-
-    
