@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Header from '@/components/layout/header';
 import MainSidebar from '@/components/layout/main-sidebar';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 
 
 const EditHomeDialog = lazy(() => import('@/components/home/edit-home-dialog').then(module => ({ default: module.EditHomeDialog })));
@@ -47,12 +47,13 @@ const titleSizeClasses: {[key: number]: string} = {
     9: 'text-9xl md:text-9xl',
 }
 
-export default function HomePage() {
+function HomePageContent() {
   const { user } = useAuth();
   const { firestore } = useFirebase();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [content, setContent] = useState<HomePageSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { setOpen } = useSidebar();
 
   useEffect(() => {
       const fetchContent = async () => {
@@ -83,11 +84,9 @@ export default function HomePage() {
   const titleSize = displayContent.titleSize || 7;
 
   return (
-    <SidebarProvider>
-        <MainSidebar />
-        <div className="flex flex-col w-full h-screen">
+    <div className="flex flex-col w-full h-screen">
         <Header />
-         <main className="flex-1 flex flex-col relative overflow-hidden">
+         <main className="flex-1 flex flex-col relative overflow-hidden" onClick={() => setOpen(false)}>
              {/* Background Image */}
             {isLoading ? (
             <Skeleton className="absolute inset-0 w-full h-full" />
@@ -148,7 +147,7 @@ export default function HomePage() {
             {/* Admin Edit Button */}
             {user?.role === 'admin' && (
             <div className="absolute top-4 right-4 z-20">
-                <Button variant="secondary" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+                <Button variant="secondary" size="icon" onClick={(e) => { e.stopPropagation(); setIsEditDialogOpen(true);}}>
                 <ImageIcon className="h-4 w-4" />
                 <span className="sr-only">Edit Home Page</span>
                 </Button>
@@ -175,6 +174,15 @@ export default function HomePage() {
             )}
         </main>
         </div>
-    </SidebarProvider>
   );
+}
+
+
+export default function HomePage() {
+    return (
+        <SidebarProvider>
+            <MainSidebar />
+            <HomePageContent />
+        </SidebarProvider>
+    );
 }
