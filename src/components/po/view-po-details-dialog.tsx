@@ -7,7 +7,7 @@ import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
 import type { DisplayPurchaseOrder } from '@/app/(app)/management/po/page';
 import { format, parse } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Download, Calendar as CalendarIcon } from 'lucide-react';
@@ -34,14 +34,26 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
-  const [salesInvoice, setSalesInvoice] = useState(po.salesInvoice || '');
-  const [deliveryReceipt, setDeliveryReceipt] = useState(po.deliveryReceipt || '');
+  const [salesInvoice, setSalesInvoice] = useState('');
+  const [deliveryReceipt, setDeliveryReceipt] = useState('');
   const [siFile, setSiFile] = useState<File | null>(null);
   const [drFile, setDrFile] = useState<File | null>(null);
-  const [receivedBy, setReceivedBy] = useState(po.receivedBy || '');
-  
-  const [receivedDateString, setReceivedDateString] = useState(po.receivedDate ? format(po.receivedDate.toDate(), 'dd-MMM-yyyy') : '');
-  const [receivedDate, setReceivedDate] = useState<Date | undefined>(po.receivedDate?.toDate());
+  const [receivedBy, setReceivedBy] = useState('');
+  const [receivedDateString, setReceivedDateString] = useState('');
+  const [receivedDate, setReceivedDate] = useState<Date | undefined>();
+
+  useEffect(() => {
+    if (isOpen && po) {
+      setSalesInvoice(po.salesInvoice || '');
+      setDeliveryReceipt(po.deliveryReceipt || '');
+      setReceivedBy(po.receivedBy || '');
+      const rDate = po.receivedDate?.toDate();
+      setReceivedDate(rDate);
+      setReceivedDateString(rDate ? format(rDate, 'dd-MMM-yyyy') : '');
+      setSiFile(null);
+      setDrFile(null);
+    }
+  }, [isOpen, po]);
 
 
   if (!po) return null;
@@ -68,7 +80,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => onOpenChange(false)}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onOpenChange(false)}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">PO Details: #{po.poNumber}</DialogTitle>
