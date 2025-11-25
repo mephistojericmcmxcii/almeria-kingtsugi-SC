@@ -188,13 +188,13 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <p className="text-sm font-medium">Agency / Company</p>
-                    <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted min-h-[40px]">{po.source}</p>
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Agency / Company</p>
+                    <p className="font-semibold">{po.source}</p>
                 </div>
-                 <div className="space-y-2">
-                    <p className="text-sm font-medium">Care Of</p>
-                    <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted min-h-[40px]">{po.careOf}</p>
+                 <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Care Of</p>
+                    <p className="font-semibold">{po.careOf}</p>
                 </div>
             </div>
 
