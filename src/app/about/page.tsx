@@ -90,7 +90,7 @@ export default function AboutPage() {
                                     <>
                                         <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{displayContent.body}</p>
                                         <h3 className="text-xl font-semibold font-headline text-accent pt-4">{displayContent.missionHeading}</h3>
-                                        <p className="text-muted-foreground leading-relaxed">{displayContent.missionP}</p>
+                                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{displayContent.missionP}</p>
                                     </>
                                 )}
                             </div>
