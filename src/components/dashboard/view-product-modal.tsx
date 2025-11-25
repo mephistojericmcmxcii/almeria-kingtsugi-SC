@@ -104,9 +104,9 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={true}>
         <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0">
-            {/* Left Column: Image */}
-            <div className="p-6 flex items-center justify-center">
-                <div className="aspect-square relative w-full max-w-md">
+            {/* Left Column: Image & Actions */}
+            <div className="p-6 flex flex-col">
+                <div className="aspect-square relative w-full">
                     <img
                         src={placeholder.imageUrl}
                         alt={placeholder.description || 'Product Image'}
@@ -114,10 +114,27 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                         data-ai-hint={placeholder.imageHint}
                     />
                 </div>
+                <div className="mt-4 pt-4 border-t space-y-4">
+                     <div className="flex items-center justify-between text-base">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                              <Tag className="w-5 h-5" />
+                              <span className="font-bold text-xl text-foreground">Price on Request</span>
+                          </div>
+                      </div>
+                       <div className="flex items-center gap-2">
+                          {getStatusBadge(variant)}
+                          {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                          <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
+                              <FileQuestion className="mr-2" /> Add to Quotation
+                          </Button>
+                      </div>
+                </div>
             </div>
             
             {/* Right Column: Details */}
-            <div className="flex flex-col min-h-0">
+            <div className="flex flex-col min-h-0 border-l">
                 <ScrollArea className="flex-1">
                     <div className="p-6 space-y-6">
                         <DialogHeader className="space-y-2 text-left">
@@ -159,23 +176,6 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="p-6 border-t bg-background space-y-4 flex-col sm:flex-col sm:space-x-0 sm:justify-start items-stretch">
-                     <div className="flex items-center justify-between text-base">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                              <Tag className="w-5 h-5" />
-                              <span className="font-bold text-xl text-foreground">Price on Request</span>
-                          </div>
-                      </div>
-                       <div className="flex items-center gap-2">
-                          {getStatusBadge(variant)}
-                          {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                          <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
-                              <FileQuestion className="mr-2" /> Add to Quotation
-                          </Button>
-                      </div>
-                </DialogFooter>
             </div>
         </div>
       </DialogContent>
