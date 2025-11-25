@@ -177,3 +177,7 @@ export type CustomerFeedback = {
   review?: string;
   createdAt: any;
 };
+
+export type BrandSettings = {
+  logoUrl?: string;
+};

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -7,6 +8,7 @@ import { UserManagement } from "@/components/admin/user-management";
 import { SystemSettings } from "@/components/admin/system-settings";
 import { PrintSettings } from "@/components/admin/print-settings";
 import { ShieldAlert } from "lucide-react";
+import { BrandSettings } from "@/components/admin/brand-settings";
 
 export default function AdminPage() {
     const { user } = useAuth();
@@ -29,11 +31,15 @@ export default function AdminPage() {
         <Tabs defaultValue="users" className="space-y-4">
             <TabsList>
                 <TabsTrigger value="users">User Management</TabsTrigger>
+                <TabsTrigger value="branding">Branding</TabsTrigger>
                 <TabsTrigger value="settings">System Settings</TabsTrigger>
                 <TabsTrigger value="print">Print Settings</TabsTrigger>
             </TabsList>
             <TabsContent value="users" className="space-y-4">
                 <UserManagement />
+            </TabsContent>
+            <TabsContent value="branding" className="space-y-4">
+                <BrandSettings />
             </TabsContent>
             <TabsContent value="settings" className="space-y-4">
                 <SystemSettings />

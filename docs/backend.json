@@ -129,6 +129,19 @@
         }
       }
     },
+    "BrandSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BrandSettings",
+      "type": "object",
+      "description": "Stores branding assets like the logo URL.",
+      "properties": {
+        "logoUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the brand logo to be displayed in the sidebar."
+        }
+      }
+    },
     "AboutPageContent": {
       "$schema": "http://json-schema.org/draft-07-schema#",
       "title": "AboutPageContent",
@@ -749,11 +762,11 @@
           "schema": {
             "$ref": "#/backend/entities/SystemSetting"
           },
-          "description": "Stores system settings. Only accessible to admins. Can hold 'about_page', 'home_page', or 'print_settings'.",
+          "description": "Stores system settings. Only accessible to admins. Can hold 'about_page', 'home_page', 'print_settings', or 'brand_logo'.",
           "params": [
             {
               "name": "settingId",
-              "description": "The unique identifier for the system setting. This can be a specific ID like 'about_page', 'maintenance_mode', 'home_page' or 'print_settings'."
+              "description": "The unique identifier for the system setting. This can be a specific ID like 'about_page', 'maintenance_mode', 'home_page', 'print_settings', or 'brand_logo'."
             }
           ]
         }

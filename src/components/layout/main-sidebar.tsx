@@ -37,17 +37,46 @@ import {
   Star,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useFirebase } from "@/firebase";
 import { UserNav } from "../auth/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { LoginRedirectDialog } from "../auth/login-redirect-dialog";
+import { doc, getDoc } from "firebase/firestore";
+import { Skeleton } from "../ui/skeleton";
 
 const MainSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, showAdminOrderBadge, showAdminRfqBadge } = useAuth();
+  const { firestore } = useFirebase();
   const [managementOpen, setManagementOpen] = React.useState(false);
   const [isLoginRedirectOpen, setIsLoginRedirectOpen] = React.useState(false);
+  const [logoUrl, setLogoUrl] = React.useState<string | null>(null);
+  const [isLoadingLogo, setIsLoadingLogo] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchLogo = async () => {
+      if (!firestore) return;
+      setIsLoadingLogo(true);
+      try {
+        const brandSettingsRef = doc(firestore, 'system_settings', 'brand_logo');
+        const docSnap = await getDoc(brandSettingsRef);
+        if (docSnap.exists()) {
+          setLogoUrl(docSnap.data().logoUrl);
+        } else {
+          setLogoUrl(null);
+        }
+      } catch (error) {
+        console.error("Error fetching brand logo:", error);
+        setLogoUrl(null);
+      } finally {
+        setIsLoadingLogo(false);
+      }
+    };
+    fetchLogo();
+  }, [firestore]);
+
 
   React.useEffect(() => {
     if (pathname.startsWith('/management')) {
@@ -124,10 +153,18 @@ const MainSidebar = () => {
     <>
     <Sidebar>
       <SidebarHeader className="h-16 border-b-2 border-b-foreground/20">
-        <div className="flex items-center gap-2">
-          <Gem className="h-8 w-8 text-primary"/>
-          <h1 className="font-bold text-3xl font-ink-free text-primary">KINTSUGI</h1>
-        </div>
+        <Link href="/" className="flex items-center gap-2">
+            {isLoadingLogo ? (
+                <Skeleton className="h-10 w-48" />
+            ) : logoUrl ? (
+                <img src={logoUrl} alt="Kintsugi Brand Logo" className="h-10 object-contain" />
+            ) : (
+                <>
+                    <Gem className="h-8 w-8 text-primary"/>
+                    <h1 className="font-bold text-3xl font-ink-free text-primary">KINTSUGI</h1>
+                </>
+            )}
+        </Link>
       </SidebarHeader>
       <SidebarMenu className="flex-1">
         {menuItems.map((item) => {
