@@ -128,7 +128,7 @@ export default function CustomerReviewsPage() {
                                     <CardTitle className="text-lg">{review.userName}</CardTitle>
                                     {review.createdAt && (
                                         <p className="text-xs text-muted-foreground">
-                                            {format(review.createdAt.toDate(), 'dd/MM/yyyy')}
+                                            {format(review.createdAt.toDate(), 'dd-MMM-yyyy')}
                                         </p>
                                     )}
                                 </div>

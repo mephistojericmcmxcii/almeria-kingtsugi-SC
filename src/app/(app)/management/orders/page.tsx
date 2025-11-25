@@ -401,7 +401,7 @@ export default function AllOrdersPage() {
                                     <div className="font-medium">{t.transactionType === 'order' ? (t as Order).userDisplayName : (t as QuotationRequest).customerName}</div>
                                     <div className="text-xs text-muted-foreground">{t.transactionType === 'order' ? (t as Order).userEmail : (t as QuotationRequest).emailAddress}</div>
                                 </TableCell>
-                                <TableCell>{format(t.transactionType === 'order' ? (t as Order).orderDate.toDate() : (t as QuotationRequest).createdAt.toDate(), 'dd/MM/yyyy')}</TableCell>
+                                <TableCell>{format(t.transactionType === 'order' ? (t as Order).orderDate.toDate() : (t as QuotationRequest).createdAt.toDate(), 'dd-MMM-yyyy')}</TableCell>
                                 <TableCell>{t.transactionType === 'order' ? formatCurrency((t as Order).totalAmount) : <span className="text-muted-foreground">N/A</span>}</TableCell>
                                 <TableCell>{t.transactionType === 'order' ? getStatusBadge((t as Order).status) : <Badge variant="outline">Submitted</Badge>}</TableCell>
                                 <TableCell className="text-right">
@@ -448,7 +448,7 @@ export default function AllOrdersPage() {
                             </div>
                              <div>
                                 <h3 className="font-semibold mb-2">Order Info</h3>
-                                <p>{format(selectedOrder.orderDate.toDate(), 'dd/MM/yyyy, h:mm a')}</p>
+                                <p>{format(selectedOrder.orderDate.toDate(), 'dd-MMM-yyyy, h:mm a')}</p>
                                 <p className="text-sm text-muted-foreground">Payment: {selectedOrder.paymentMethod}</p>
                             </div>
                         </div>
@@ -585,6 +585,19 @@ export default function AllOrdersPage() {
                                     onChange={(e) => setCancellationReason(e.target.value)}
                                     placeholder={`Provide a reason for this action...`}
                                 />
+                            </div>
+                        )}
+                         {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
+                            <div className="pt-4 border-t">
+                                <h3 className="font-semibold mb-2 flex items-center gap-2">Status History</h3>
+                                <ul className="space-y-1 text-sm text-muted-foreground">
+                                    {selectedOrder.statusHistory.map((h: StatusHistory, index: number) => (
+                                        <li key={index} className="flex items-center justify-between">
+                                            <span className="font-medium capitalize">{STATUS_DISPLAY_NAMES[h.status] || h.status.replace('-', ' ')}</span>
+                                            <span>{format(h.timestamp.toDate(), 'dd-MMM-yyyy, h:mm a')}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
                         )}
                     </div>

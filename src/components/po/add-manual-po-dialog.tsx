@@ -141,10 +141,10 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
                  <div className="relative flex items-center">
                     <FormControl>
                          <Input
-                            value={field.value ? format(field.value, 'dd/MM/yyyy') : ''}
+                            value={field.value ? format(field.value, 'dd-MMM-yyyy') : ''}
                             onChange={(e) => {
                                 try {
-                                    const parsedDate = parse(e.target.value, 'dd/MM/yyyy', new Date());
+                                    const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
                                     if (!isNaN(parsedDate.getTime())) {
                                         field.onChange(parsedDate);
                                     } else {
@@ -154,7 +154,7 @@ export function AddManualPoDialog({ isOpen, onOpenChange, onSuccess }: AddManual
                                     field.onChange(undefined);
                                 }
                             }}
-                            placeholder="dd/MM/yyyy"
+                            placeholder="dd-MMM-yyyy"
                         />
                     </FormControl>
                     <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>

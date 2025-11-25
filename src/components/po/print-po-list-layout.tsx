@@ -61,7 +61,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                                   <tbody>
                                       <tr>
                                           <td className="font-medium">{po.poNumber}</td>
-                                          <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
+                                          <td>{format(po.date.toDate(), 'dd-MMM-yyyy')}</td>
                                           <td>{po.careOf}</td>
                                           <td className="text-right">{formatCurrency(totals[po.id]?.allocated || 0)}</td>
                                           <td className="text-right">{formatCurrency(totals[po.id]?.utilized || 0)}</td>
@@ -120,7 +120,7 @@ const PrintPoListLayout: React.FC<PrintPoListLayoutProps> = ({ pos, totals, poIt
                       return (
                           <tr key={po.id}>
                               <td className="font-medium">{po.poNumber}</td>
-                              <td>{format(po.date.toDate(), 'MMM d, yyyy')}</td>
+                              <td>{format(po.date.toDate(), 'dd-MMM-yyyy')}</td>
                               <td>{po.careOf}</td>
                               <td>{(po as any).displayStatus || po.status}</td>
                               <td className="text-right">{formatCurrency(total?.allocated || 0)}</td>

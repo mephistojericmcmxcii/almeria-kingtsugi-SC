@@ -82,7 +82,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 </div>
                  <div>
                     <p className="text-sm font-semibold text-muted-foreground">Date</p>
-                    <p>{format(po.date.toDate(), 'dd/MM/yyyy')}</p>
+                    <p>{format(po.date.toDate(), 'dd-MMM-yyyy')}</p>
                 </div>
                  <div>
                     <p className="text-sm font-semibold text-muted-foreground">Care Of</p>
@@ -148,16 +148,16 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                 <Label>Date Received</Label>
                                 <div className="relative flex items-center">
                                     <Input
-                                        value={receivedDate ? format(receivedDate, 'dd/MM/yyyy') : ''}
+                                        value={receivedDate ? format(receivedDate, 'dd-MMM-yyyy') : ''}
                                         onChange={(e) => {
                                             try {
-                                                const parsedDate = parse(e.target.value, 'dd/MM/yyyy', new Date());
+                                                const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
                                                 setReceivedDate(isNaN(parsedDate.getTime()) ? undefined : parsedDate);
                                             } catch {
                                                 setReceivedDate(undefined);
                                             }
                                         }}
-                                        placeholder="dd/MM/yyyy"
+                                        placeholder="dd-MMM-yyyy"
                                         disabled={isDelivered}
                                     />
                                     <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>

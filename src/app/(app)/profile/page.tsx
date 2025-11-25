@@ -334,7 +334,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                                 {order.statusHistory.map((h: StatusHistory, index: number) => (
                                     <li key={index} className="flex items-center justify-between">
                                         <span className="font-medium capitalize">{statusDisplayMap[h.status] || h.status.replace('-', ' ')}</span>
-                                        <span>{format(h.timestamp.toDate(), 'dd/MM/yyyy, h:mm a')}</span>
+                                        <span>{format(h.timestamp.toDate(), 'dd-MMM-yyyy, h:mm a')}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -396,7 +396,7 @@ function OrderList({ orders, title, description, emptyMessage }: { orders: Order
                             {orders.map(order => (
                                 <TableRow key={order.id}>
                                     <TableCell className="font-mono text-xs">{order.id}</TableCell>
-                                    <TableCell>{format(order.orderDate.toDate(), 'dd/MM/yyyy')}</TableCell>
+                                    <TableCell>{format(order.orderDate.toDate(), 'dd-MMM-yyyy')}</TableCell>
                                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                                     <TableCell className="text-right font-medium">
                                         {order.status !== 'pending-quote' ? formatCurrency(order.totalAmount) : 'N/A'}
@@ -579,7 +579,7 @@ function RfqList() {
                         {rfqs.map(rfq => (
                             <TableRow key={rfq.id}>
                                 <TableCell className="font-mono text-xs">{rfq.id}</TableCell>
-                                <TableCell>{format(rfq.createdAt.toDate(), 'dd/MM/yyyy')}</TableCell>
+                                <TableCell>{format(rfq.createdAt.toDate(), 'dd-MMM-yyyy')}</TableCell>
                                 <TableCell>
                                     <Badge variant={rfq.requestType === 'list' ? 'secondary' : 'default'}>
                                         {rfq.requestType === 'list' ? 'Listed Items' : 'File Attachment'}

@@ -56,7 +56,7 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
                   </div>
                   <div>
                       <p className="po-info-label">Date:</p>
-                      <p className="po-info-value">{format(po.date.toDate(), 'MMM d, yyyy')}</p>
+                      <p className="po-info-value">{format(po.date.toDate(), 'dd-MMM-yyyy')}</p>
                   </div>
                    <div style={{ gridColumn: '1 / -1' }}>
                       <p className="po-info-label">Care Of:</p>

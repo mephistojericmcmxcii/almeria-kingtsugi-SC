@@ -579,7 +579,7 @@ export default function PoPage() {
                         </TableCell>
                        )}
                       <TableCell className="font-medium">{po.poNumber}</TableCell>
-                      <TableCell>{format(po.date.toDate(), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>{format(po.date.toDate(), 'dd-MMM-yyyy')}</TableCell>
                       <TableCell>{po.careOf}</TableCell>
                       <TableCell>{getStatusBadge(po.displayStatus)}</TableCell>
                        <TableCell className="text-right font-medium">
