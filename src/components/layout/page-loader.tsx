@@ -37,6 +37,18 @@ export function PageLoader() {
     };
   }, [pathname, searchParams, isClient]);
 
+  useEffect(() => {
+    if (isPageLoading) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isPageLoading]);
+
   if (!isClient) {
     return null;
   }
