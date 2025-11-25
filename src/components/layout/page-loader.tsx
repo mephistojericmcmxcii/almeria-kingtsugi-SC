@@ -11,8 +11,16 @@ export function PageLoader() {
   const searchParams = useSearchParams();
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    // We need to wait for the client to be ready before starting the loading logic
+    if (!isClient) return;
+
     setIsPageLoading(true);
     setIsVisible(true);
 
@@ -28,7 +36,11 @@ export function PageLoader() {
         clearTimeout(timer);
         clearTimeout(fadeOutTimer);
     };
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, isClient]);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div
