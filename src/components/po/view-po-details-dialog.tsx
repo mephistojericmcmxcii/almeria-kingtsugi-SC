@@ -33,7 +33,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   const { updatePoStatus } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<PurchaseOrderStatus | ''>('');
+  
   const [salesInvoice, setSalesInvoice] = useState(po.salesInvoice || '');
   const [deliveryReceipt, setDeliveryReceipt] = useState(po.deliveryReceipt || '');
   const [siFile, setSiFile] = useState<File | null>(null);
@@ -46,10 +46,9 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
 
   if (!po) return null;
 
-  const handleUpdateStatus = async () => {
-    if (!selectedStatus) return;
+  const handleMarkAsDelivered = async () => {
     setIsUpdating(true);
-    const success = await updatePoStatus(po, selectedStatus, { 
+    const success = await updatePoStatus(po, 'Delivered', { 
         salesInvoice, 
         deliveryReceipt, 
         salesInvoiceFile: siFile, 
@@ -58,15 +57,15 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
         receivedDate
     });
     if (success) {
-        onOpenChange(true); // Signal that a change was made
+        onOpenChange(true);
     }
     setIsUpdating(false);
   }
   
-  const isDeliveredDisabled = !salesInvoice || !deliveryReceipt || !receivedBy || !receivedDate;
-  const isSaveDisabled = isUpdating || !selectedStatus || (selectedStatus === 'Delivered' && isDeliveredDisabled);
-  const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
   const isDelivered = po.status === 'Delivered';
+  const isMarkAsDeliveredDisabled = isUpdating || !salesInvoice || !deliveryReceipt || !receivedBy || !receivedDate || isDelivered;
+  
+  const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => onOpenChange(false)}>
@@ -197,20 +196,9 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
         <DialogFooter className="sm:justify-between items-center">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
           {(po.displayStatus === 'Completed' || po.displayStatus === 'For Delivery') && (
-            <div className="flex items-center gap-2">
-                 <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as PurchaseOrderStatus)} disabled={isUpdating || isDelivered}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Update Status..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="For Delivery">For Delivery</SelectItem>
-                        <SelectItem value="Delivered" disabled={isDeliveredDisabled}>Delivered</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button onClick={handleUpdateStatus} disabled={isSaveDisabled}>
-                    {isUpdating ? 'Saving...' : 'Save'}
-                </Button>
-            </div>
+            <Button onClick={handleMarkAsDelivered} disabled={isMarkAsDeliveredDisabled}>
+                {isUpdating ? 'Saving...' : (isDelivered ? 'Already Delivered' : 'Mark as Delivered')}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
