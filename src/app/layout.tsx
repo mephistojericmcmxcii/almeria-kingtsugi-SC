@@ -1,13 +1,23 @@
-import type { Metadata } from 'next';
+
+'use client';
+
 import './globals.css';
 import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { PageLoader } from '@/components/layout/page-loader';
+import { Suspense } from 'react';
 
-export const metadata: Metadata = {
-  title: 'KINTSUGI variery shop',
-  description: 'Business management for the KINTSUGI variety shop',
-};
+function AppWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <PageLoader />
+      </Suspense>
+      {children}
+    </>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -17,6 +27,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <title>KINTSUGI variety shop</title>
+        <meta name="description" content="Business management for the KINTSUGI variety shop" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Yuji+Syuku&display=swap" rel="stylesheet" />
@@ -25,7 +37,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <AuthProvider>
-            {children}
+            <AppWrapper>
+              {children}
+            </AppWrapper>
             <Toaster />
           </AuthProvider>
         </FirebaseClientProvider>
