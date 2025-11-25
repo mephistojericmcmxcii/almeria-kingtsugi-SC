@@ -166,6 +166,10 @@ const PrintBrochureLayout: React.FC<PrintBrochureLayoutProps> = ({ variant }) =>
                 <table className="specs-table">
                     <tbody>
                         <tr>
+                            <td>Brand</td>
+                            <td>{variant.brand}</td>
+                        </tr>
+                        <tr>
                             <td>Variation</td>
                             <td>{variant.variation}</td>
                         </tr>
