@@ -11,10 +11,10 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tag, FileQuestion, Info, ListTree, X } from 'lucide-react';
+import { Tag, FileQuestion, Info, ListTree } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { DialogHeader, DialogTitle } from '../ui/dialog';
 import { LoginRedirectDialog } from '../auth/login-redirect-dialog';
 
 interface ViewProductModalProps {
@@ -129,8 +129,8 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                           <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
                               <FileQuestion className="mr-2" /> Add to Quotation
                           </Button>
-                           <Button variant="secondary" size="lg" onClick={() => onOpenChange(false)}>
-                              Close
+                          <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
+                             Close
                            </Button>
                       </div>
                 </div>
