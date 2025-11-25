@@ -239,12 +239,12 @@ export default function PoPaymentPage() {
   
   const getSortIcon = (key: SortConfig['key']) => {
     if (!sortConfig || sortConfig.key !== key) {
-        return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+        return <ArrowUpDown className="h-4 w-4 opacity-50" />;
     }
     if (sortConfig.direction === 'ascending') {
-        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+        return <ArrowUpDown className="h-4 w-4" />;
     }
-    return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    return <ArrowUpDown className="h-4 w-4" />;
   };
 
 
@@ -394,16 +394,16 @@ export default function PoPaymentPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                 <TableHead><Button variant="ghost" onClick={() => requestSort('poNumber')}>PO # {getSortIcon('poNumber')}</Button></TableHead>
-                <TableHead><Button variant="ghost" onClick={() => requestSort('date')}>Date {getSortIcon('date')}</Button></TableHead>
-                <TableHead><Button variant="ghost" onClick={() => requestSort('careOf')}>Care Of {getSortIcon('careOf')}</Button></TableHead>
-                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('totalAllocation')}>Total Allocation {getSortIcon('totalAllocation')}</Button></TableHead>
-                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('totalExpenses')}>Total Expenses {getSortIcon('totalExpenses')}</Button></TableHead>
-                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('taxDeduction')}>Tax Deduction {getSortIcon('taxDeduction')}</Button></TableHead>
-                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('amountDeposited')}>Amount Deposited {getSortIcon('amountDeposited')}</Button></TableHead>
-                <TableHead className="text-right"><Button variant="ghost" onClick={() => requestSort('profit')}>Profit / Loss {getSortIcon('profit')}</Button></TableHead>
-                <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('paymentStatus')}>Payment Status {getSortIcon('paymentStatus')}</Button></TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                 <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('poNumber')}>{getSortIcon('poNumber')}PO #</Button></TableHead>
+                <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('date')}>{getSortIcon('date')}Date</Button></TableHead>
+                <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('careOf')}>{getSortIcon('careOf')}Care Of</Button></TableHead>
+                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalAllocation')}>{getSortIcon('totalAllocation')}Total Allocation</Button></TableHead>
+                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalExpenses')}>{getSortIcon('totalExpenses')}Total Expenses</Button></TableHead>
+                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('taxDeduction')}>{getSortIcon('taxDeduction')}Tax Deduction</Button></TableHead>
+                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('amountDeposited')}>{getSortIcon('amountDeposited')}Amount Deposited</Button></TableHead>
+                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('profit')}>{getSortIcon('profit')}Profit / Loss</Button></TableHead>
+                <TableHead className="text-center px-2"><Button variant="ghost" className="p-0 justify-center w-full" onClick={() => requestSort('paymentStatus')}>{getSortIcon('paymentStatus')}Payment Status</Button></TableHead>
+                <TableHead className="text-right px-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
