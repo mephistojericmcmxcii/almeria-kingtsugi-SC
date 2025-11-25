@@ -104,82 +104,82 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={true}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
-            {/* Left Column: Image and Actions */}
-            <div className="flex flex-col p-6 pr-0">
-                <div className="aspect-square relative w-full">
-                    <img
-                        src={placeholder.imageUrl}
-                        alt={placeholder.description || 'Product Image'}
-                        className="object-cover rounded-lg w-full h-full"
-                        data-ai-hint={placeholder.imageHint}
-                    />
-                </div>
-                <div className="px-0 pb-0 mt-auto border-t pt-6 space-y-4">
-                    <div className="flex items-center justify-between text-base">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Tag className="w-5 h-5" />
-                            <span className="font-bold text-xl text-foreground">Price on Request</span>
-                        </div>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        {getStatusBadge(variant)}
-                        {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
-                            <FileQuestion className="mr-2" /> Add to Quotation
-                        </Button>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Right Column: Details */}
-            <div className="flex flex-col overflow-y-auto">
-               <ScrollArea className="flex-grow">
-                 <div className="space-y-6 px-6 py-6">
-                    <DialogHeader className="space-y-2">
-                        <div className='flex items-center justify-between'>
-                            <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
-                        </div>
-                        <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
-                    </DialogHeader>
-                    
-                    <div className="space-y-6 text-sm flex-grow">
-                       
-                        <div className="space-y-2">
-                            <table className="w-full text-sm">
-                                <tbody>
-                                    <tr className="border-b">
-                                        <td className="py-2 font-medium text-muted-foreground w-1/3">Variation</td>
-                                        <td className="py-2 font-semibold">{variant.variation}</td>
-                                    </tr>
-                                    <tr className="border-b">
-                                        <td className="py-2 font-medium text-muted-foreground">Brand</td>
-                                        <td className="py-2 font-semibold">{variant.brand}</td>
-                                    </tr>
-                                    {variant.model && (
-                                        <tr className="border-b">
-                                            <td className="py-2 font-medium text-muted-foreground">Model</td>
-                                            <td className="py-2 font-semibold">{variant.model}</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                       </div>
+        <ScrollArea className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+              {/* Left Column: Image and Actions */}
+              <div className="flex flex-col p-6 pr-0 md:sticky md:top-0">
+                  <div className="aspect-square relative w-full">
+                      <img
+                          src={placeholder.imageUrl}
+                          alt={placeholder.description || 'Product Image'}
+                          className="object-cover rounded-lg w-full h-full"
+                          data-ai-hint={placeholder.imageHint}
+                      />
+                  </div>
+                  <div className="px-0 pb-0 mt-auto border-t pt-6 space-y-4">
+                      <div className="flex items-center justify-between text-base">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                              <Tag className="w-5 h-5" />
+                              <span className="font-bold text-xl text-foreground">Price on Request</span>
+                          </div>
+                      </div>
+                       <div className="flex items-center gap-2">
+                          {getStatusBadge(variant)}
+                          {variant.quantity > 0 && <span className="text-xs text-muted-foreground">({variant.quantity} available)</span>}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                          <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
+                              <FileQuestion className="mr-2" /> Add to Quotation
+                          </Button>
+                      </div>
+                  </div>
+              </div>
+              
+              {/* Right Column: Details */}
+              <div className="flex flex-col p-6">
+                 <div className="space-y-6">
+                      <DialogHeader className="space-y-2 text-left">
+                          <div className='flex items-center justify-between'>
+                              <Badge variant="secondary">{variant.parentCategory || 'Uncategorized'}</Badge>
+                          </div>
+                          <DialogTitle className="font-headline text-3xl text-primary">{variant.parentName}</DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="space-y-6 text-sm flex-grow">
+                         
+                          <div className="space-y-2">
+                              <table className="w-full text-sm">
+                                  <tbody>
+                                      <tr className="border-b">
+                                          <td className="py-2 font-medium text-muted-foreground w-1/3">Variation</td>
+                                          <td className="py-2 font-semibold">{variant.variation}</td>
+                                      </tr>
+                                      <tr className="border-b">
+                                          <td className="py-2 font-medium text-muted-foreground">Brand</td>
+                                          <td className="py-2 font-semibold">{variant.brand}</td>
+                                      </tr>
+                                      {variant.model && (
+                                          <tr className="border-b">
+                                              <td className="py-2 font-medium text-muted-foreground">Model</td>
+                                              <td className="py-2 font-semibold">{variant.model}</td>
+                                          </tr>
+                                      )}
+                                  </tbody>
+                              </table>
+                         </div>
 
-                       {variant.description && (
-                           <div className="space-y-2">
-                                <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><Info className="w-4 h-4"/>Description</h4>
-                                <p className="text-sm text-muted-foreground">{variant.description}</p>
-                           </div>
-                       )}
-                       {renderSpecifications()}
-                    </div>
-                </div>
-               </ScrollArea>
-            </div>
-        </div>
+                         {variant.description && (
+                             <div className="space-y-2">
+                                  <h4 className="font-semibold flex items-center gap-2 text-muted-foreground"><Info className="w-4 h-4"/>Description</h4>
+                                  <p className="text-sm text-muted-foreground">{variant.description}</p>
+                             </div>
+                         )}
+                         {renderSpecifications()}
+                      </div>
+                  </div>
+              </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
     <LoginRedirectDialog isOpen={isLoginRedirectOpen} onOpenChange={setIsLoginRedirectOpen} />
