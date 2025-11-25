@@ -11,7 +11,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tag, FileQuestion, Info, ListTree } from 'lucide-react';
+import { Tag, FileQuestion, Info, ListTree, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
@@ -102,7 +102,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={true}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0">
             {/* Left Column: Image & Actions */}
             <div className="p-6 flex flex-col">
@@ -129,6 +129,9 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
                           <Button size="lg" disabled={variant.quantity <= 0} onClick={handleAddToCartClick}>
                               <FileQuestion className="mr-2" /> Add to Quotation
                           </Button>
+                           <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
+                              <X className="mr-2"/> Close
+                           </Button>
                       </div>
                 </div>
             </div>
