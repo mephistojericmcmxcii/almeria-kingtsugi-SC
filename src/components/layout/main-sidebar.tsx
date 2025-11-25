@@ -123,7 +123,7 @@ const MainSidebar = () => {
   return (
     <>
     <Sidebar>
-      <SidebarHeader className="h-16 border-b-2" style={{ borderColor: '#f7d825' }}>
+      <SidebarHeader className="h-16 border-b-2 border-b-foreground/20">
         <div className="flex items-center gap-2">
           <Gem className="h-6 w-6 text-primary"/>
           <h1 className="font-bold text-2xl font-ink-free text-primary">KINTSUGI</h1>
