@@ -89,7 +89,8 @@ function HomePageContent() {
     <>
       <style>{`
         .responsive-footer-text {
-          font-size: clamp(9pt, 2vw, 12pt);
+          font-size: clamp(5pt, 2vw, 9pt);
+          white-space: nowrap;
         }
       `}</style>
       <div className="flex flex-col w-full h-screen">
