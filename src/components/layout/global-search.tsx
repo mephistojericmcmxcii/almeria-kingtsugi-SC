@@ -27,6 +27,8 @@ export function GlobalSearch() {
   useEffect(() => {
     if (searchTerm.trim() === '') {
         setIsOpen(false);
+    } else {
+        setIsOpen(true);
     }
   }, [searchTerm]);
 
@@ -43,7 +45,10 @@ export function GlobalSearch() {
     ).slice(0, 7); // Limit to 7 results
   }, [searchTerm, products]);
 
-  const handleSelect = (variant: InventoryVariant) => {
+  const handleSelect = (value: string) => {
+    const variant = filteredProducts.find(p => p.id === value);
+    if (!variant) return;
+
     setIsOpen(false);
     setSearchTerm('');
     if (isMobile) {
@@ -76,11 +81,6 @@ export function GlobalSearch() {
     return { imageUrl: PlaceHolderImages.find(p => p.id === 'product-fallback')!.imageUrl };
   };
 
-  // This custom filter function tells the Command component to always show what we pass to it.
-  const customFilter = () => {
-    return 1;
-  }
-
   return (
     <>
     <div className="w-full max-w-sm">
@@ -92,13 +92,7 @@ export function GlobalSearch() {
                         placeholder="Search products..."
                         className="pl-9 bg-background/80 hover:bg-background/90 focus:bg-background"
                         value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            if (e.target.value.trim() !== '') {
-                                setIsOpen(true);
-                            }
-                        }}
-                        onFocus={() => { if(searchTerm.trim() !== '') setIsOpen(true); }}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         disabled={isProductsLoading}
                     />
                 </div>
@@ -108,7 +102,7 @@ export function GlobalSearch() {
                 className="w-[var(--radix-popover-trigger-width)] p-0" 
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
-                <Command filter={customFilter}>
+                <Command>
                     <CommandList>
                     {filteredProducts.length === 0 && searchTerm ? (
                          <CommandEmpty>No products found.</CommandEmpty>
@@ -117,8 +111,8 @@ export function GlobalSearch() {
                         {filteredProducts.map((variant) => (
                             <CommandItem
                                 key={variant.id}
-                                onSelect={() => handleSelect(variant)}
-                                value={`${variant.parentName} ${variant.brand} ${variant.variation}`}
+                                value={variant.id}
+                                onSelect={handleSelect}
                                 className="flex items-center gap-3 cursor-pointer"
                             >
                                 <img 
