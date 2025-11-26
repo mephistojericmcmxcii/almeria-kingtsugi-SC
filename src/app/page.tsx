@@ -163,7 +163,7 @@ function HomePageContent() {
 
               {/* Footer */}
               <footer className="relative z-10 h-14 flex items-center bg-black/15 backdrop-blur-sm mt-auto">
-                  <div className="w-full flex justify-between items-center text-white/60 responsive-footer-text px-4">
+                  <div className="w-full flex justify-between items-center text-white/60 responsive-footer-text">
                       <div className="text-left flex-1">{displayContent.footerTextLeft}</div>
                       <div className="text-center flex-1">{displayContent.footerTextCenter}</div>
                       <div className="text-right flex-1">{displayContent.footerTextRight}</div>
