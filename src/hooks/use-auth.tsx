@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef, useCallback } from 'react';
@@ -151,8 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const personalNotificationsQuery = query(
-        collection(firestore, 'users', user.id, 'notifications'),
-        where('read', '==', false)
+        collection(firestore, 'users', user.id, 'notifications')
     );
 
     const unsubscribers = [
@@ -168,8 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (user.role === 'admin') {
         const adminNotificationsQuery = query(
-            collection(firestore, 'admin_notifications'),
-            where('read', '==', false)
+            collection(firestore, 'admin_notifications')
         );
         
         unsubscribers.push(
@@ -766,8 +763,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     
-        const batch = firestore ? writeBatch(firestore) : null;
-        if (!batch) return false;
+        const writeBatch = firestore ? writeBatch(firestore) : null;
+        if (!writeBatch) return false;
     
         try {
             // Create a new order document for the user
@@ -788,12 +785,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 discount: 0,
                 statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
             };
-            batch.set(newOrderRef, newOrder);
+            writeBatch.set(newOrderRef, newOrder);
     
             // Delete items from the user's cart
             for (const item of cartItems) {
                 const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
-                batch.delete(cartItemRef);
+                writeBatch.delete(cartItemRef);
             }
     
             // Create a single notification for all admins in the root collection
@@ -805,9 +802,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 read: false,
                 createdAt: serverTimestamp() as Timestamp,
             };
-            batch.set(adminNotificationRef, adminNotification);
+            writeBatch.set(adminNotificationRef, adminNotification);
     
-            await batch.commit();
+            await writeBatch.commit();
             
             await fetchOrders(); // Refetch user's orders
             return true;
@@ -982,7 +979,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                      const newNotification: Omit<Notification, 'id'> = {
                         title: `Order #${order.id.substring(0, 6)}... Updated`,
                         description: `Your order status is now: ${newStatus.replace('-', ' ')}`,
-                        href: `/profile?tab=purchases`,
+                        href: newStatus === 'quote-ready' ? '/profile?tab=quotation' : '/profile?tab=purchases',
                         read: false,
                         createdAt: Timestamp.now(),
                     };
@@ -996,7 +993,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const newFeedback: Omit<CustomerFeedback, 'id'> = {
                         userName: user.displayName,
                         rating: details.rating,
-                        review: details.review,
+                        review: details.review || '',
                         createdAt: serverTimestamp(),
                     };
                     transaction.set(feedbackRef, newFeedback);
