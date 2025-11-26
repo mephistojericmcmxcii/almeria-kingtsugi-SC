@@ -87,7 +87,7 @@ function HomePageContent() {
     <div className="flex flex-col w-full h-screen">
         <Header />
          <main 
-            className="flex-1 flex flex-col relative overflow-hidden bg-cover bg-center transition-all duration-500"
+            className="flex-1 flex flex-col relative bg-cover bg-center transition-all duration-500"
             style={{ backgroundImage: `url(${displayContent.backgroundUrl})`}}
             onClick={() => setOpen(false)}
         >
