@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
@@ -10,13 +10,19 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/compon
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Search } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
 export function GlobalSearch() {
-  const { products, isProductsLoading } = useAuth();
+  const { products, isProductsLoading, addToCart } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
+
 
   useEffect(() => {
     if (searchTerm.trim() !== '') {
@@ -39,10 +45,19 @@ export function GlobalSearch() {
     ).slice(0, 7); // Limit to 7 results
   }, [searchTerm, products]);
 
-  const handleSelect = (variantId: string) => {
+  const handleSelect = (variant: InventoryVariant) => {
     setIsOpen(false);
     setSearchTerm('');
-    router.push(`/products/${variantId}`);
+    if (isMobile) {
+        router.push(`/products/${variant.id}`);
+    } else {
+        setSelectedVariant(variant);
+    }
+  };
+
+  const handleAddToCart = (variant: InventoryVariant) => {
+    addToCart(variant);
+    setSelectedVariant(null);
   };
 
   const getPlaceholderImage = (item: InventoryVariant) => {
@@ -69,6 +84,7 @@ export function GlobalSearch() {
   }
 
   return (
+    <>
     <div className="w-full max-w-sm">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverAnchor asChild>
@@ -98,7 +114,7 @@ export function GlobalSearch() {
                         {filteredProducts.map((variant) => (
                             <CommandItem
                                 key={variant.id}
-                                onSelect={() => handleSelect(variant.id)}
+                                onSelect={() => handleSelect(variant)}
                                 value={`${variant.parentName} ${variant.brand} ${variant.variation}`}
                                 className="flex items-center gap-3 cursor-pointer"
                             >
@@ -120,5 +136,17 @@ export function GlobalSearch() {
             </PopoverContent>
         </Popover>
     </div>
+    
+    {!isMobile && selectedVariant && (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ViewProductModal 
+                isOpen={!!selectedVariant}
+                onOpenChange={() => setSelectedVariant(null)}
+                variant={selectedVariant}
+                onAddToCart={handleAddToCart}
+            />
+        </Suspense>
+    )}
+    </>
   );
 }
