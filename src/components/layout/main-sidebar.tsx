@@ -21,6 +21,7 @@ import {
   Gem,
   Settings,
   LogOut,
+  LogIn,
   Briefcase,
   Boxes,
   CreditCard,
@@ -247,7 +248,7 @@ const MainSidebar = () => {
         ) : (
              <Link href="/login">
                 <SidebarMenuButton>
-                    <LogOut className="rotate-180" />
+                    <LogIn />
                     <span>Login</span>
                 </SidebarMenuButton>
              </Link>
