@@ -61,7 +61,6 @@ export type InventoryVariant = {
   imageUrl?: string;
   createdAt: any;
   updatedAt: any;
-  lowStockNotified?: boolean; // Flag to track if low stock notification has been sent
   // This property is available on documents fetched from a collection group query
   ref?: DocumentReference; 
 };
@@ -191,3 +190,5 @@ export type CustomerFeedback = {
 export type BrandSettings = {
   logoUrl?: string;
 };
+
+    

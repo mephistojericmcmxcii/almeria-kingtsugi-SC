@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef, useCallback } from 'react';
@@ -195,20 +194,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribers.forEach(unsub => unsub());
   }, [user, firestore]);
   
-    // Logic for checking low stock and sending notifications
+  // Logic for checking low stock and sending notifications
   const checkLowStock = useCallback(async (variants: InventoryVariant[]) => {
     if (!firestore || user?.role !== 'admin') return;
 
     const batchOp = writeBatch(firestore);
-    let updatesMade = false;
 
     for (const variant of variants) {
-        if (!variant.id || !variant.ref) continue;
-        const isLow = variant.quantity <= variant.warningLimit;
-        const isGood = variant.quantity > variant.warningLimit;
-
-        if (isLow && !variant.lowStockNotified) {
-            // Item has become low and we haven't notified yet.
+        if (variant.quantity <= variant.warningLimit) {
             const notificationRef = doc(firestore, 'admin_notifications', `lowstock_${variant.id}`);
             batchOp.set(notificationRef, {
                 title: 'Low Stock Alert',
@@ -217,27 +210,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 read: false,
                 createdAt: serverTimestamp(),
             });
-            batchOp.update(variant.ref, { lowStockNotified: true });
-            updatesMade = true;
-        } else if (isGood && variant.lowStockNotified) {
-            // Item is back in good stock, so reset the flag for future notifications.
-            batchOp.update(variant.ref, { lowStockNotified: false });
-            updatesMade = true;
         }
     }
 
-    if (updatesMade) {
-        try {
-            await batchOp.commit();
-        } catch (error) {
-            console.error("Error in low stock notification batch write:", error);
-        }
+    try {
+        await batchOp.commit();
+    } catch (error) {
+        console.error("Error in low stock notification batch write:", error);
     }
-}, [firestore, user?.role]);
+  }, [firestore, user?.role]);
   
   // Fetch all product variants once and cache them
   useEffect(() => {
-    // Only run this logic on the home or products page
     const shouldFetch = pathname === '/' || pathname.startsWith('/products');
     
     if (!shouldFetch || products !== null) {
@@ -256,7 +240,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setProducts(variants);
         setIsProductsLoading(false);
 
-        // Perform low stock check after fetching/updating products
         if(user?.role === 'admin') {
             checkLowStock(variants);
         }
@@ -1304,3 +1287,4 @@ export const useAuth = () => {
   return context;
 };
 
+    
