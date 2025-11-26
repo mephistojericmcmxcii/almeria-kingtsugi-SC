@@ -3,7 +3,6 @@
 
 import './globals.css';
 import { AuthProvider } from '@/hooks/use-auth';
-import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { PageLoader } from '@/components/layout/page-loader';
 import { Suspense, useState, useEffect } from 'react';
@@ -48,7 +47,6 @@ export default function RootLayout({
             <AppWrapper>
               {children}
             </AppWrapper>
-            <Toaster />
           </AuthProvider>
         </FirebaseClientProvider>
       </body>
