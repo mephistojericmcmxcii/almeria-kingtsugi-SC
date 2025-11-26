@@ -39,10 +39,11 @@ export default function NotificationDropdown() {
   
   if (isLoading || !user) return null;
 
-  const hasNotifications = notifications.length > 0;
+  const unreadNotifications = notifications.filter(n => !n.read);
+  const hasNotifications = unreadNotifications.length > 0;
 
   const handleNotificationClick = async (notification: Notification) => {
-    await markNotificationAsRead(notification.id);
+    await markNotificationAsRead(notification);
     router.push(notification.href);
   };
 
@@ -63,7 +64,7 @@ export default function NotificationDropdown() {
         <DropdownMenuLabel>Notifications</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {hasNotifications ? (
-          notifications.map((notification) => {
+          unreadNotifications.map((notification) => {
              const Icon = ICONS[notification.title.toLowerCase().replace(/ /g, '-')] || ICONS.default;
              return (
                  <DropdownMenuItem key={notification.id} onSelect={() => handleNotificationClick(notification)} className="flex items-start gap-3 p-3 cursor-pointer">
@@ -84,5 +85,7 @@ export default function NotificationDropdown() {
     </DropdownMenu>
   );
 }
+
+    
 
     

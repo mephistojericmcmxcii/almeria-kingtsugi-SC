@@ -70,7 +70,7 @@ interface AuthContextType {
   showAdminRfqBadge: boolean;
   dismissAdminRfqBadge: () => void;
   fetchOrders: () => Promise<void>;
-  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markNotificationAsRead: (notification: Notification) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -150,23 +150,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
-    const notificationsQuery = query(
+    const personalNotificationsQuery = query(
         collection(firestore, 'users', user.id, 'notifications'),
         where('read', '==', false)
     );
-    
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-        const fetchedNotifications = snapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
-            .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-        setNotifications(fetchedNotifications);
-    },
-    (error) => {
-      console.error("Notifications listener error:", error);
-    });
 
-    return () => unsubscribe();
-  }, [user, firestore, toast]);
+    const unsubscribers = [
+        onSnapshot(personalNotificationsQuery, (snapshot) => {
+            const personalNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), isGlobal: false } as Notification & { isGlobal: boolean }));
+            setNotifications(prev => {
+                const otherNotifs = prev.filter(n => n.isGlobal);
+                const combined = [...otherNotifs, ...personalNotifs];
+                return combined.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+            });
+        }, (error) => console.error("Personal notifications listener error:", error))
+    ];
+
+    if (user.role === 'admin') {
+        const adminNotificationsQuery = query(
+            collection(firestore, 'admin_notifications'),
+            where('read', '==', false)
+        );
+        
+        unsubscribers.push(
+            onSnapshot(adminNotificationsQuery, (snapshot) => {
+                const adminNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), isGlobal: true } as Notification & { isGlobal: boolean }));
+                setNotifications(prev => {
+                    const personalNotifs = prev.filter(n => !n.isGlobal);
+                    const combined = [...personalNotifs, ...adminNotifs];
+                    return combined.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+                });
+            }, (error) => console.error("Admin notifications listener error:", error))
+        );
+    }
+    
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, [user, firestore]);
   
   // Fetch all product variants once and cache them
   useEffect(() => {
@@ -751,11 +770,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!batch) return false;
     
         try {
-            // Fetch all admin users
-            const adminsQuery = query(collection(firestore, 'users'), where('role', '==', 'admin'));
-            const adminSnapshot = await getDocs(adminsQuery);
-            const adminIds = adminSnapshot.docs.map(doc => doc.id);
-    
             // Create a new order document for the user
             const newOrderRef = doc(collection(firestore, 'users', user.id, 'orders'));
             const newOrder: Omit<Order, 'id'> = {
@@ -782,18 +796,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 batch.delete(cartItemRef);
             }
     
-            // Create a notification for each admin user
-            adminIds.forEach(adminId => {
-                const notificationRef = doc(collection(firestore, 'users', adminId, 'notifications'));
-                const adminNotification: Omit<Notification, 'id'> = {
-                    title: 'New Quotation Request',
-                    description: `A new request has been submitted by ${user.displayName}.`,
-                    href: '/management/orders',
-                    read: false,
-                    createdAt: serverTimestamp() as Timestamp,
-                };
-                batch.set(notificationRef, adminNotification);
-            });
+            // Create a single notification for all admins in the root collection
+            const adminNotificationRef = doc(collection(firestore, 'admin_notifications'));
+            const adminNotification: Omit<Notification, 'id'> = {
+                title: 'New Quotation Request',
+                description: `A new request has been submitted by ${user.displayName}.`,
+                href: '/management/orders',
+                read: false,
+                createdAt: serverTimestamp() as Timestamp,
+            };
+            batch.set(adminNotificationRef, adminNotification);
     
             await batch.commit();
             
@@ -1050,9 +1062,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+    const markNotificationAsRead = async (notification: Notification): Promise<void> => {
         if (!user) return;
-        const notificationRef = doc(firestore, 'users', user.id, 'notifications', notificationId);
+        
+        let notificationRef;
+        if ((notification as any).isGlobal) {
+            notificationRef = doc(firestore, 'admin_notifications', notification.id);
+        } else {
+            notificationRef = doc(firestore, 'users', user.id, 'notifications', notification.id);
+        }
+        
         try {
             await updateDoc(notificationRef, { read: true });
         } catch (error) {
@@ -1178,5 +1197,8 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
+
 
     
