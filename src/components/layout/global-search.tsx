@@ -63,6 +63,11 @@ export function GlobalSearch() {
     return { imageUrl: PlaceHolderImages.find(p => p.id === 'product-fallback')!.imageUrl };
   };
 
+  // This custom filter function tells the Command component to always show what we pass to it.
+  const customFilter = () => {
+    return 1;
+  }
+
   return (
     <div className="w-full max-w-sm">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -84,7 +89,7 @@ export function GlobalSearch() {
                 className="w-[var(--radix-popover-trigger-width)] p-0" 
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
-                <Command>
+                <Command filter={customFilter}>
                     <CommandList>
                     {filteredProducts.length === 0 && searchTerm ? (
                          <CommandEmpty>No products found.</CommandEmpty>
