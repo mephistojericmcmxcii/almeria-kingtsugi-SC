@@ -20,7 +20,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Send } from 'lucide-react';
 import {
@@ -72,7 +71,6 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function RfqPage() {
   const { user, firestore, uploadFile } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -152,7 +150,9 @@ export default function RfqPage() {
             const fileName = `${rfqRef.id}_customer_rfq`;
             const downloadUrl = await uploadFile(file, `rfq_attachments/${rfqRef.id}`, fileName);
             if (!downloadUrl) {
-                throw new Error("File upload failed. Please try again.");
+                // The uploadFile hook now shows a toast on failure, so we just stop execution.
+                setIsSubmitting(false);
+                return;
             }
             fileUrl = downloadUrl;
         }
@@ -197,21 +197,10 @@ export default function RfqPage() {
 
         await batch.commit();
 
-
-        toast({
-            title: "Request Sent!",
-            description: "Your Request for Quotation has been successfully submitted.",
-        });
-        
         router.push('/profile?tab=rfq');
 
     } catch (err: any) {
         console.error("[RFQ Form] An error occurred during submission:", err);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: err.message || "An unknown error occurred.",
-        });
     } finally {
         setIsSubmitting(false);
         setFormData(null);
@@ -346,3 +335,5 @@ export default function RfqPage() {
     </>
   );
 }
+
+    
