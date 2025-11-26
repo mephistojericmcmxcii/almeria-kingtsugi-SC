@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Search } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,9 +21,7 @@ export function GlobalSearch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-
+  
   useEffect(() => {
     if (searchTerm.trim() !== '') {
         setIsOpen(true);
@@ -32,7 +29,6 @@ export function GlobalSearch() {
         setIsOpen(false);
     }
   }, [searchTerm]);
-
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm || !products) return [];
@@ -46,8 +42,8 @@ export function GlobalSearch() {
     ).slice(0, 7); // Limit to 7 results
   }, [searchTerm, products]);
 
-  const handleSelect = (value: string) => {
-    const variant = filteredProducts.find(p => p.id === value);
+  const handleSelect = (variantId: string) => {
+    const variant = filteredProducts.find(p => p.id === variantId);
     if (!variant) return;
 
     setIsOpen(false);
@@ -94,51 +90,53 @@ export function GlobalSearch() {
                         className="pl-9 bg-background/80 hover:bg-background/90 focus:bg-background"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        onBlur={() => {
+                            // Delay closing to allow click events to register
+                            setTimeout(() => {
+                                if (!document.activeElement?.closest('[data-radix-popover-content-wrapper]')) {
+                                    setIsOpen(false);
+                                }
+                            }, 150);
+                        }}
+                        onFocus={() => {
+                             if (searchTerm.trim() !== '') {
+                                setIsOpen(true);
+                            }
+                        }}
                         disabled={isProductsLoading}
                     />
                 </div>
             </PopoverAnchor>
             
             <PopoverContent
-                ref={popoverRef}
                 className="w-[var(--radix-popover-trigger-width)] p-0"
                 onOpenAutoFocus={(e) => e.preventDefault()}
-                onBlur={(e) => {
-                    // This is the hardfix: Check if the new focused element is outside the popover.
-                    // If it is, then we can safely close it.
-                    if (!popoverRef.current?.contains(e.relatedTarget as Node)) {
-                        setIsOpen(false);
-                    }
-                }}
             >
-                <Command>
-                    <CommandList>
-                    {filteredProducts.length === 0 && searchTerm ? (
-                         <CommandEmpty>No products found.</CommandEmpty>
-                    ) : (
-                        <CommandGroup>
-                        {filteredProducts.map((variant) => (
-                            <CommandItem
-                                key={variant.id}
-                                value={variant.id}
-                                onSelect={handleSelect}
-                                className="flex items-center gap-3 cursor-pointer"
-                            >
-                                <img 
-                                    src={getPlaceholderImage(variant).imageUrl}
-                                    alt={variant.parentName}
-                                    className="h-8 w-8 object-cover rounded-sm"
-                                />
-                                <div>
-                                    <p className="text-sm font-medium">{variant.parentName}</p>
-                                    <p className="text-xs text-muted-foreground">{variant.brand} - {variant.variation}</p>
-                                </div>
-                            </CommandItem>
-                        ))}
-                        </CommandGroup>
-                    )}
-                    </CommandList>
-                </Command>
+                <div className="max-h-[300px] overflow-y-auto overflow-x-hidden">
+                    {filteredProducts.length > 0 ? (
+                        <div className="p-1">
+                            {filteredProducts.map((variant) => (
+                                <button
+                                    key={variant.id}
+                                    onClick={() => handleSelect(variant.id)}
+                                    className="flex w-full items-center gap-3 cursor-pointer rounded-sm p-2 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                >
+                                    <img 
+                                        src={getPlaceholderImage(variant).imageUrl}
+                                        alt={variant.parentName}
+                                        className="h-8 w-8 object-cover rounded-sm"
+                                    />
+                                    <div>
+                                        <p className="font-medium">{variant.parentName}</p>
+                                        <p className="text-xs text-muted-foreground">{variant.brand} - {variant.variation}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : searchTerm ? (
+                         <div className="py-6 text-center text-sm">No products found.</div>
+                    ) : null}
+                </div>
             </PopoverContent>
         </Popover>
     </div>
