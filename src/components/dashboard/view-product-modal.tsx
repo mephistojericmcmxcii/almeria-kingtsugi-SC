@@ -102,7 +102,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={false}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0" showCloseButton={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0">
             {/* Left Column: Image & Actions */}
             <div className="p-6 flex flex-col">
