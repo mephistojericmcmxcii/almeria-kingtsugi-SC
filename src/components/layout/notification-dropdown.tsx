@@ -14,8 +14,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Bell, ShoppingCart, FileQuestion, Truck, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
+// Define a type for a single notification object
+type Notification = {
+  id: string; // e.g., 'cart', 'quoteReady'
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  href: string;
+};
 
 export default function NotificationDropdown() {
   const { 
@@ -28,58 +36,64 @@ export default function NotificationDropdown() {
     dismissUserNotifications
   } = useAuth();
   const router = useRouter();
+  
   const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Effect to build the initial list of notifications when the component mounts or badges change
+  useEffect(() => {
+    const buildNotifications = () => {
+      const allPossibleNotifications: (Notification | null)[] = [
+        showCartBadge && (cart?.length || 0) > 0 ? {
+          id: 'cart',
+          icon: ShoppingCart,
+          title: `${cart.length} item(s) in your quote list`,
+          description: "Ready to submit for a quotation.",
+          href: '/profile?tab=quotation',
+        } : null,
+        showQuoteReadyBadge ? {
+          id: 'quoteReady',
+          icon: FileQuestion,
+          title: "Your Quotation is Ready",
+          description: "A new quotation is available for your review and confirmation.",
+          href: '/profile?tab=quotation',
+        } : null,
+        showNewPurchaseBadge ? {
+          id: 'newPurchase',
+          icon: Truck,
+          title: "Purchase Update",
+          description: "There's an update on one of your active purchases.",
+          href: '/profile?tab=purchases',
+        } : null,
+        showNewHistoryBadge ? {
+          id: 'newHistory',
+          icon: History,
+          title: "Order History Update",
+          description: "One of your orders has been completed or cancelled.",
+          href: '/profile?tab=orders',
+        } : null
+      ];
+      // Filter out nulls and set the state
+      setNotifications(allPossibleNotifications.filter(Boolean) as Notification[]);
+    };
+    buildNotifications();
+  }, [showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, cart]);
 
   if (!user) return null;
 
-  const cartItemCount = cart?.length || 0;
-
-  const notifications = [
-    {
-      show: showCartBadge,
-      icon: ShoppingCart,
-      title: `${cartItemCount} item(s) in your quote list`,
-      description: "Ready to submit for a quotation.",
-      href: '/profile?tab=quotation',
-      tab: 'quotation'
-    },
-    {
-      show: showQuoteReadyBadge,
-      icon: FileQuestion,
-      title: "Your Quotation is Ready",
-      description: "A new quotation is available for your review and confirmation.",
-      href: '/profile?tab=quotation',
-      tab: 'quotation'
-    },
-    {
-      show: showNewPurchaseBadge,
-      icon: Truck,
-      title: "Purchase Update",
-      description: "There's an update on one of your active purchases.",
-      href: '/profile?tab=purchases',
-      tab: 'purchases'
-    },
-    {
-      show: showNewHistoryBadge,
-      icon: History,
-      title: "Order History Update",
-      description: "One of your orders has been completed or cancelled.",
-      href: '/profile?tab=orders',
-      tab: 'orders'
-    }
-  ].filter(n => n.show);
-
   const hasNotifications = notifications.length > 0;
 
-  const handleNotificationClick = (href: string) => {
-    // No need to dismiss here, it will be handled on close
+  const handleNotificationClick = (notificationId: string, href: string) => {
+    // Immediately remove the clicked notification from the local state list
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
     router.push(href);
   };
   
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open && hasNotifications) {
-      // Dismiss notifications when the dropdown is closed
+      // When the dropdown is closed, sync the backend that all current notifications have been seen.
+      // The UI has already been updated optimistically.
       dismissUserNotifications();
     }
   };
@@ -87,7 +101,7 @@ export default function NotificationDropdown() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20 relative">
+        <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20 relative">
           <Bell className="h-6 w-6 text-white" />
           {hasNotifications && (
             <span className="absolute top-1 right-1 flex h-3 w-3">
@@ -101,8 +115,8 @@ export default function NotificationDropdown() {
         <DropdownMenuLabel>Notifications</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {hasNotifications ? (
-          notifications.map((notification, index) => (
-            <DropdownMenuItem key={index} onSelect={() => handleNotificationClick(notification.href)} className="flex items-start gap-3 p-3 cursor-pointer">
+          notifications.map((notification) => (
+            <DropdownMenuItem key={notification.id} onSelect={() => handleNotificationClick(notification.id, notification.href)} className="flex items-start gap-3 p-3 cursor-pointer">
               <notification.icon className="h-5 w-5 text-muted-foreground mt-1" />
               <div className="flex flex-col">
                 <p className="font-semibold text-sm">{notification.title}</p>
