@@ -6,6 +6,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { PageLoader } from '@/components/layout/page-loader';
 import { Suspense, useState, useEffect } from 'react';
+import { Toaster } from '@/components/ui/toaster';
 
 function AppWrapper({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
@@ -22,6 +23,7 @@ function AppWrapper({ children }: { children: React.ReactNode }) {
         </Suspense>
       )}
       {children}
+      <Toaster />
     </>
   );
 }
