@@ -92,7 +92,7 @@ function HomePageContent() {
             className="flex-1 flex flex-col relative transition-all duration-500 bg-center"
             style={{ 
               backgroundImage: `url(${displayContent.backgroundUrl})`,
-              backgroundSize: isMobile ? 'cover' : '100% 130%',
+              backgroundSize: isMobile ? 'auto' : '100% 130%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
             }}
