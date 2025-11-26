@@ -7,6 +7,8 @@ import { UserNav } from "../auth/user-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "./global-search";
+import { Button } from "../ui/button";
+import { Bell } from "lucide-react";
 
 const Header = () => {
   const { user } = useAuth();
@@ -43,7 +45,13 @@ const Header = () => {
          <GlobalSearch />
       </div>
 
-      <UserNav />
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary/90">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">Notifications</span>
+        </Button>
+        <UserNav />
+      </div>
     </header>
   );
 };
