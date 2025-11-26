@@ -747,8 +747,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     
-        const writeBatch = firestore ? batch(firestore) : null;
-        if (!writeBatch) return false;
+        const batch = firestore ? writeBatch(firestore) : null;
+        if (!batch) return false;
     
         try {
             // Fetch all admin users
@@ -774,12 +774,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 discount: 0,
                 statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
             };
-            writeBatch.set(newOrderRef, newOrder);
+            batch.set(newOrderRef, newOrder);
     
             // Delete items from the user's cart
             for (const item of cartItems) {
                 const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
-                writeBatch.delete(cartItemRef);
+                batch.delete(cartItemRef);
             }
     
             // Create a notification for each admin user
@@ -792,10 +792,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     read: false,
                     createdAt: serverTimestamp() as Timestamp,
                 };
-                writeBatch.set(notificationRef, adminNotification);
+                batch.set(notificationRef, adminNotification);
             });
     
-            await writeBatch.commit();
+            await batch.commit();
             
             await fetchOrders(); // Refetch user's orders
             return true;
