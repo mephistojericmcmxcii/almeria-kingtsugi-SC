@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoginRedirectDialog } from '@/components/auth/login-redirect-dialog';
 import { ArrowLeft, Tag, FileQuestion, Info, ListTree, Package } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -126,7 +127,7 @@ export default function ProductDetailsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
         {/* Left Column: Image & Actions */}
-        <div className="space-y-6 sticky top-8">
+        <div className={cn("space-y-6 md:sticky md:top-8")}>
           <div className="aspect-square relative w-full">
             <img
               src={placeholder.imageUrl}
