@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "./global-search";
 
-const NotificationDropdown = lazy(() => import('./notification-dropdown').then(module => ({ default: module.NotificationDropdown })));
+const NotificationDropdown = lazy(() => import('./notification-dropdown').then(module => ({ default: module.default })));
 
 
 const Header = () => {
