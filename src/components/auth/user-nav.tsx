@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { LogOut, User as UserIcon } from "lucide-react";
 
 export function UserNav() {
-  const { user, cart, logout, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge } = useAuth();
+  const { user, logout } = useAuth();
 
   if (!user) {
     return null;
@@ -31,11 +31,6 @@ export function UserNav() {
     }
     return name.substring(0, 2);
   };
-  
-  const cartItemCount = cart?.length || 0;
-  const hasCartNotif = showCartBadge && cartItemCount > 0;
-  const hasProfileNotif = showQuoteReadyBadge || showNewPurchaseBadge || showNewHistoryBadge;
-  const hasNotification = hasCartNotif || hasProfileNotif;
 
   return (
     <DropdownMenu>
@@ -45,16 +40,6 @@ export function UserNav() {
             <AvatarImage src={user.profileImageUrl} alt={user.displayName} />
             <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
           </Avatar>
-           {hasNotification && (
-                <span className="absolute top-0 right-0 flex h-3 w-3">
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive text-destructive-foreground text-xs font-bold items-center justify-center">
-                    {hasCartNotif ? cartItemCount : ''}
-                  </span>
-                   {hasProfileNotif && (
-                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                    )}
-                </span>
-           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -69,15 +54,9 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/profile" className="relative">
+            <Link href="/profile">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile</span>
-              {hasProfileNotif && (
-                 <span className="absolute right-2 flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
-                 </span>
-              )}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>

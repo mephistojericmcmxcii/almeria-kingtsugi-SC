@@ -1,14 +1,15 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { UserNav } from "../auth/user-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "./global-search";
-import { Button } from "../ui/button";
-import { Bell } from "lucide-react";
+
+const NotificationDropdown = lazy(() => import('./notification-dropdown').then(module => ({ default: module.NotificationDropdown })));
+
 
 const Header = () => {
   const { user } = useAuth();
@@ -46,9 +47,9 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20">
-          <Bell className="h-6 w-6 text-white" />
-        </Button>
+        <Suspense fallback={null}>
+            <NotificationDropdown />
+        </Suspense>
         <UserNav />
       </div>
     </header>

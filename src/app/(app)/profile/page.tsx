@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useFirebase } from '@/firebase';
 import type { CartItem, Order, OrderStatus, StatusHistory, QuotationRequest } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -472,7 +472,7 @@ function RfqList() {
         };
 
         fetchRfqs();
-    }, [user?.id, firestore]); // Depend on user.id (a stable string) instead of the whole user object
+    }, [user?.id, firestore]);
     
      const renderRfqDetailsModal = () => {
         if (!viewingRfq) return null;
@@ -604,12 +604,11 @@ function RfqList() {
 }
 
 export default function ProfilePage() {
-  const { user, cart, orders, updateUserProfile, isLoading: isAuthLoading, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, fetchOrders } = useAuth();
+  const { user, orders, updateUserProfile, isLoading: isAuthLoading, fetchOrders } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
-
-  const cartItemCount = cart?.length || 0;
+  const searchParams = useSearchParams();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -619,6 +618,8 @@ export default function ProfilePage() {
       contactNumber: '',
     },
   });
+
+  const defaultTab = searchParams.get('tab') || 'profile';
   
   useEffect(() => {
     if (user) {
@@ -640,12 +641,6 @@ export default function ProfilePage() {
     return { quotationOrders, activeOrders, completedOrders };
   }, [orders]);
   
-  const handleTabChange = (value: string) => {
-    if (['quotation', 'purchases', 'orders', 'rfq'].includes(value)) {
-        dismissUserNotifications();
-    }
-  };
-
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchOrders();
@@ -658,12 +653,11 @@ export default function ProfilePage() {
     setIsSubmitting(false);
   };
 
-
   if (!user) {
     return null;
   }
   
-  const noQuotations = (!cart || cart.length === 0) && quotationOrders.length === 0;
+  const noQuotations = !quotationOrders || quotationOrders.length === 0;
 
   return (
     <div className="space-y-8">
@@ -678,7 +672,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4" onValueChange={handleTabChange}>
+      <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">
             <User className="mr-2" />
@@ -688,30 +682,17 @@ export default function ProfilePage() {
             <Send className="mr-2" />
             Request Quotations
           </TabsTrigger>
-           <TabsTrigger value="quotation" className="relative">
+           <TabsTrigger value="quotation">
             <FileQuestion className="mr-2" />
             My Quotation
-            {showCartBadge && cartItemCount > 0 ? (
-              <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
-                {cartItemCount}
-              </span>
-            ) : showQuoteReadyBadge && (
-               <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
-            )}
           </TabsTrigger>
-           <TabsTrigger value="purchases" className="relative">
+           <TabsTrigger value="purchases">
             <Truck className="mr-2" />
             My Purchases
-             {showNewPurchaseBadge && (
-                <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
-             )}
           </TabsTrigger>
-          <TabsTrigger value="orders" className="relative">
+          <TabsTrigger value="orders">
             <History className="mr-2" />
             Order History
-             {showNewHistoryBadge && (
-                <span className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive"></span>
-             )}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
@@ -802,7 +783,7 @@ export default function ProfilePage() {
                         orders={quotationOrders}
                         title="Submitted Quotations"
                         description="These are your active quotation requests. You will be notified when the seller responds."
-                        emptyMessage={<></>} // This won't be shown if orders exist
+                        emptyMessage={<></>}
                     />
                 )}
             </div>
