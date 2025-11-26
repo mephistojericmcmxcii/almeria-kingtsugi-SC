@@ -639,6 +639,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
             const cartItemRef = doc(firestore, 'users', user.id, 'cart', variant.id);
+            const notificationRef = doc(collection(firestore, 'users', user.id, 'notifications'));
 
             await runTransaction(firestore, async (transaction) => {
                 const cartItemDoc = await transaction.get(cartItemRef);
@@ -670,11 +671,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     };
                     transaction.set(cartItemRef, newCartItem);
                 }
+
+                const newNotification: Omit<Notification, 'id'> = {
+                    title: 'Item Added to Quotation',
+                    description: `${variant.parentName} was added to your list.`,
+                    href: '/profile?tab=quotation',
+                    read: false,
+                    createdAt: serverTimestamp() as Timestamp,
+                };
+                transaction.set(notificationRef, newNotification);
+
             });
 
             toast({
                 title: "Item Added to Quotation",
-                description: `${variant.parentName} - ${variant.brand} has been added to your quotation list.`,
+                description: `${variant.parentName} - ${variant.brand} has been added.`,
             });
         } catch (error: any) {
             if (error.message.includes('Stock Limit Reached')) {
