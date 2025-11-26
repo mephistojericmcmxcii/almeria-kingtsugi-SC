@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -6,55 +7,13 @@ import { onSnapshot, collection, collectionGroup, doc, updateDoc, serverTimestam
 import type { User, CartItem, Order, QuotationRequest } from '@/lib/types';
 
 export const useBadgeManager = (user: User | null, cart: CartItem[] | null, firestore: Firestore) => {
-    const [showCartBadge, setShowCartBadge] = useState(false);
-    const [showQuoteReadyBadge, setShowQuoteReadyBadge] = useState(false);
-    const [showNewPurchaseBadge, setShowNewPurchaseBadge] = useState(false);
-    const [showNewHistoryBadge, setShowNewHistoryBadge] = useState(false);
+    // This hook no longer manages user-facing badges, as they are handled by the new notifications system.
+    // It only manages admin-facing badges now.
     const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
     const [showAdminRfqBadge, setShowAdminRfqBadge] = useState(false);
 
     // Track if admin badges have been dismissed in the current session
     const [hasSeenAdminNotifications, setHasSeenAdminNotifications] = useState(false);
-
-    // Cart badge logic
-    useEffect(() => {
-        setShowCartBadge(cart !== null && cart.length > 0);
-    }, [cart]);
-
-    // User-specific order notification logic
-    useEffect(() => {
-        if (!user || user.role === 'admin') {
-            setShowQuoteReadyBadge(false);
-            setShowNewPurchaseBadge(false);
-            setShowNewHistoryBadge(false);
-            return;
-        }
-
-        const userOrdersQuery = query(collection(firestore, 'users', user.id, 'orders'));
-        const unsubscribe = onSnapshot(userOrdersQuery, (snapshot) => {
-            let hasNewQuoteReady = false;
-            let hasNewPurchase = false;
-            let hasNewHistory = false;
-            const lastViewedUser = user.lastViewedOrdersAt?.toMillis() || 0;
-
-            snapshot.forEach(doc => {
-                const order = doc.data() as Order;
-                const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-                
-                if (updatedAt > lastViewedUser) {
-                    if (order.status === 'quote-ready') hasNewQuoteReady = true;
-                    if (['confirmed', 'delivering'].includes(order.status)) hasNewPurchase = true;
-                    if (['completed', 'cancelled', 'declined'].includes(order.status)) hasNewHistory = true;
-                }
-            });
-
-            setShowQuoteReadyBadge(hasNewQuoteReady);
-            setShowNewPurchaseBadge(hasNewPurchase);
-            setShowNewHistoryBadge(hasNewHistory);
-        });
-
-        return () => unsubscribe();
-    }, [user, firestore]);
 
     // Admin-specific notification logic
     useEffect(() => {
@@ -99,23 +58,6 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
         };
     }, [user, firestore]);
 
-    const dismissUserNotifications = useCallback(async () => {
-        if (!user) return;
-        
-        // Immediately update local state for instant UI feedback
-        setShowQuoteReadyBadge(false);
-        setShowNewPurchaseBadge(false);
-        setShowNewHistoryBadge(false);
-        setShowCartBadge(false); // Also dismiss cart badge
-
-        try {
-            const userRef = doc(firestore, "users", user.id);
-            await updateDoc(userRef, { lastViewedOrdersAt: serverTimestamp() });
-        } catch (error) {
-            console.error("Error updating lastViewedOrdersAt:", error);
-        }
-    }, [user, firestore]);
-
     const dismissAdminOrderBadge = useCallback(async () => {
         if (!user || user.role !== 'admin' || hasSeenAdminNotifications) return;
         
@@ -145,14 +87,11 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
     }, [user, firestore, hasSeenAdminNotifications]);
 
     return {
-        showCartBadge,
-        showQuoteReadyBadge,
-        showNewPurchaseBadge,
-        showNewHistoryBadge,
         showAdminOrderBadge,
         showAdminRfqBadge,
-        dismissUserNotifications,
         dismissAdminOrderBadge,
         dismissAdminRfqBadge,
     };
 };
+
+    

@@ -10,7 +10,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback } from '@/lib/types';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback, Notification } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -27,6 +27,7 @@ interface AuthContextType {
   cart: CartItem[] | null;
   orders: Order[] | null;
   products: InventoryVariant[] | null; // <-- Add products to context
+  notifications: Notification[];
   isProductsLoading: boolean; // <-- Add loading state for products
   firestore: Firestore;
   toast: ({...props}: any) => void;
@@ -64,16 +65,12 @@ interface AuthContextType {
   updatePoStatus: (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null, receivedBy?: string, receivedDate?: Date }) => Promise<boolean>;
   uploadFile: (file: File, path: string, fileName?: string) => Promise<string | null>;
   deleteFileByUrl: (url: string) => Promise<void>;
-  showCartBadge: boolean;
-  showQuoteReadyBadge: boolean;
-  showNewPurchaseBadge: boolean;
-  showNewHistoryBadge: boolean;
-  dismissUserNotifications: () => void;
   showAdminOrderBadge: boolean;
   dismissAdminOrderBadge: () => void;
   showAdminRfqBadge: boolean;
   dismissAdminRfqBadge: () => void;
   fetchOrders: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,15 +83,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [products, setProducts] = useState<InventoryVariant[] | null>(null); // <-- Add state for products
   const [isProductsLoading, setIsProductsLoading] = useState(true); // <-- Add loading state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const {
-      showCartBadge,
-      showQuoteReadyBadge,
-      showNewPurchaseBadge,
-      showNewHistoryBadge,
       showAdminOrderBadge,
       showAdminRfqBadge,
-      dismissUserNotifications,
       dismissAdminOrderBadge,
       dismissAdminRfqBadge,
   } = useBadgeManager(user, cart, firestore);
@@ -150,6 +143,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return () => unsubscribe();
   }, [user, firestore, pathname]);
+
+   useEffect(() => {
+    if (!user) {
+        setNotifications([]);
+        return;
+    }
+
+    const notificationsQuery = query(
+        collection(firestore, 'users', user.id, 'notifications'),
+        where('read', '==', false),
+        where('createdAt', '!=', null)
+    );
+    
+    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+        const fetchedNotifications = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
+            .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+        setNotifications(fetchedNotifications);
+    });
+
+    return () => unsubscribe();
+  }, [user, firestore]);
   
   // Fetch all product variants once and cache them
   useEffect(() => {
@@ -877,6 +892,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
+        const notificationRef = doc(collection(firestore, 'users', order.userId, 'notifications'));
         
         try {
             const dataToUpdate: any = {
@@ -912,6 +928,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await runTransaction(firestore, async (transaction: Transaction) => {
                 // Always update the order document
                 transaction.update(orderRef, dataToUpdate);
+
+                // Create a notification for the user for certain status changes
+                const isUserFacingUpdate = ['quote-ready', 'completed', 'cancelled', 'declined', 'delivering'].includes(newStatus);
+                
+                if (isUserFacingUpdate) {
+                     const newNotification: Omit<Notification, 'id'> = {
+                        title: `Order #${order.id.substring(0, 6)}... Updated`,
+                        description: `Your order status is now: ${newStatus.replace('-', ' ')}`,
+                        href: `/profile?tab=purchases`,
+                        read: false,
+                        createdAt: Timestamp.now(),
+                    };
+                    transaction.set(notificationRef, newNotification);
+                }
+
 
                 // If review and rating are provided, create a new feedback document
                 if (newStatus === 'completed' && details?.rating && user) {
@@ -982,6 +1013,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 errorEmitter.emit('permission-error', permissionError);
             }
             return false;
+        }
+    };
+    
+    const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+        if (!user) return;
+        const notificationRef = doc(firestore, 'users', user.id, 'notifications', notificationId);
+        try {
+            await updateDoc(notificationRef, { read: true });
+        } catch (error) {
+            console.error("Failed to mark notification as read:", error);
         }
     };
 
@@ -1087,7 +1128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, products, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, deleteFileByUrl, showCartBadge, showQuoteReadyBadge, showNewPurchaseBadge, showNewHistoryBadge, dismissUserNotifications, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders };
+  const value = { user, cart, orders, products, notifications, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, deleteFileByUrl, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders, markNotificationAsRead };
 
   return (
     <AuthContext.Provider value={value}>
@@ -1103,3 +1144,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

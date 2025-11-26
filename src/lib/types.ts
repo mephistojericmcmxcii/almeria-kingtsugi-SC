@@ -15,6 +15,15 @@ export type User = {
   lastViewedAllRfqsAt?: Timestamp;
 };
 
+export type Notification = {
+    id: string;
+    title: string;
+    description: string;
+    href: string;
+    read: boolean;
+    createdAt: Timestamp;
+};
+
 export type InventoryItem = {
     id: string;
     name: string;
@@ -181,3 +190,5 @@ export type CustomerFeedback = {
 export type BrandSettings = {
   logoUrl?: string;
 };
+
+    
