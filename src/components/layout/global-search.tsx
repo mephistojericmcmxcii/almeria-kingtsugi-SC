@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
@@ -22,13 +22,14 @@ export function GlobalSearch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-        setIsOpen(false);
-    } else {
+    if (searchTerm.trim() !== '') {
         setIsOpen(true);
+    } else {
+        setIsOpen(false);
     }
   }, [searchTerm]);
 
@@ -98,9 +99,17 @@ export function GlobalSearch() {
                 </div>
             </PopoverAnchor>
             
-            <PopoverContent 
-                className="w-[var(--radix-popover-trigger-width)] p-0" 
+            <PopoverContent
+                ref={popoverRef}
+                className="w-[var(--radix-popover-trigger-width)] p-0"
                 onOpenAutoFocus={(e) => e.preventDefault()}
+                onBlur={(e) => {
+                    // This is the hardfix: Check if the new focused element is outside the popover.
+                    // If it is, then we can safely close it.
+                    if (!popoverRef.current?.contains(e.relatedTarget as Node)) {
+                        setIsOpen(false);
+                    }
+                }}
             >
                 <Command>
                     <CommandList>
