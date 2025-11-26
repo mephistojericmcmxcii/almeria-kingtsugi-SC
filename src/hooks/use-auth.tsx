@@ -152,8 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const notificationsQuery = query(
         collection(firestore, 'users', user.id, 'notifications'),
-        where('read', '==', false),
-        where('createdAt', '!=', null)
+        where('read', '==', false)
     );
     
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
@@ -161,10 +160,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
             .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
         setNotifications(fetchedNotifications);
+    },
+    (error) => {
+        if (error.code === 'failed-precondition') {
+            const compositeIndexUrl = `https://console.firebase.google.com/v1/r/project/${firestore.app.options.projectId}/firestore/indexes?create_composite=ClJwcm9qZWN0cy9hbG1lcmlhc2RiL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9ub3RpZmljYXRpb25zL2luZGV4ZXMvXxABGggKBHJlYWQQARoNCgljcmVhdGVkQXQQAxoMCghfX25hbWVfXxAB`;
+            console.error(`Firestore query requires an index. Please create it here: ${compositeIndexUrl}`);
+            toast({
+                variant: 'destructive',
+                title: 'Database Index Required',
+                description: 'A database operation failed. Check the developer console for instructions to create the necessary index.',
+                duration: 10000,
+            });
+        } else {
+             console.error("Notifications listener error:", error);
+        }
     });
 
     return () => unsubscribe();
-  }, [user, firestore]);
+  }, [user, firestore, toast]);
   
   // Fetch all product variants once and cache them
   useEffect(() => {
