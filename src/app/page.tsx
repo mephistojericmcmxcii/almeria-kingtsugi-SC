@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import Header from '@/components/layout/header';
 import MainSidebar from '@/components/layout/main-sidebar';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const EditHomeDialog = lazy(() => import('@/components/home/edit-home-dialog').then(module => ({ default: module.EditHomeDialog })));
@@ -54,6 +55,7 @@ function HomePageContent() {
   const [content, setContent] = useState<HomePageSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setOpen } = useSidebar();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
       const fetchContent = async () => {
@@ -87,10 +89,10 @@ function HomePageContent() {
     <div className="flex flex-col w-full h-screen">
         <Header />
          <main 
-            className="flex-1 flex flex-col relative transition-all duration-500"
+            className="flex-1 flex flex-col relative transition-all duration-500 bg-center"
             style={{ 
               backgroundImage: `url(${displayContent.backgroundUrl})`,
-              backgroundSize: '100% 130%',
+              backgroundSize: isMobile ? 'cover' : '100% 130%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
             }}
