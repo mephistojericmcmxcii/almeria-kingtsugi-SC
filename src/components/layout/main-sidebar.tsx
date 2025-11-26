@@ -242,7 +242,7 @@ const MainSidebar = () => {
       <SidebarFooter>
         {user ? (
             <SidebarMenuButton onClick={logout}>
-                <LogOut />
+                <LogOut className="transform rotate-180" />
                 <span>Logout</span>
             </SidebarMenuButton>
         ) : (
