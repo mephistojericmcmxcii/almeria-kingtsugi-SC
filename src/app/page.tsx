@@ -99,7 +99,7 @@ function HomePageContent() {
               className="flex-1 flex flex-col relative transition-all duration-500 bg-center"
               style={{ 
                 backgroundImage: `url(${displayContent.backgroundUrl})`,
-                backgroundSize: isMobile ? 'auto' : '100% 130%',
+                backgroundSize: isMobile ? 'auto 100%' : 'auto 100%',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
               }}
@@ -163,7 +163,7 @@ function HomePageContent() {
 
               {/* Footer */}
               <footer className="relative z-10 h-14 flex items-center bg-black/15 backdrop-blur-sm mt-auto">
-                  <div className="w-full flex justify-between items-center text-white/60 responsive-footer-text">
+                  <div className="w-full flex justify-between items-center text-white/60 responsive-footer-text px-2">
                       <div className="text-left flex-1">{displayContent.footerTextLeft}</div>
                       <div className="text-center flex-1">{displayContent.footerTextCenter}</div>
                       <div className="text-right flex-1">{displayContent.footerTextRight}</div>
