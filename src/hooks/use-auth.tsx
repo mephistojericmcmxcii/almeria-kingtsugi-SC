@@ -189,8 +189,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const personalNotifs = prev.filter(n => !n.isGlobal);
                     const combined = [...personalNotifs, ...adminNotifs];
                     return combined.sort((a, b) => {
-                        const timeA = a.createdAt?.toMillis() ?? 0;
-                        const timeB = b.createdAt?.toMillis() ?? 0;
+                        const timeA = a.createdAt?.toMillis() || 0;
+                        const timeB = b.createdAt?.toMillis() || 0;
                         return timeB - timeA;
                     });
                 });
@@ -201,19 +201,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribers.forEach(unsub => unsub());
   }, [user, firestore]);
   
+    // Logic for checking low stock and sending notifications
+  const checkLowStock = useCallback(async (variants: InventoryVariant[]) => {
+      if (!firestore || user?.role !== 'admin') return;
+
+      const batchOp = writeBatch(firestore);
+      let updatesMade = false;
+
+      for (const variant of variants) {
+          const isLow = variant.quantity <= variant.warningLimit;
+
+          if (isLow && !variant.lowStockNotified) {
+              // Item is low and notification has not been sent
+              const notificationRef = doc(collection(firestore, 'admin_notifications'));
+              batchOp.set(notificationRef, {
+                  title: 'Low Stock Alert',
+                  description: `${variant.parentName} (${variant.brand}) is running low. Only ${variant.quantity} left.`,
+                  href: `/management/inventory/${variant.parentItemId}`,
+                  read: false,
+                  createdAt: serverTimestamp(),
+              });
+              
+              if (variant.ref) {
+                  batchOp.update(variant.ref, { lowStockNotified: true });
+              }
+              updatesMade = true;
+          } else if (!isLow && variant.lowStockNotified) {
+              // Item is no longer low, reset the flag
+              if (variant.ref) {
+                batchOp.update(variant.ref, { lowStockNotified: false });
+                updatesMade = true;
+              }
+          }
+      }
+
+      if (updatesMade) {
+          try {
+              await batchOp.commit();
+          } catch (error) {
+              console.error("Error in low stock notification batch write:", error);
+          }
+      }
+  }, [firestore, user?.role]);
+  
   // Fetch all product variants once and cache them
   useEffect(() => {
-    if (products === null) {
-      setIsProductsLoading(true);
-      const variantsQuery = query(collectionGroup(firestore, 'variants'));
-      getDocs(variantsQuery).then(variantsSnapshot => {
+    // Only run this logic on the products page
+    if (pathname !== '/products' || products !== null) {
+        if(products) setIsProductsLoading(false);
+        return;
+    };
+    
+    setIsProductsLoading(true);
+    const variantsQuery = query(collectionGroup(firestore, 'variants'));
+    const unsubscribe = onSnapshot(variantsQuery, (variantsSnapshot) => {
         const variants = variantsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           ref: doc.ref,
         } as InventoryVariant));
         setProducts(variants);
-      }).catch(error => {
+        setIsProductsLoading(false);
+
+        // Perform low stock check after fetching/updating products
+        if(user?.role === 'admin') {
+            checkLowStock(variants);
+        }
+
+    }, (error) => {
         if (error.code === 'permission-denied') {
             const contextualError = new FirestorePermissionError({
                 path: 'variants',
@@ -228,13 +283,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               description: 'Could not load the product catalog.'
             });
         }
-      }).finally(() => {
         setIsProductsLoading(false);
-      });
-    } else {
-        setIsProductsLoading(false);
-    }
-  }, [firestore, products, toast]);
+    });
+    
+    return () => unsubscribe();
+
+  }, [firestore, pathname, checkLowStock, user?.role]);
 
   const fetchOrders = useCallback(async () => {
     if (!user || pathname === '/login') {
@@ -1037,7 +1091,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         description: description,
                         href: '/management/orders',
                         read: false,
-                        createdAt: Timestamp.now(),
+                        createdAt: serverTimestamp() as Timestamp,
                     };
                     transaction.set(adminNotificationRef, adminNotification);
                 }
@@ -1250,4 +1304,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
