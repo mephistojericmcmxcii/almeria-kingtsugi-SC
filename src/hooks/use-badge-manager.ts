@@ -101,9 +101,12 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
 
     const dismissUserNotifications = useCallback(async () => {
         if (!user) return;
+        
+        // Immediately update local state for instant UI feedback
         setShowQuoteReadyBadge(false);
         setShowNewPurchaseBadge(false);
         setShowNewHistoryBadge(false);
+        setShowCartBadge(false); // Also dismiss cart badge
 
         try {
             const userRef = doc(firestore, "users", user.id);

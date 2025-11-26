@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Bell, ShoppingCart, FileQuestion, Truck, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 
 export default function NotificationDropdown() {
@@ -27,6 +28,7 @@ export default function NotificationDropdown() {
     dismissUserNotifications
   } = useAuth();
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;
 
@@ -73,9 +75,17 @@ export default function NotificationDropdown() {
     dismissUserNotifications();
     router.push(href);
   };
+  
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open && hasNotifications) {
+      // Dismiss notifications when the dropdown is closed
+      dismissUserNotifications();
+    }
+  };
 
   return (
-    <DropdownMenu onOpenChange={(open) => { if (!open) dismissUserNotifications()}}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20 relative">
           <Bell className="h-6 w-6 text-white" />
