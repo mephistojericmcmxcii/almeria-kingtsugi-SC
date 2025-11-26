@@ -763,8 +763,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     
-        const writeBatch = firestore ? writeBatch(firestore) : null;
-        if (!writeBatch) return false;
+        const batch = firestore ? writeBatch(firestore) : null;
+        if (!batch) return false;
     
         try {
             // Create a new order document for the user
@@ -785,12 +785,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 discount: 0,
                 statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
             };
-            writeBatch.set(newOrderRef, newOrder);
+            batch.set(newOrderRef, newOrder);
     
             // Delete items from the user's cart
             for (const item of cartItems) {
                 const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
-                writeBatch.delete(cartItemRef);
+                batch.delete(cartItemRef);
             }
     
             // Create a single notification for all admins in the root collection
@@ -802,9 +802,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 read: false,
                 createdAt: serverTimestamp() as Timestamp,
             };
-            writeBatch.set(adminNotificationRef, adminNotification);
+            batch.set(adminNotificationRef, adminNotification);
     
-            await writeBatch.commit();
+            await batch.commit();
             
             await fetchOrders(); // Refetch user's orders
             return true;
@@ -835,6 +835,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const newOrderRef = doc(collection(firestore, 'users', rfq.userId, 'orders'));
         const originalRfqRef = doc(firestore, 'users', rfq.userId, 'rfq', rfq.id);
+        const notificationRef = doc(collection(firestore, 'users', rfq.userId, 'notifications'));
+
 
         try {
             await runTransaction(firestore, async (transaction) => {
@@ -895,6 +897,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 transaction.set(newOrderRef, newOrder);
                 transaction.delete(originalRfqRef);
+
+                // Create notification for the user
+                const newNotification: Omit<Notification, 'id'> = {
+                    title: 'Quotation Ready',
+                    description: `Your quotation for request #${rfq.id.substring(0, 6)}... is ready for review.`,
+                    href: '/profile?tab=quotation',
+                    read: false,
+                    createdAt: Timestamp.now(),
+                };
+                transaction.set(notificationRef, newNotification);
+
             });
 
             toast({
@@ -1194,8 +1207,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
-
-
-    
