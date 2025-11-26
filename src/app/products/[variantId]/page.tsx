@@ -10,8 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoginRedirectDialog } from '@/components/auth/login-redirect-dialog';
-import { ArrowLeft, Tag, FileQuestion, Info, ListTree, Package } from 'lucide-react';
-import Link from 'next/link';
+import { Tag, FileQuestion, Info, ListTree, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function ProductDetailsPage() {
@@ -109,9 +108,6 @@ export default function ProductDetailsPage() {
         <p className="text-muted-foreground mt-2">
           The product you're looking for might have been moved or deleted.
         </p>
-        <Button asChild className="mt-6">
-          <Link href="/products">Back to Catalog</Link>
-        </Button>
       </div>
     );
   }
@@ -121,10 +117,6 @@ export default function ProductDetailsPage() {
   return (
     <>
     <div className="space-y-6">
-      <Button variant="outline" size="sm" asChild>
-        <Link href="/products"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Catalog</Link>
-      </Button>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-start">
         {/* Left Column: Image & Actions */}
         <div className={cn("space-y-6 md:sticky md:top-8")}>
