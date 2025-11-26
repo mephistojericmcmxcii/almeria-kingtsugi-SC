@@ -70,7 +70,7 @@ interface AuthContextType {
   showAdminRfqBadge: boolean;
   dismissAdminRfqBadge: () => void;
   fetchOrders: () => Promise<void>;
-  markNotificationAsRead: (notification: Notification) => Promise<void>;
+  deleteNotificationOnClick: (notification: Notification) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -182,7 +182,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setNotifications(prev => {
                     const personalNotifs = prev.filter(n => !n.isGlobal);
                     const combined = [...personalNotifs, ...adminNotifs];
-                    return combined.sort(sortNotifications);
+                    return combined.sort((a, b) => {
+                        const timeA = a.createdAt?.toMillis() ?? 0;
+                        const timeB = b.createdAt?.toMillis() ?? 0;
+                        return timeB - timeA;
+                    });
                 });
             }, (error) => console.error("Admin notifications listener error:", error))
         );
@@ -1074,7 +1078,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const title = newStatus === 'confirmed' ? 'Order Confirmed' : 'Order Completed';
                     const description = newStatus === 'confirmed' 
                         ? `${order.userDisplayName} has confirmed their order #${order.id.substring(0, 6)}...`
-                        : `${order.userDisplayName} has marked order #${order.id.substring(0, 6)}... as completed.`;
+                        : `${order.userDisplayName} has marked order #${order.id.substring(0, 6)}... as received.`;
                     
                     const adminNotification: Omit<Notification, 'id'> = {
                         title: title,
@@ -1159,7 +1163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
-    const markNotificationAsRead = async (notification: Notification): Promise<void> => {
+    const deleteNotificationOnClick = async (notification: Notification): Promise<void> => {
         if (!user) return;
         
         let notificationRef;
@@ -1170,9 +1174,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         try {
-            await updateDoc(notificationRef, { read: true });
+            await deleteDoc(notificationRef);
         } catch (error) {
-            console.error("Failed to mark notification as read:", error);
+            console.error("Failed to delete notification:", error);
         }
     };
 
@@ -1278,7 +1282,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/');
   };
   
-  const value = { user, cart, orders, products, notifications, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, deleteFileByUrl, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders, markNotificationAsRead };
+  const value = { user, cart, orders, products, notifications, isProductsLoading, firestore, toast, login, register, loginWithGoogle, logout, isLoading, createAdminUser, updateUserRole, updateUserProfile, addToCart, updateCartItemQuantity, removeCartItem, placeOrder, respondToRfq, updateOrderStatus, updatePoStatus, uploadFile, deleteFileByUrl, showAdminOrderBadge, dismissAdminOrderBadge, showAdminRfqBadge, dismissAdminRfqBadge, fetchOrders, deleteNotificationOnClick };
 
   return (
     <AuthContext.Provider value={value}>
@@ -1294,4 +1298,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

@@ -34,7 +34,7 @@ const ICONS: Record<string, React.ElementType> = {
 
 
 export default function NotificationDropdown() {
-  const { user, firestore, notifications, isLoading, markNotificationAsRead } = useAuth();
+  const { user, firestore, notifications, isLoading, deleteNotificationOnClick } = useAuth();
   const router = useRouter();
   
   if (isLoading || !user) return null;
@@ -43,8 +43,8 @@ export default function NotificationDropdown() {
   const hasNotifications = unreadNotifications.length > 0;
 
   const handleNotificationClick = async (notification: Notification) => {
-    await markNotificationAsRead(notification);
     router.push(notification.href);
+    await deleteNotificationOnClick(notification);
   };
 
   return (
@@ -85,7 +85,3 @@ export default function NotificationDropdown() {
     </DropdownMenu>
   );
 }
-
-    
-
-    
