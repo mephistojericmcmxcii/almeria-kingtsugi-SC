@@ -210,6 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       for (const variant of variants) {
           const isLow = variant.quantity <= variant.warningLimit;
+          const isGood = variant.quantity > variant.warningLimit;
 
           if (isLow && !variant.lowStockNotified) {
               // Item is low and notification has not been sent
@@ -226,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   batchOp.update(variant.ref, { lowStockNotified: true });
               }
               updatesMade = true;
-          } else if (!isLow && variant.lowStockNotified) {
+          } else if (isGood && variant.lowStockNotified) {
               // Item is no longer low, reset the flag
               if (variant.ref) {
                 batchOp.update(variant.ref, { lowStockNotified: false });
@@ -842,8 +843,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     
-        const batchOp = firestore ? writeBatch(firestore) : null;
-        if (!batchOp) return false;
+        const batch = firestore ? writeBatch(firestore) : null;
+        if (!batch) return false;
     
         try {
             // Create a new order document for the user
@@ -864,12 +865,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 discount: 0,
                 statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
             };
-            batchOp.set(newOrderRef, newOrder);
+            batch.set(newOrderRef, newOrder);
     
             // Delete items from the user's cart
             for (const item of cartItems) {
                 const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
-                batchOp.delete(cartItemRef);
+                batch.delete(cartItemRef);
             }
     
             // Create a single notification for all admins in the root collection
@@ -881,9 +882,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 read: false,
                 createdAt: serverTimestamp() as Timestamp,
             };
-            batchOp.set(adminNotificationRef, adminNotification);
+            batch.set(adminNotificationRef, adminNotification);
     
-            await batchOp.commit();
+            await batch.commit();
             
             await fetchOrders(); // Refetch user's orders
             return true;
