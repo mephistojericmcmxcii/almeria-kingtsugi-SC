@@ -102,10 +102,10 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0" showCloseButton={false}>
-        <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0" showCloseButton={false}>
+        <div className="grid grid-cols-1 md:grid-cols-3 flex-1 min-h-0">
             {/* Left Column: Image & Actions */}
-            <div className="p-6 flex flex-col">
+            <div className="md:col-span-1 p-6 flex flex-col">
                 <div className="aspect-square relative w-full">
                     <img
                         src={placeholder.imageUrl}
@@ -137,7 +137,7 @@ export function ViewProductModal({ isOpen, onOpenChange, variant, onAddToCart }:
             </div>
             
             {/* Right Column: Details */}
-            <div className="flex flex-col min-h-0 border-l">
+            <div className="md:col-span-2 flex flex-col min-h-0 border-l">
                 <ScrollArea className="flex-1">
                     <div className="p-6 space-y-6">
                         <DialogHeader className="space-y-2 text-left">
