@@ -90,7 +90,7 @@ function HomePageContent() {
             className="flex-1 flex flex-col relative transition-all duration-500"
             style={{ 
               backgroundImage: `url(${displayContent.backgroundUrl})`,
-              backgroundSize: '100% 100%',
+              backgroundSize: '100% 130%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
             }}
