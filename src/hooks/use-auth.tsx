@@ -149,6 +149,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
+    const sortNotifications = (a: Notification, b: Notification) => {
+        const timeA = a.createdAt?.toMillis() || 0;
+        const timeB = b.createdAt?.toMillis() || 0;
+        return timeB - timeA;
+    };
+
     const personalNotificationsQuery = query(
         collection(firestore, 'users', user.id, 'notifications')
     );
@@ -159,7 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setNotifications(prev => {
                 const otherNotifs = prev.filter(n => n.isGlobal);
                 const combined = [...otherNotifs, ...personalNotifs];
-                return combined.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+                return combined.sort(sortNotifications);
             });
         }, (error) => console.error("Personal notifications listener error:", error))
     ];
@@ -175,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setNotifications(prev => {
                     const personalNotifs = prev.filter(n => !n.isGlobal);
                     const combined = [...personalNotifs, ...adminNotifs];
-                    return combined.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+                    return combined.sort(sortNotifications);
                 });
             }, (error) => console.error("Admin notifications listener error:", error))
         );
