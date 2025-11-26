@@ -23,21 +23,7 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
             return;
         }
 
-        // --- Admin Orders Listener ---
-        const ordersUnsub = onSnapshot(collectionGroup(firestore, 'orders'), (snapshot) => {
-            const lastViewedAdminOrders = user.lastViewedAllOrdersAt?.toMillis() || 0;
-            const hasNew = snapshot.docs.some(doc => {
-                const order = doc.data() as Order;
-                // Consider new if 'pending-quote' or if updated after last view
-                if (order.status === 'pending-quote') return true;
-                const updatedAt = order.updatedAt?.toMillis() || order.orderDate.toMillis();
-                return updatedAt > lastViewedAdminOrders;
-            });
-            setShowAdminOrderBadge(hasNew);
-        }, (error) => {
-            console.error("Admin order listener error:", error);
-            setShowAdminOrderBadge(false); // Clear badge on error
-        });
+        // The listener for the order badge is removed, as this is now handled by the notification bell.
 
         // --- Admin RFQs Listener ---
         const rfqsUnsub = onSnapshot(collectionGroup(firestore, 'rfq'), (snapshot) => {
@@ -53,7 +39,6 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
         });
 
         return () => {
-            ordersUnsub();
             rfqsUnsub();
         };
     }, [user, firestore]);

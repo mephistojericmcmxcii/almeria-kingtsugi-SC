@@ -162,18 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setNotifications(fetchedNotifications);
     },
     (error) => {
-        if (error.code === 'failed-precondition') {
-            const compositeIndexUrl = `https://console.firebase.google.com/v1/r/project/${firestore.app.options.projectId}/firestore/indexes?create_composite=ClJwcm9qZWN0cy9hbG1lcmlhc2RiL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9ub3RpZmljYXRpb25zL2luZGV4ZXMvXxABGggKBHJlYWQQARoNCgljcmVhdGVkQXQQAxoMCghfX25hbWVfXxAB`;
-            console.error(`Firestore query requires an index. Please create it here: ${compositeIndexUrl}`);
-            toast({
-                variant: 'destructive',
-                title: 'Database Index Required',
-                description: 'A database operation failed. Check the developer console for instructions to create the necessary index.',
-                duration: 10000,
-            });
-        } else {
-             console.error("Notifications listener error:", error);
-        }
+      console.error("Notifications listener error:", error);
     });
 
     return () => unsubscribe();
@@ -757,37 +746,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to request a quotation.' });
             return false;
         }
-
+    
+        const writeBatch = firestore ? batch(firestore) : null;
+        if (!writeBatch) return false;
+    
         try {
+            // Fetch all admin users
+            const adminsQuery = query(collection(firestore, 'users'), where('role', '==', 'admin'));
+            const adminSnapshot = await getDocs(adminsQuery);
+            const adminIds = adminSnapshot.docs.map(doc => doc.id);
+    
+            // Create a new order document for the user
             const newOrderRef = doc(collection(firestore, 'users', user.id, 'orders'));
-
-            await runTransaction(firestore, async (transaction) => {
-                
-                const newOrder: Omit<Order, 'id'> = {
-                    orderDate: serverTimestamp(),
-                    userId: user.id,
-                    userDisplayName: user.displayName,
-                    userEmail: user.email,
-                    items: cartItems,
-                    totalAmount,
-                    shippingAddress,
-                    shippingContactNumber,
-                    status: 'pending-quote',
-                    paymentMethod,
-                    notes,
-                    updatedAt: serverTimestamp(),
-                    discount: 0,
-                    statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
+            const newOrder: Omit<Order, 'id'> = {
+                orderDate: serverTimestamp(),
+                userId: user.id,
+                userDisplayName: user.displayName,
+                userEmail: user.email,
+                items: cartItems,
+                totalAmount,
+                shippingAddress,
+                shippingContactNumber,
+                status: 'pending-quote',
+                paymentMethod,
+                notes,
+                updatedAt: serverTimestamp(),
+                discount: 0,
+                statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
+            };
+            writeBatch.set(newOrderRef, newOrder);
+    
+            // Delete items from the user's cart
+            for (const item of cartItems) {
+                const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
+                writeBatch.delete(cartItemRef);
+            }
+    
+            // Create a notification for each admin user
+            adminIds.forEach(adminId => {
+                const notificationRef = doc(collection(firestore, 'users', adminId, 'notifications'));
+                const adminNotification: Omit<Notification, 'id'> = {
+                    title: 'New Quotation Request',
+                    description: `A new request has been submitted by ${user.displayName}.`,
+                    href: '/management/orders',
+                    read: false,
+                    createdAt: serverTimestamp() as Timestamp,
                 };
-                transaction.set(newOrderRef, newOrder);
-
-                for (const item of cartItems) {
-                    const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
-                    transaction.delete(cartItemRef);
-                }
+                writeBatch.set(notificationRef, adminNotification);
             });
+    
+            await writeBatch.commit();
             
-            await fetchOrders(); // Refetch orders to show the new one
+            await fetchOrders(); // Refetch user's orders
             return true;
         } catch (error: any) {
             console.error("Quotation request failed:", error);
