@@ -112,7 +112,7 @@ export default function ProductsPage() {
         </CardHeader>
         <CardContent>
             {isDataLoading ? (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {Array.from({ length: 10 }).map((_, i) => (
                         <div key={i} className="space-y-2">
                            <Skeleton className="h-48 w-full" />
@@ -122,7 +122,7 @@ export default function ProductsPage() {
                     ))}
                 </div>
             ) : filteredItems.length > 0 ? (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filteredItems.map((variant) => {
                         const placeholder = getPlaceholderImage(variant);
                         return (
