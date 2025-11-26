@@ -139,6 +139,7 @@ export default function RfqPage() {
     setShowConfirmation(false);
 
     const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
+    const adminNotificationRef = doc(collection(firestore, 'admin_notifications'));
 
     try {
         let fileUrl = '';
@@ -169,6 +170,17 @@ export default function RfqPage() {
         }
         
         await setDoc(rfqRef, dataToSave);
+        
+        // Create admin notification
+        const adminNotification = {
+            title: 'New Custom RFQ',
+            description: `A custom quotation request was submitted by ${user.displayName}.`,
+            href: '/management/orders',
+            read: false,
+            createdAt: serverTimestamp(),
+        };
+        await setDoc(adminNotificationRef, adminNotification);
+
 
         toast({
             title: "Request Sent!",
