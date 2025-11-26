@@ -72,7 +72,7 @@ export default function NotificationDropdown() {
   const hasNotifications = notifications.length > 0;
 
   const handleNotificationClick = (href: string) => {
-    dismissUserNotifications();
+    // No need to dismiss here, it will be handled on close
     router.push(href);
   };
   
