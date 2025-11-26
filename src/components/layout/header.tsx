@@ -46,10 +46,6 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary/90">
-            <Bell className="h-7 w-7" />
-            <span className="sr-only">Notifications</span>
-        </Button>
         <UserNav />
       </div>
     </header>
