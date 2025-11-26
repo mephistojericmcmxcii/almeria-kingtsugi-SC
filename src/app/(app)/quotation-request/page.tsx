@@ -71,7 +71,7 @@ const formSchema = z.discriminatedUnion('requestType', [
 type FormValues = z.infer<typeof formSchema>;
 
 export default function RfqPage() {
-  const { user, firestore, uploadFile, dismissAdminRfqBadge } = useAuth();
+  const { user, firestore, uploadFile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,6 +140,8 @@ export default function RfqPage() {
 
     const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
     const adminNotificationRef = doc(collection(firestore, 'admin_notifications'));
+    const userNotificationRef = doc(collection(firestore, 'users', user.id, 'notifications'));
+
 
     try {
         let fileUrl = '';
@@ -180,6 +182,16 @@ export default function RfqPage() {
             createdAt: serverTimestamp(),
         };
         await setDoc(adminNotificationRef, adminNotification);
+
+        // Create user notification
+        const userNotification = {
+            title: 'RFQ Submitted',
+            description: 'Your custom quotation request has been sent successfully.',
+            href: '/profile?tab=rfq',
+            read: false,
+            createdAt: serverTimestamp(),
+        };
+        await setDoc(userNotificationRef, userNotification);
 
 
         toast({
