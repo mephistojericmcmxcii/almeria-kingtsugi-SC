@@ -7,8 +7,8 @@ import { onSnapshot, collection, collectionGroup, doc, updateDoc, serverTimestam
 import type { User, CartItem, Order, QuotationRequest } from '@/lib/types';
 
 export const useBadgeManager = (user: User | null, cart: CartItem[] | null, firestore: Firestore) => {
-    // This hook no longer manages user-facing badges, as they are handled by the new notifications system.
-    // It only manages admin-facing badges now.
+    // This hook is simplified and currently does not manage any active badges.
+    // All notifications are handled through the notification bell system.
     const [showAdminOrderBadge, setShowAdminOrderBadge] = useState(false);
     const [showAdminRfqBadge, setShowAdminRfqBadge] = useState(false);
 
@@ -22,25 +22,10 @@ export const useBadgeManager = (user: User | null, cart: CartItem[] | null, fire
             setShowAdminRfqBadge(false);
             return;
         }
+        
+        // All listener logic for sidebar badges has been removed to centralize
+        // notifications in the notification bell.
 
-        // The listener for the order badge is removed, as this is now handled by the notification bell.
-
-        // --- Admin RFQs Listener ---
-        const rfqsUnsub = onSnapshot(collectionGroup(firestore, 'rfq'), (snapshot) => {
-            const lastViewedAdminRfqs = user.lastViewedAllRfqsAt?.toMillis() || 0;
-            const hasNew = snapshot.docs.some(doc => {
-                const rfq = doc.data() as QuotationRequest;
-                return rfq.createdAt && rfq.createdAt.toMillis() > lastViewedAdminRfqs;
-            });
-            setShowAdminRfqBadge(hasNew);
-        }, (error) => {
-            console.error("Admin RFQ listener error:", error);
-            setShowAdminRfqBadge(false); // Clear badge on error
-        });
-
-        return () => {
-            rfqsUnsub();
-        };
     }, [user, firestore]);
 
     const dismissAdminOrderBadge = useCallback(async () => {
