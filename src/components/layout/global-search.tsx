@@ -33,9 +33,9 @@ export function GlobalSearch() {
     const lowercasedTerm = searchTerm.toLowerCase();
     
     return products.filter(variant => 
-      variant.parentName.toLowerCase().includes(lowercasedTerm) ||
-      variant.brand.toLowerCase().includes(lowercasedTerm) ||
-      variant.variation.toLowerCase().includes(lowercasedTerm)
+      variant.parentName.toLowerCase().startsWith(lowercasedTerm) ||
+      variant.brand.toLowerCase().startsWith(lowercasedTerm) ||
+      variant.variation.toLowerCase().startsWith(lowercasedTerm)
     ).slice(0, 7); // Limit to 7 results
   }, [searchTerm, products]);
 
