@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -138,6 +138,8 @@ export default function RfqPage() {
     setIsSubmitting(true);
     setShowConfirmation(false);
 
+    const batch = writeBatch(firestore);
+
     const rfqRef = doc(collection(firestore, 'users', user.id, 'rfq'));
     const adminNotificationRef = doc(collection(firestore, 'admin_notifications'));
     const userNotificationRef = doc(collection(firestore, 'users', user.id, 'notifications'));
@@ -171,7 +173,7 @@ export default function RfqPage() {
             dataToSave.items = [];
         }
         
-        await setDoc(rfqRef, dataToSave);
+        batch.set(rfqRef, dataToSave);
         
         // Create admin notification
         const adminNotification = {
@@ -181,7 +183,7 @@ export default function RfqPage() {
             read: false,
             createdAt: serverTimestamp(),
         };
-        await setDoc(adminNotificationRef, adminNotification);
+        batch.set(adminNotificationRef, adminNotification);
 
         // Create user notification
         const userNotification = {
@@ -191,7 +193,9 @@ export default function RfqPage() {
             read: false,
             createdAt: serverTimestamp(),
         };
-        await setDoc(userNotificationRef, userNotification);
+        batch.set(userNotificationRef, userNotification);
+
+        await batch.commit();
 
 
         toast({
