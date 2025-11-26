@@ -46,6 +46,9 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20">
+          <Bell className="h-6 w-6 text-white" />
+        </Button>
         <UserNav />
       </div>
     </header>
