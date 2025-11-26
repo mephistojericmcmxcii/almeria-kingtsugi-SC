@@ -244,7 +244,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             ...doc.data()
         } as Order));
         
-        const sortedOrders = fetchedOrders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+        const sortedOrders = fetchedOrders.sort((a, b) => {
+            const timeA = a.orderDate?.toMillis() || 0;
+            const timeB = b.orderDate?.toMillis() || 0;
+            return timeB - timeA;
+        });
         setOrders(sortedOrders);
     } catch (error) {
       console.error("Error fetching orders manually:", error);
@@ -268,7 +272,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             ...doc.data()
         } as Order));
         
-        const sortedOrders = fetchedOrders.sort((a, b) => b.orderDate.toMillis() - a.orderDate.toMillis());
+        const sortedOrders = fetchedOrders.sort((a, b) => {
+            const timeA = a.orderDate?.toMillis() || 0;
+            const timeB = b.orderDate?.toMillis() || 0;
+            return timeB - timeA;
+        });
         setOrders(sortedOrders);
     }, (error) => {
         console.error("Orders listener error:", error);
