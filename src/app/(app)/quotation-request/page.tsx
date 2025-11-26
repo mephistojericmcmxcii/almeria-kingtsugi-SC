@@ -203,7 +203,7 @@ export default function RfqPage() {
             description: "Your Request for Quotation has been successfully submitted.",
         });
         
-        router.push('/profile');
+        router.push('/profile?tab=rfq');
 
     } catch (err: any) {
         console.error("[RFQ Form] An error occurred during submission:", err);
