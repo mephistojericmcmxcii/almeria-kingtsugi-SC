@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, Go
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
 import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback, Notification } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -156,7 +157,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const personalNotificationsQuery = query(
-        collection(firestore, 'users', user.id, 'notifications')
+        collection(firestore, 'users', user.id, 'notifications'),
+        where('read', '==', false)
     );
 
     const unsubscribers = [
@@ -172,7 +174,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (user.role === 'admin') {
         const adminNotificationsQuery = query(
-            collection(firestore, 'admin_notifications')
+            collection(firestore, 'admin_notifications'),
+            where('read', '==', false)
         );
         
         unsubscribers.push(
@@ -181,7 +184,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setNotifications(prev => {
                     const personalNotifs = prev.filter(n => !n.isGlobal);
                     const combined = [...personalNotifs, ...adminNotifs];
-                    return combined.sort(sortNotifications);
+                    return combined.sort((a, b) => {
+                        const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                        const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                        return timeB - timeA;
+                    });
                 });
             }, (error) => console.error("Admin notifications listener error:", error))
         );
@@ -273,8 +280,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } as Order));
         
         const sortedOrders = fetchedOrders.sort((a, b) => {
-            const timeA = a.orderDate?.toMillis() || 0;
-            const timeB = b.orderDate?.toMillis() || 0;
+            const timeA = a.orderDate ? a.orderDate.toMillis() : 0;
+            const timeB = b.orderDate ? b.orderDate.toMillis() : 0;
             return timeB - timeA;
         });
         setOrders(sortedOrders);
@@ -962,7 +969,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     ): Promise<boolean> => {
         const orderRef = doc(firestore, 'users', order.userId, 'orders', order.id);
-        const notificationRef = doc(collection(firestore, 'users', order.userId, 'notifications'));
         
         try {
             const dataToUpdate: any = {
@@ -999,18 +1005,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 // Always update the order document
                 transaction.update(orderRef, dataToUpdate);
 
-                // Create a notification for the user for certain status changes
+                // --- Notification Logic ---
+                // Notify user on specific status changes
                 const isUserFacingUpdate = ['quote-ready', 'completed', 'cancelled', 'declined', 'delivering'].includes(newStatus);
-                
                 if (isUserFacingUpdate) {
-                     const newNotification: Omit<Notification, 'id'> = {
+                    const userNotificationRef = doc(collection(firestore, 'users', order.userId, 'notifications'));
+                    const newNotification: Omit<Notification, 'id'> = {
                         title: `Order #${order.id.substring(0, 6)}... Updated`,
                         description: `Your order status is now: ${newStatus.replace('-', ' ')}`,
                         href: newStatus === 'quote-ready' ? '/profile?tab=quotation' : '/profile?tab=purchases',
                         read: false,
                         createdAt: Timestamp.now(),
                     };
-                    transaction.set(notificationRef, newNotification);
+                    transaction.set(userNotificationRef, newNotification);
+                }
+                
+                // Notify admin when an order is confirmed
+                if (newStatus === 'confirmed') {
+                    const adminNotificationRef = doc(collection(firestore, 'admin_notifications'));
+                    const adminNotification: Omit<Notification, 'id'> = {
+                        title: 'Order Confirmed',
+                        description: `${order.userDisplayName} has confirmed their order #${order.id.substring(0, 6)}...`,
+                        href: '/management/orders',
+                        read: false,
+                        createdAt: Timestamp.now(),
+                    };
+                    transaction.set(adminNotificationRef, adminNotification);
                 }
 
 
@@ -1221,3 +1241,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
