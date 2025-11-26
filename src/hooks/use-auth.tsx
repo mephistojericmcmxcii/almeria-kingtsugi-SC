@@ -167,7 +167,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setNotifications(prev => {
                 const otherNotifs = prev.filter(n => n.isGlobal);
                 const combined = [...otherNotifs, ...personalNotifs];
-                return combined.sort(sortNotifications);
+                return combined.sort((a, b) => {
+                    const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                    const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                    return timeB - timeA;
+                });
             });
         }, (error) => console.error("Personal notifications listener error:", error))
     ];
@@ -185,8 +189,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const personalNotifs = prev.filter(n => !n.isGlobal);
                     const combined = [...personalNotifs, ...adminNotifs];
                     return combined.sort((a, b) => {
-                        const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-                        const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                        const timeA = a.createdAt?.toMillis() ?? 0;
+                        const timeB = b.createdAt?.toMillis() ?? 0;
                         return timeB - timeA;
                     });
                 });
@@ -280,8 +284,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } as Order));
         
         const sortedOrders = fetchedOrders.sort((a, b) => {
-            const timeA = a.orderDate ? a.orderDate.toMillis() : 0;
-            const timeB = b.orderDate ? b.orderDate.toMillis() : 0;
+            const timeA = a.orderDate?.toMillis() ?? 0;
+            const timeB = b.orderDate?.toMillis() ?? 0;
             return timeB - timeA;
         });
         setOrders(sortedOrders);
@@ -784,8 +788,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     
-        const batch = firestore ? writeBatch(firestore) : null;
-        if (!batch) return false;
+        const batchOp = firestore ? writeBatch(firestore) : null;
+        if (!batchOp) return false;
     
         try {
             // Create a new order document for the user
@@ -806,12 +810,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 discount: 0,
                 statusHistory: [{ status: 'pending-quote', timestamp: Timestamp.now() }],
             };
-            batch.set(newOrderRef, newOrder);
+            batchOp.set(newOrderRef, newOrder);
     
             // Delete items from the user's cart
             for (const item of cartItems) {
                 const cartItemRef = doc(firestore, 'users', user.id, 'cart', item.id);
-                batch.delete(cartItemRef);
+                batchOp.delete(cartItemRef);
             }
     
             // Create a single notification for all admins in the root collection
@@ -823,9 +827,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 read: false,
                 createdAt: serverTimestamp() as Timestamp,
             };
-            batch.set(adminNotificationRef, adminNotification);
+            batchOp.set(adminNotificationRef, adminNotification);
     
-            await batch.commit();
+            await batchOp.commit();
             
             await fetchOrders(); // Refetch user's orders
             return true;
@@ -1020,12 +1024,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     transaction.set(userNotificationRef, newNotification);
                 }
                 
-                // Notify admin when an order is confirmed
-                if (newStatus === 'confirmed') {
+                // Notify admin when an order is confirmed or completed
+                if (newStatus === 'confirmed' || newStatus === 'completed') {
                     const adminNotificationRef = doc(collection(firestore, 'admin_notifications'));
+                    const title = newStatus === 'confirmed' ? 'Order Confirmed' : 'Order Completed';
+                    const description = newStatus === 'confirmed' 
+                        ? `${order.userDisplayName} has confirmed their order #${order.id.substring(0, 6)}...`
+                        : `${order.userDisplayName} has marked order #${order.id.substring(0, 6)}... as completed.`;
+                    
                     const adminNotification: Omit<Notification, 'id'> = {
-                        title: 'Order Confirmed',
-                        description: `${order.userDisplayName} has confirmed their order #${order.id.substring(0, 6)}...`,
+                        title: title,
+                        description: description,
                         href: '/management/orders',
                         read: false,
                         createdAt: Timestamp.now(),
