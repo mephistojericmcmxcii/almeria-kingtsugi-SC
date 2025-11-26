@@ -86,18 +86,11 @@ function HomePageContent() {
   return (
     <div className="flex flex-col w-full h-screen">
         <Header />
-         <main className="flex-1 flex flex-col relative overflow-hidden" onClick={() => setOpen(false)}>
-             {/* Background Image */}
-            {isLoading ? (
-            <Skeleton className="absolute inset-0 w-full h-full" />
-            ) : (
-            <div 
-                className="absolute inset-0 w-full h-full bg-cover bg-center transition-all duration-500"
-                style={{ backgroundImage: `url(${displayContent.backgroundUrl})`}}
-                data-ai-hint="seasonal background"
-            />
-            )}
-            
+         <main 
+            className="flex-1 flex flex-col relative overflow-hidden bg-cover bg-center transition-all duration-500"
+            style={{ backgroundImage: `url(${displayContent.backgroundUrl})`}}
+            onClick={() => setOpen(false)}
+        >
             {/* Overlay */}
             <div className="absolute inset-0 w-full h-full bg-black/50" />
 
