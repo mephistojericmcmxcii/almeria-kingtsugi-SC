@@ -96,10 +96,10 @@ function HomePageContent() {
       <div className="flex flex-col w-full h-screen">
           <Header />
            <main 
-              className="flex-1 flex flex-col relative transition-all duration-500 bg-center"
+              className="flex-1 flex flex-col relative transition-all duration-500"
               style={{ 
                 backgroundImage: `url(${displayContent.backgroundUrl})`,
-                backgroundSize: isMobile ? 'auto 100%' : 'auto 100%',
+                backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
               }}
