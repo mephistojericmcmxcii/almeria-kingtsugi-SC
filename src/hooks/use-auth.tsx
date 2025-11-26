@@ -208,8 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const isGood = variant.quantity > variant.warningLimit;
 
         if (isLow && !variant.lowStockNotified) {
-            // Item is low and notification has not been sent.
-            // Use a predictable doc ID to overwrite old notifications for the same item.
+            // Item has become low and we haven't notified yet.
             const notificationRef = doc(firestore, 'admin_notifications', `lowstock_${variant.id}`);
             batchOp.set(notificationRef, {
                 title: 'Low Stock Alert',
@@ -218,12 +217,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 read: false,
                 createdAt: serverTimestamp(),
             });
-            
             batchOp.update(variant.ref, { lowStockNotified: true });
             updatesMade = true;
-
         } else if (isGood && variant.lowStockNotified) {
-            // Item is no longer low, reset the flag
+            // Item is back in good stock, so reset the flag for future notifications.
             batchOp.update(variant.ref, { lowStockNotified: false });
             updatesMade = true;
         }
@@ -1062,10 +1059,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const isUserFacingUpdate = ['quote-ready', 'completed', 'cancelled', 'declined', 'delivering'].includes(newStatus);
                 if (isUserFacingUpdate) {
                     const userNotificationRef = doc(collection(firestore, 'users', order.userId, 'notifications'));
+                    let href = '/profile?tab=purchases';
+                    if (newStatus === 'quote-ready') {
+                        href = '/profile?tab=quotation';
+                    } else if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'declined') {
+                        href = '/profile?tab=orders';
+                    }
+
                     const newNotification: Omit<Notification, 'id'> = {
                         title: `Order #${order.id.substring(0, 6)}... Updated`,
                         description: `Your order status is now: ${newStatus.replace('-', ' ')}`,
-                        href: newStatus === 'quote-ready' ? '/profile?tab=quotation' : '/profile?tab=purchases',
+                        href: href,
                         read: false,
                         createdAt: Timestamp.now(),
                     };
@@ -1298,3 +1302,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
