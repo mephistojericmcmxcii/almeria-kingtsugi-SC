@@ -25,9 +25,7 @@ export function GlobalSearch() {
 
 
   useEffect(() => {
-    if (searchTerm.trim() !== '') {
-        setIsOpen(true);
-    } else {
+    if (searchTerm.trim() === '') {
         setIsOpen(false);
     }
   }, [searchTerm]);
@@ -94,8 +92,13 @@ export function GlobalSearch() {
                         placeholder="Search products..."
                         className="pl-9 bg-background/80 hover:bg-background/90 focus:bg-background"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onFocus={() => { if(searchTerm) setIsOpen(true); }}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            if (e.target.value.trim() !== '') {
+                                setIsOpen(true);
+                            }
+                        }}
+                        onFocus={() => { if(searchTerm.trim() !== '') setIsOpen(true); }}
                         disabled={isProductsLoading}
                     />
                 </div>
