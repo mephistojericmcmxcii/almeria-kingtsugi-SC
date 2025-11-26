@@ -237,8 +237,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   // Fetch all product variants once and cache them
   useEffect(() => {
-    // Only run this logic on the products page
-    if (pathname !== '/products' || products !== null) {
+    // Only run this logic on the home or products page
+    const shouldFetch = pathname === '/' || pathname.startsWith('/products');
+    
+    if (!shouldFetch || products !== null) {
         if(products) setIsProductsLoading(false);
         return;
     };
@@ -279,7 +281,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     return () => unsubscribe();
 
-  }, [firestore, pathname, checkLowStock, user?.role]);
+  }, [firestore, pathname, checkLowStock, user?.role, products]);
 
   const fetchOrders = useCallback(async () => {
     if (!user || pathname === '/login') {
@@ -833,8 +835,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     
-        const batch = firestore ? writeBatch(firestore) : null;
-        if (!batch) return false;
+        const batch = writeBatch(firestore);
     
         try {
             // Create a new order document for the user
