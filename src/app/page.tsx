@@ -87,8 +87,13 @@ function HomePageContent() {
     <div className="flex flex-col w-full h-screen">
         <Header />
          <main 
-            className="flex-1 flex flex-col relative bg-cover bg-center transition-all duration-500"
-            style={{ backgroundImage: `url(${displayContent.backgroundUrl})`}}
+            className="flex-1 flex flex-col relative transition-all duration-500"
+            style={{ 
+              backgroundImage: `url(${displayContent.backgroundUrl})`,
+              backgroundSize: '100% 100%',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
             onClick={() => setOpen(false)}
         >
             {/* Overlay */}
