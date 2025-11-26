@@ -157,8 +157,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const personalNotificationsQuery = query(
-        collection(firestore, 'users', user.id, 'notifications'),
-        where('read', '==', false)
+        collection(firestore, 'users', user.id, 'notifications')
     );
 
     const unsubscribers = [
@@ -167,19 +166,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setNotifications(prev => {
                 const otherNotifs = prev.filter(n => n.isGlobal);
                 const combined = [...otherNotifs, ...personalNotifs];
-                return combined.sort((a, b) => {
-                    const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-                    const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
-                    return timeB - timeA;
-                });
+                return combined.sort(sortNotifications);
             });
         }, (error) => console.error("Personal notifications listener error:", error))
     ];
 
     if (user.role === 'admin') {
         const adminNotificationsQuery = query(
-            collection(firestore, 'admin_notifications'),
-            where('read', '==', false)
+            collection(firestore, 'admin_notifications')
         );
         
         unsubscribers.push(
@@ -188,11 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setNotifications(prev => {
                     const personalNotifs = prev.filter(n => !n.isGlobal);
                     const combined = [...personalNotifs, ...adminNotifs];
-                    return combined.sort((a, b) => {
-                        const timeA = a.createdAt?.toMillis() || 0;
-                        const timeB = b.createdAt?.toMillis() || 0;
-                        return timeB - timeA;
-                    });
+                    return combined.sort(sortNotifications);
                 });
             }, (error) => console.error("Admin notifications listener error:", error))
         );
@@ -203,47 +193,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
     // Logic for checking low stock and sending notifications
   const checkLowStock = useCallback(async (variants: InventoryVariant[]) => {
-      if (!firestore || user?.role !== 'admin') return;
+    if (!firestore || user?.role !== 'admin') return;
 
-      const batchOp = writeBatch(firestore);
-      let updatesMade = false;
+    const batchOp = writeBatch(firestore);
+    let updatesMade = false;
 
-      for (const variant of variants) {
-          const isLow = variant.quantity <= variant.warningLimit;
-          const isGood = variant.quantity > variant.warningLimit;
+    for (const variant of variants) {
+        if (!variant.id || !variant.ref) continue;
+        const isLow = variant.quantity <= variant.warningLimit;
+        const isGood = variant.quantity > variant.warningLimit;
 
-          if (isLow && !variant.lowStockNotified) {
-              // Item is low and notification has not been sent
-              const notificationRef = doc(collection(firestore, 'admin_notifications'));
-              batchOp.set(notificationRef, {
-                  title: 'Low Stock Alert',
-                  description: `${variant.parentName} (${variant.brand}) is running low. Only ${variant.quantity} left.`,
-                  href: `/management/inventory/${variant.parentItemId}`,
-                  read: false,
-                  createdAt: serverTimestamp(),
-              });
-              
-              if (variant.ref) {
-                  batchOp.update(variant.ref, { lowStockNotified: true });
-              }
-              updatesMade = true;
-          } else if (isGood && variant.lowStockNotified) {
-              // Item is no longer low, reset the flag
-              if (variant.ref) {
-                batchOp.update(variant.ref, { lowStockNotified: false });
-                updatesMade = true;
-              }
-          }
-      }
+        if (isLow && !variant.lowStockNotified) {
+            // Item is low and notification has not been sent.
+            // Use a predictable doc ID to overwrite old notifications for the same item.
+            const notificationRef = doc(firestore, 'admin_notifications', `lowstock_${variant.id}`);
+            batchOp.set(notificationRef, {
+                title: 'Low Stock Alert',
+                description: `${variant.parentName} (${variant.brand}) is running low. Only ${variant.quantity} left.`,
+                href: `/management/inventory/${variant.parentItemId}`,
+                read: false,
+                createdAt: serverTimestamp(),
+            });
+            
+            batchOp.update(variant.ref, { lowStockNotified: true });
+            updatesMade = true;
 
-      if (updatesMade) {
-          try {
-              await batchOp.commit();
-          } catch (error) {
-              console.error("Error in low stock notification batch write:", error);
-          }
-      }
-  }, [firestore, user?.role]);
+        } else if (isGood && variant.lowStockNotified) {
+            // Item is no longer low, reset the flag
+            batchOp.update(variant.ref, { lowStockNotified: false });
+            updatesMade = true;
+        }
+    }
+
+    if (updatesMade) {
+        try {
+            await batchOp.commit();
+        } catch (error) {
+            console.error("Error in low stock notification batch write:", error);
+        }
+    }
+}, [firestore, user?.role]);
   
   // Fetch all product variants once and cache them
   useEffect(() => {
@@ -1305,3 +1294,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
