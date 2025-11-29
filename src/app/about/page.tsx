@@ -102,7 +102,7 @@ export default function AboutPage() {
                                         <img
                                             src={displayContent.imageUrl}
                                             alt="About the Kintsugi Shop"
-                                            className="rounded-lg object-cover aspect-video w-full h-full"
+                                            className="rounded-lg object-contain w-full"
                                             data-ai-hint="shop interior"
                                         />
                                     )
