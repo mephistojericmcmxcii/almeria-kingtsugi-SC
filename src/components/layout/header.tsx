@@ -27,7 +27,7 @@ const Header = () => {
   }, []);
   
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b-2 border-b-foreground/20 bg-primary px-4 md:px-6 w-full">
+    <header className="sticky top-0 z-10 grid h-16 w-full grid-cols-3 items-center gap-4 border-b-2 border-b-foreground/20 bg-primary px-4 md:px-6">
       <div className="flex items-center gap-4">
           {/* Desktop sidebar trigger (visible when collapsed) */}
           <SidebarTrigger className={cn("hidden h-7 w-7 -ml-2", !open && "md:flex")} />
@@ -38,11 +38,11 @@ const Header = () => {
           </div>
       </div>
       
-      <div className="flex-1">
+      <div className="flex justify-center">
         <GlobalSearch />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         <Suspense fallback={null}>
             <NotificationDropdown />
         </Suspense>
