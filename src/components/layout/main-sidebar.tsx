@@ -37,6 +37,7 @@ import {
   FileQuestion,
   Send,
   Star,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirebase } from "@/firebase";
@@ -140,6 +141,13 @@ const MainSidebar = () => {
       isProtected: true, // This route requires login
     },
     {
+        href: "/transactions",
+        label: "My Transactions",
+        icon: Receipt,
+        adminOnly: false,
+        isProtected: true,
+    },
+    {
       href: "/reviews",
       label: "Customer Reviews",
       icon: Star,
@@ -192,6 +200,9 @@ const MainSidebar = () => {
         {menuItems.map((item) => {
           if (item.adminOnly && user?.role !== 'admin') {
             return null;
+          }
+          if (!user && item.isProtected && item.label === 'My Transactions') {
+              return null; // Don't show My Transactions if not logged in
           }
           return (
             <SidebarMenuItem key={item.href}>
@@ -262,4 +273,3 @@ const MainSidebar = () => {
 };
 
 export default MainSidebar;
-

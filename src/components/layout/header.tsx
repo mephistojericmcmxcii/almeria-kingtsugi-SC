@@ -43,14 +43,14 @@ const Header = () => {
           </div>
       </div>
       
-      <div className="flex justify-start">
+      <div className="flex justify-center">
         <GlobalSearch />
       </div>
 
       <div className="flex items-center justify-end gap-2">
          {user && (
           <Button asChild variant="secondary" size="icon" className="h-10 w-10 rounded-full bg-black/10 hover:bg-black/20 relative">
-            <Link href="/profile?tab=quotation">
+            <Link href="/transactions?tab=quotation">
               <ShoppingCart className="h-6 w-6 text-white" />
               {cartItemCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
