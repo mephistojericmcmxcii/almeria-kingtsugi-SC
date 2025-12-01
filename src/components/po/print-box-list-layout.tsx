@@ -19,14 +19,20 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           @media print {
             @page {
               size: portrait;
-              margin: 1cm;
+              margin: 0;
             }
             body {
               background-color: #fff !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            .sticker-container {
+            .print-area {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
+            .outer-border {
               box-shadow: none !important;
               margin: 0 !important;
               border-radius: 0 !important;
@@ -36,32 +42,21 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
              font-family: 'PT Sans', sans-serif;
              background-color: #f3f4f6;
           }
-          .sticker-container {
+          .outer-border {
               margin: 2rem auto;
-              padding: 1.5rem;
-              position: relative;
-              background-color: #fff;
+              padding: 8px;
+              background-color: black;
               width: 100%;
               max-width: 500px;
-              z-index: 1;
               box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
           }
-          .border-div {
-            position: absolute;
-            background: linear-gradient(45deg, gold, black);
-            z-index: -1;
+          .inner-border {
+              padding: 4px;
+              background-color: #D4AF37; /* Gold color */
           }
-          .top-border {
-            top: 0; left: 0; width: 100%; height: 10px;
-          }
-          .bottom-border {
-            bottom: 0; left: 0; width: 100%; height: 10px;
-          }
-          .left-border {
-            top: 0; left: 0; width: 10px; height: 100%;
-          }
-          .right-border {
-            top: 0; right: 0; width: 10px; height: 100%;
+          .sticker-content {
+              background-color: #fff;
+              padding: 1.5rem;
           }
           .box-identity {
               font-size: 18pt;
@@ -116,60 +111,61 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
               font-weight: 600;
           }
         `}</style>
-        <div className="sticker-container">
-            <div className="border-div top-border"></div>
-            <div className="border-div bottom-border"></div>
-            <div className="border-div left-border"></div>
-            <div className="border-div right-border"></div>
+        <div className="print-area">
+            <div className="outer-border">
+                <div className="inner-border">
+                    <div className="sticker-content">
+                        {boxIdentity && (
+                            <div className="box-identity">
+                            {boxIdentity}
+                            </div>
+                        )}
+                        {po && (
+                            <div className="po-info">
+                                <div>
+                                    <p className="po-info-label">P.O. #:</p>
+                                    <p className="po-info-value">{po.poNumber}</p>
+                                </div>
+                                <div>
+                                    <p className="po-info-label">Date:</p>
+                                    <p className="po-info-value">{format(po.date.toDate(), 'dd-MMM-yyyy')}</p>
+                                </div>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <p className="po-info-label">Care Of:</p>
+                                    <p className="po-info-value">{po.careOf}</p>
+                                </div>
+                            </div>
+                        )}
 
-            {boxIdentity && (
-                <div className="box-identity">
-                {boxIdentity}
+                        <table className="item-table">
+                            <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th className="text-center">Qty</th>
+                                <th>Unit</th>
+                                <th>Description</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {items.length > 0 ? (
+                                items.map((item) => (
+                                <tr key={item.id}>
+                                    <td className="font-medium">{item.name}</td>
+                                    <td className="text-center">{item.quantity}</td>
+                                    <td>{item.unit}</td>
+                                    <td>{item.description || 'N/A'}</td>
+                                </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                <td colSpan={4} className="text-center" style={{ padding: '20px'}}>No items selected.</td>
+                                </tr>
+                            )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            )}
-            {po && (
-                <div className="po-info">
-                    <div>
-                        <p className="po-info-label">P.O. #:</p>
-                        <p className="po-info-value">{po.poNumber}</p>
-                    </div>
-                    <div>
-                        <p className="po-info-label">Date:</p>
-                        <p className="po-info-value">{format(po.date.toDate(), 'dd-MMM-yyyy')}</p>
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                        <p className="po-info-label">Care Of:</p>
-                        <p className="po-info-value">{po.careOf}</p>
-                    </div>
-                </div>
-            )}
-
-            <table className="item-table">
-                <thead>
-                <tr>
-                    <th>Item Name</th>
-                    <th className="text-center">Qty</th>
-                    <th>Unit</th>
-                    <th>Description</th>
-                </tr>
-                </thead>
-                <tbody>
-                {items.length > 0 ? (
-                    items.map((item) => (
-                    <tr key={item.id}>
-                        <td className="font-medium">{item.name}</td>
-                        <td className="text-center">{item.quantity}</td>
-                        <td>{item.unit}</td>
-                        <td>{item.description || 'N/A'}</td>
-                    </tr>
-                    ))
-                ) : (
-                    <tr>
-                    <td colSpan={4} className="text-center" style={{ padding: '20px'}}>No items selected.</td>
-                    </tr>
-                )}
-                </tbody>
-            </table>
+            </div>
         </div>
     </>
   );
