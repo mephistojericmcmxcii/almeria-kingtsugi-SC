@@ -30,8 +30,6 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
               box-shadow: none !important;
               margin: 0 !important;
               border-radius: 0 !important;
-              /* Force border printing */
-              border: 10px solid transparent;
             }
           }
           body {
