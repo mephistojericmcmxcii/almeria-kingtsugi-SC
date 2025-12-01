@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 type PoFinancialSummary = {
   id: string;
@@ -109,7 +111,9 @@ export default function FinancialReportsPage() {
                     const sortedYears = years.sort((a, b) => b - a);
                     setPlAvailableYears(sortedYears);
                     setSelectedPlYear1(sortedYears[0]);
-                    setSelectedPlYear2(sortedYears[1]);
+                    if (sortedYears.length > 1) {
+                      setSelectedPlYear2(sortedYears[1]);
+                    }
                 }
 
 
@@ -263,170 +267,176 @@ export default function FinancialReportsPage() {
                     <Printer className="mr-2 h-4 w-4" /> Print Report
                 </Button>
             </div>
-
-            <Card id="report-filters" className="printable-card">
-                 <CardHeader>
-                    <CardTitle>Filters</CardTitle>
-                    <CardDescription>Filter the expenditure data for your report.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col md:flex-row items-center gap-4">
-                        <div className="relative w-full md:w-1/2">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input placeholder="Search by PO #, Source..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10" />
-                        </div>
-                        <Select value={selectedYear} onValueChange={setSelectedYear}>
-                            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Select Year" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Years</SelectItem>
-                                {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-                            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Select Quarter" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Quarters</SelectItem>
-                                <SelectItem value="1">Quarter 1</SelectItem>
-                                <SelectItem value="2">Quarter 2</SelectItem>
-                                <SelectItem value="3">Quarter 3</SelectItem>
-                                <SelectItem value="4">Quarter 4</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="printable-card">
-                <CardHeader>
-                    <CardTitle>Expenditure & Profit Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <StatsCard title="Total PO Allocation" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalAllocation)} description="Total budgeted amount for all POs." icon={DollarSign} isLoading={isLoading} />
-                        <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs." icon={TrendingDown} isLoading={isLoading} />
-                        <StatsCard title="Total Tax Deduction" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalTaxDeduction)} description="Total tax deductions from all POs." icon={Receipt} isLoading={isLoading} />
-                        <StatsCard title="Net Profit / Loss" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)} description="Sum of all PO profits and losses." icon={TrendingUp} isLoading={isLoading} />
-                    </div>
-                </CardContent>
-            </Card>
-
-             <Card className="printable-card">
-                <CardHeader>
-                    <CardTitle>Multi-Year Profit/Loss Comparison</CardTitle>
-                    <CardDescription>Compare monthly profit/loss from Purchase Orders across different years.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? ( <Skeleton className="h-[400px] w-full" /> ) : (
-                        <>
-                            <div className="flex items-center justify-center gap-6 pb-4">
-                                <Select value={String(selectedPlYear1)} onValueChange={(v) => setSelectedPlYear1(Number(v))}>
-                                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 1" /></SelectTrigger>
+            
+             <Tabs defaultValue="financial-reports" className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="financial-reports">Financial Reports</TabsTrigger>
+                    <TabsTrigger value="yearly-comparison">Yearly Profit Comparison</TabsTrigger>
+                </TabsList>
+                <TabsContent value="financial-reports" className="space-y-6">
+                    <Card id="report-filters" className="printable-card">
+                        <CardHeader>
+                            <CardTitle>Filters</CardTitle>
+                            <CardDescription>Filter the expenditure data for your report.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col md:flex-row items-center gap-4">
+                                <div className="relative w-full md:w-1/2">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input placeholder="Search by PO #, Source..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10" />
+                                </div>
+                                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                    <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Select Year" /></SelectTrigger>
                                     <SelectContent>
-                                        {plAvailableYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                        <SelectItem value="all">All Years</SelectItem>
+                                        {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <span className="font-semibold text-muted-foreground">vs.</span>
-                                <Select value={String(selectedPlYear2)} onValueChange={(v) => setSelectedPlYear2(Number(v))}>
-                                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 2" /></SelectTrigger>
+                                <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                                    <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Select Quarter" /></SelectTrigger>
                                     <SelectContent>
-                                        {plAvailableYears.filter(y => y !== selectedPlYear1).map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                        <SelectItem value="all">All Quarters</SelectItem>
+                                        <SelectItem value="1">Quarter 1</SelectItem>
+                                        <SelectItem value="2">Quarter 2</SelectItem>
+                                        <SelectItem value="3">Quarter 3</SelectItem>
+                                        <SelectItem value="4">Quarter 4</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <LineChart data={profitLossComparisonData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="month" fontSize="12px" />
-                                    <YAxis tickFormatter={(value) => formatCurrency(value as number)} fontSize="12px" />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Legend />
-                                    {selectedPlYear1 && <Line type="monotone" name={`P/L ${selectedPlYear1}`} dataKey={selectedPlYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
-                                    {selectedPlYear2 && <Line type="monotone" name={`P/L ${selectedPlYear2}`} dataKey={selectedPlYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="printable-card">
+                        <CardHeader>
+                            <CardTitle>Expenditure & Profit Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <StatsCard title="Total PO Allocation" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalAllocation)} description="Total budgeted amount for all POs." icon={DollarSign} isLoading={isLoading} />
+                                <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs." icon={TrendingDown} isLoading={isLoading} />
+                                <StatsCard title="Total Tax Deduction" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalTaxDeduction)} description="Total tax deductions from all POs." icon={Receipt} isLoading={isLoading} />
+                                <StatsCard title="Net Profit / Loss" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)} description="Sum of all PO profits and losses." icon={TrendingUp} isLoading={isLoading} />
+                            </div>
+                        </CardContent>
+                    </Card>
 
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 printable-card">
-                    <CardHeader><CardTitle>Profit/Loss per PO</CardTitle></CardHeader>
-                    <CardContent>
-                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
-                            <ResponsiveContainer width="100%" height={350}>
-                                <BarChart data={profitLossChartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} interval={0} fontSize="10px" />
-                                    <YAxis tickFormatter={(value) => formatCurrency(value)} fontSize="12px" />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} />
-                                    <Bar dataKey="profit" name="Profit/Loss">
-                                        {profitLossChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#22c55e' : '#ef4444'} />)}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                         )}
-                    </CardContent>
-                </Card>
-                 <Card className="printable-card">
-                    <CardHeader><CardTitle>Expenses by Category</CardTitle></CardHeader>
-                    <CardContent>
-                        {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
-                            <ResponsiveContainer width="100%" height={350}>
-                                <PieChart>
-                                    <Pie data={expensesByCategoryData} cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={120} fill="#8884d8" dataKey="value">
-                                        {expensesByCategoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                                    </Pie>
-                                    <Legend />
-                                    <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <Card className="printable-card">
-                 <CardHeader><CardTitle>Detailed Expenditure Data</CardTitle></CardHeader>
-                <CardContent>
-                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>PO #</TableHead>
-                                <TableHead>Source</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Allocation</TableHead>
-                                <TableHead className="text-right">Expenses</TableHead>
-                                <TableHead className="text-right">Tax</TableHead>
-                                <TableHead className="text-right">Profit/Loss</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                            )) : filteredSummaries.length > 0 ? (
-                                filteredSummaries.map((summary) => (
-                                    <TableRow key={summary.id}>
-                                        <TableCell>{summary.po.poNumber}</TableCell>
-                                        <TableCell>{summary.po.source}</TableCell>
-                                        <TableCell><Badge variant="outline">{summary.po.paymentStatus}</Badge></TableCell>
-                                        <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(summary.taxDeduction)}</TableCell>
-                                        <TableCell className={cn("text-right font-bold", summary.profit >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(summary.profit)}</TableCell>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <Card className="lg:col-span-2 printable-card">
+                            <CardHeader><CardTitle>Profit/Loss per PO</CardTitle></CardHeader>
+                            <CardContent>
+                                {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                                    <ResponsiveContainer width="100%" height={350}>
+                                        <BarChart data={profitLossChartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} interval={0} fontSize="10px" />
+                                            <YAxis tickFormatter={(value) => formatCurrency(value)} fontSize="12px" />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} />
+                                            <Bar dataKey="profit" name="Profit/Loss">
+                                                {profitLossChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#22c55e' : '#ef4444'} />)}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card className="printable-card">
+                            <CardHeader><CardTitle>Expenses by Category</CardTitle></CardHeader>
+                            <CardContent>
+                                {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                                    <ResponsiveContainer width="100%" height={350}>
+                                        <PieChart>
+                                            <Pie data={expensesByCategoryData} cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={120} fill="#8884d8" dataKey="value">
+                                                {expensesByCategoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                                            </Pie>
+                                            <Legend />
+                                            <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                    
+                    <Card className="printable-card">
+                        <CardHeader><CardTitle>Detailed Expenditure Data</CardTitle></CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>PO #</TableHead>
+                                        <TableHead>Source</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Allocation</TableHead>
+                                        <TableHead className="text-right">Expenses</TableHead>
+                                        <TableHead className="text-right">Tax</TableHead>
+                                        <TableHead className="text-right">Profit/Loss</TableHead>
                                     </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={7} className="h-24 text-center">No data found for the selected filters.</TableCell></TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                    )) : filteredSummaries.length > 0 ? (
+                                        filteredSummaries.map((summary) => (
+                                            <TableRow key={summary.id}>
+                                                <TableCell>{summary.po.poNumber}</TableCell>
+                                                <TableCell>{summary.po.source}</TableCell>
+                                                <TableCell><Badge variant="outline">{summary.po.paymentStatus}</Badge></TableCell>
+                                                <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(summary.taxDeduction)}</TableCell>
+                                                <TableCell className={cn("text-right font-bold", summary.profit >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(summary.profit)}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow><TableCell colSpan={7} className="h-24 text-center">No data found for the selected filters.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="yearly-comparison">
+                     <Card className="printable-card">
+                        <CardHeader>
+                            <CardTitle>Multi-Year Profit/Loss Comparison</CardTitle>
+                            <CardDescription>Compare monthly profit/loss from Purchase Orders across different years.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoading ? ( <Skeleton className="h-[400px] w-full" /> ) : (
+                                <>
+                                    <div className="flex items-center justify-center gap-6 pb-4">
+                                        <Select value={String(selectedPlYear1)} onValueChange={(v) => setSelectedPlYear1(Number(v))}>
+                                            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 1" /></SelectTrigger>
+                                            <SelectContent>
+                                                {plAvailableYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <span className="font-semibold text-muted-foreground">vs.</span>
+                                        <Select value={String(selectedPlYear2)} onValueChange={(v) => setSelectedPlYear2(Number(v))}>
+                                            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 2" /></SelectTrigger>
+                                            <SelectContent>
+                                                {plAvailableYears.filter(y => y !== selectedPlYear1).map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={400}>
+                                        <LineChart data={profitLossComparisonData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="month" fontSize="12px" />
+                                            <YAxis tickFormatter={(value) => formatCurrency(value as number)} fontSize="12px" />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Legend />
+                                            {selectedPlYear1 && <Line type="monotone" name={`P/L ${selectedPlYear1}`} dataKey={selectedPlYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                            {selectedPlYear2 && <Line type="monotone" name={`P/L ${selectedPlYear2}`} dataKey={selectedPlYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </>
                             )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
-
-    
