@@ -48,17 +48,16 @@ export default function FinancialReportsPage() {
     const { toast } = useToast();
     const [summaries, setSummaries] = useState<PoFinancialSummary[]>([]);
     const [fixedCosts, setFixedCosts] = useState<FixedMiscCost[]>([]);
-    const [salesOrders, setSalesOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [selectedQuarter, setSelectedQuarter] = useState('all');
     
-    // State for sales chart
-    const [salesAvailableYears, setSalesAvailableYears] = useState<number[]>([]);
-    const [selectedSalesYear1, setSelectedSalesYear1] = useState<number | undefined>();
-    const [selectedSalesYear2, setSelectedSalesYear2] = useState<number | undefined>();
+    // State for profit/loss chart
+    const [plAvailableYears, setPlAvailableYears] = useState<number[]>([]);
+    const [selectedPlYear1, setSelectedPlYear1] = useState<number | undefined>();
+    const [selectedPlYear2, setSelectedPlYear2] = useState<number | undefined>();
 
 
     useEffect(() => {
@@ -104,26 +103,20 @@ export default function FinancialReportsPage() {
 
                 const calculatedSummaries = await Promise.all(summaryPromises);
                 setSummaries(calculatedSummaries);
+                
+                if (calculatedSummaries.length > 0) {
+                    const years = Array.from(new Set(calculatedSummaries.map(s => getYear(s.po.date.toDate()))));
+                    const sortedYears = years.sort((a, b) => b - a);
+                    setPlAvailableYears(sortedYears);
+                    setSelectedPlYear1(sortedYears[0]);
+                    setSelectedPlYear2(sortedYears[1]);
+                }
+
 
                 // Fetch Fixed/Misc Costs
                 const costsQuery = query(collection(firestore, 'fixed_misc_costs'), orderBy('date', 'desc'));
                 const costsSnapshot = await getDocs(costsQuery);
                 setFixedCosts(costsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FixedMiscCost)));
-                
-                // Fetch Sales Data
-                const salesQuery = query(collectionGroup(firestore, 'orders'), where('status', '==', 'completed'));
-                const salesSnapshot = await getDocs(salesQuery);
-                const fetchedSalesOrders = salesSnapshot.docs.map(doc => doc.data() as Order);
-                setSalesOrders(fetchedSalesOrders);
-                
-                if (fetchedSalesOrders.length > 0) {
-                    const years = Array.from(new Set(fetchedSalesOrders.map(order => getYear(order.orderDate.toDate()))));
-                    const sortedYears = years.sort((a, b) => b - a);
-                    setSalesAvailableYears(sortedYears);
-                    setSelectedSalesYear1(sortedYears[0]); // Most recent year
-                    setSelectedSalesYear2(sortedYears[1]); // Second most recent year
-                }
-
 
             } catch (error) {
                 console.error("Error fetching financial data:", error);
@@ -188,22 +181,22 @@ export default function FinancialReportsPage() {
 
     }, [filteredSummaries, filteredFixedCosts]);
 
-    const salesChartData = useMemo(() => {
+    const profitLossComparisonData = useMemo(() => {
         const dataByMonth: any[] = MONTH_NAMES.map(month => ({ month }));
-        salesOrders.forEach(order => {
-            const orderDate = order.orderDate.toDate();
-            const year = getYear(orderDate);
-            const month = getMonth(orderDate);
+        summaries.forEach(summary => {
+            const poDate = summary.po.date.toDate();
+            const year = getYear(poDate);
+            const month = getMonth(poDate);
 
-            if (year === selectedSalesYear1 || year === selectedSalesYear2) {
+            if (year === selectedPlYear1 || year === selectedPlYear2) {
                 if (!dataByMonth[month][year]) {
                     dataByMonth[month][year] = 0;
                 }
-                dataByMonth[month][year] += order.totalAmount;
+                dataByMonth[month][year] += summary.profit;
             }
         });
         return dataByMonth;
-    }, [salesOrders, selectedSalesYear1, selectedSalesYear2]);
+    }, [summaries, selectedPlYear1, selectedPlYear2]);
 
     const availableYears = useMemo(() => {
         const years = new Set([...summaries.map(s => s.po.date.toDate().getFullYear()), ...fixedCosts.map(c => c.date.toDate().getFullYear())]);
@@ -319,36 +312,36 @@ export default function FinancialReportsPage() {
 
              <Card className="printable-card">
                 <CardHeader>
-                    <CardTitle>Multi-Year Sales Comparison</CardTitle>
-                    <CardDescription>Compare monthly sales revenue across different years.</CardDescription>
+                    <CardTitle>Multi-Year Profit/Loss Comparison</CardTitle>
+                    <CardDescription>Compare monthly profit/loss from Purchase Orders across different years.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? ( <Skeleton className="h-[400px] w-full" /> ) : (
                         <>
                             <div className="flex items-center justify-center gap-6 pb-4">
-                                <Select value={String(selectedSalesYear1)} onValueChange={(v) => setSelectedSalesYear1(Number(v))}>
+                                <Select value={String(selectedPlYear1)} onValueChange={(v) => setSelectedPlYear1(Number(v))}>
                                     <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 1" /></SelectTrigger>
                                     <SelectContent>
-                                        {salesAvailableYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                        {plAvailableYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                                 <span className="font-semibold text-muted-foreground">vs.</span>
-                                <Select value={String(selectedSalesYear2)} onValueChange={(v) => setSelectedSalesYear2(Number(v))}>
+                                <Select value={String(selectedPlYear2)} onValueChange={(v) => setSelectedPlYear2(Number(v))}>
                                     <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 2" /></SelectTrigger>
                                     <SelectContent>
-                                        {salesAvailableYears.filter(y => y !== selectedSalesYear1).map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                        {plAvailableYears.filter(y => y !== selectedPlYear1).map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <ResponsiveContainer width="100%" height={400}>
-                                <LineChart data={salesChartData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
+                                <LineChart data={profitLossComparisonData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="month" fontSize="12px" />
                                     <YAxis tickFormatter={(value) => formatCurrency(value as number)} fontSize="12px" />
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend />
-                                    {selectedSalesYear1 && <Line type="monotone" dataKey={selectedSalesYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
-                                    {selectedSalesYear2 && <Line type="monotone" dataKey={selectedSalesYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                    {selectedPlYear1 && <Line type="monotone" name={`P/L ${selectedPlYear1}`} dataKey={selectedPlYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                    {selectedPlYear2 && <Line type="monotone" name={`P/L ${selectedPlYear2}`} dataKey={selectedPlYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
                                 </LineChart>
                             </ResponsiveContainer>
                         </>
@@ -435,3 +428,5 @@ export default function FinancialReportsPage() {
         </div>
     );
 }
+
+    
