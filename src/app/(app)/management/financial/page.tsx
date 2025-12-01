@@ -39,7 +39,7 @@ type PoFinancialSummary = {
 };
 
 type SortConfig = {
-    key: keyof PoFinancialSummary['po'] | 'totalAllocation' | 'totalExpenses' | 'profit' | 'taxDeduction';
+    key: keyof PoFinancialSummary['po'] | 'totalAllocation' | 'totalExpenses' | 'profit' | 'taxDeduction' | 'ld';
     direction: 'ascending' | 'descending';
 };
 
@@ -192,12 +192,15 @@ export default function FinancialPage() {
             const aPo = a.po;
             const bPo = b.po;
 
-            if (['totalAllocation', 'totalExpenses', 'profit', 'taxDeduction'].includes(sortConfig.key)) {
+            if (['totalAllocation', 'totalExpenses', 'profit', 'taxDeduction', 'ld'].includes(sortConfig.key)) {
                 const aAllocation = a.po.totalAllocation ?? a.totalAllocation;
                 const bAllocation = b.po.totalAllocation ?? b.totalAllocation;
                 
                 const aTax = a.po.amountDeposited && a.po.amountDeposited > 0 ? aAllocation - (a.po.amountDeposited || 0) : 0;
                 const bTax = b.po.amountDeposited && b.po.amountDeposited > 0 ? bAllocation - (b.po.amountDeposited || 0) : 0;
+                
+                const aLd = aAllocation - a.totalExpenses;
+                const bLd = bAllocation - b.totalExpenses;
 
                 if(sortConfig.key === 'totalAllocation') {
                     aValue = aAllocation;
@@ -208,9 +211,12 @@ export default function FinancialPage() {
                 } else if (sortConfig.key === 'taxDeduction') {
                     aValue = aTax;
                     bValue = bTax;
+                } else if (sortConfig.key === 'ld') {
+                    aValue = aLd;
+                    bValue = bLd;
                 } else { // profit
-                    const aProfit = aAllocation - a.totalExpenses - aTax;
-                    const bProfit = bAllocation - b.totalExpenses - bTax;
+                    const aProfit = a.po.amountDeposited ? (a.po.amountDeposited - a.totalExpenses) : (aAllocation - a.totalExpenses - aTax);
+                    const bProfit = b.po.amountDeposited ? (b.po.amountDeposited - b.totalExpenses) : (bAllocation - b.totalExpenses - bTax);
                     aValue = aProfit;
                     bValue = bProfit;
                 }
@@ -245,9 +251,11 @@ export default function FinancialPage() {
             const expenses = summary.totalExpenses;
             
             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
+            
+            const profit = summary.po.amountDeposited ? (summary.po.amountDeposited - expenses) : (allocation - expenses - taxDeduction);
 
             acc.totalTaxDeduction += taxDeduction;
-            acc.totalProfitLoss += allocation - expenses - taxDeduction;
+            acc.totalProfitLoss += profit;
             return acc;
         }, { paidCount: 0, unpaidCount: 0, totalTaxDeduction: 0, totalProfitLoss: 0 });
 
@@ -378,7 +386,7 @@ export default function FinancialPage() {
         <TabsContent value="po-payment" className="space-y-4">
             <Card>
                 <CardHeader>
-                <CardTitle className="font-headline">Purchase Order Financials</CardTitle>
+                <CardTitle className="font-headline">PO Payment</CardTitle>
                 <CardDescription>
                     A summary of allocated budget vs. actual expenses for each PO.
                 </CardDescription>
@@ -442,6 +450,7 @@ export default function FinancialPage() {
                         <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalExpenses')}>{getSortIcon('totalExpenses')}Total Expenses</Button></TableHead>
                         <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('taxDeduction')}>{getSortIcon('taxDeduction')}Tax Deduction</Button></TableHead>
                         <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('amountDeposited')}>{getSortIcon('amountDeposited')}Amount Deposited</Button></TableHead>
+                        <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('ld')}>LD</Button></TableHead>
                         <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('profit')}>{getSortIcon('profit')}Profit / Loss</Button></TableHead>
                         <TableHead className="text-center px-2"><Button variant="ghost" className="p-0 justify-center w-full" onClick={() => requestSort('paymentStatus')}>{getSortIcon('paymentStatus')}Payment Status</Button></TableHead>
                         <TableHead className="text-right px-4">Actions</TableHead>
@@ -459,6 +468,7 @@ export default function FinancialPage() {
                             <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
                             <TableCell className="text-center"><Skeleton className="h-6 w-24 mx-auto" /></TableCell>
                             <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
@@ -468,7 +478,8 @@ export default function FinancialPage() {
                             const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
                             const expenses = summary.totalExpenses;
                             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
-                            const profitLoss = allocation - expenses - taxDeduction;
+                            const ld = allocation - expenses;
+                            const profitLoss = summary.po.amountDeposited ? (summary.po.amountDeposited - expenses) : (allocation - expenses - taxDeduction);
                             return (
                                 <TableRow key={summary.id}>
                                     <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
@@ -478,6 +489,12 @@ export default function FinancialPage() {
                                     <TableCell className="text-right font-semibold">{formatCurrency(expenses)}</TableCell>
                                     <TableCell className="text-right text-orange-600">{formatCurrency(taxDeduction)}</TableCell>
                                     <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
+                                     <TableCell className={cn(
+                                        "text-right font-bold",
+                                        ld >= 0 ? "text-green-600" : "text-red-600"
+                                    )}>
+                                        {formatCurrency(ld)}
+                                    </TableCell>
                                     <TableCell className={cn(
                                         "text-right font-bold",
                                         profitLoss >= 0 ? "text-green-600" : "text-red-600"
@@ -512,7 +529,7 @@ export default function FinancialPage() {
                         })
                     ) : (
                         <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
+                        <TableCell colSpan={11} className="h-24 text-center">
                             No purchase orders found for the selected filters.
                         </TableCell>
                         </TableRow>
