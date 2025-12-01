@@ -26,9 +26,6 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-             .print-area {
-                padding-top: 1rem;
-            }
           }
           body {
              font-family: 'PT Sans', sans-serif;
@@ -36,10 +33,9 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           }
           .print-area {
             width: 100%;
-            height: 100vh;
           }
           .outer-border {
-              margin: 2rem auto;
+              margin: 1rem auto;
               padding: 8px;
               background-color: black;
               width: 100%;
