@@ -57,7 +57,8 @@ export default function FinancialReportsPage() {
     
     // State for sales chart
     const [salesAvailableYears, setSalesAvailableYears] = useState<number[]>([]);
-    const [selectedSalesYears, setSelectedSalesYears] = useState<number[]>([]);
+    const [selectedSalesYear1, setSelectedSalesYear1] = useState<number | undefined>();
+    const [selectedSalesYear2, setSelectedSalesYear2] = useState<number | undefined>();
 
 
     useEffect(() => {
@@ -119,7 +120,8 @@ export default function FinancialReportsPage() {
                     const years = Array.from(new Set(fetchedSalesOrders.map(order => getYear(order.orderDate.toDate()))));
                     const sortedYears = years.sort((a, b) => b - a);
                     setSalesAvailableYears(sortedYears);
-                    setSelectedSalesYears(sortedYears.slice(0, 2)); // Select the most recent 2 years by default
+                    setSelectedSalesYear1(sortedYears[0]); // Most recent year
+                    setSelectedSalesYear2(sortedYears[1]); // Second most recent year
                 }
 
 
@@ -193,24 +195,20 @@ export default function FinancialReportsPage() {
             const year = getYear(orderDate);
             const month = getMonth(orderDate);
 
-            if (!dataByMonth[month][year]) {
-                dataByMonth[month][year] = 0;
+            if (year === selectedSalesYear1 || year === selectedSalesYear2) {
+                if (!dataByMonth[month][year]) {
+                    dataByMonth[month][year] = 0;
+                }
+                dataByMonth[month][year] += order.totalAmount;
             }
-            dataByMonth[month][year] += order.totalAmount;
         });
         return dataByMonth;
-    }, [salesOrders]);
+    }, [salesOrders, selectedSalesYear1, selectedSalesYear2]);
 
     const availableYears = useMemo(() => {
         const years = new Set([...summaries.map(s => s.po.date.toDate().getFullYear()), ...fixedCosts.map(c => c.date.toDate().getFullYear())]);
         return Array.from(years).sort((a, b) => b - a).map(String);
     }, [summaries, fixedCosts]);
-
-    const handleSalesYearToggle = (year: number) => {
-        setSelectedSalesYears(prev => 
-            prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]
-        );
-    };
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -328,12 +326,19 @@ export default function FinancialReportsPage() {
                     {isLoading ? ( <Skeleton className="h-[400px] w-full" /> ) : (
                         <>
                             <div className="flex items-center justify-center gap-6 pb-4">
-                                {salesAvailableYears.map(year => (
-                                    <div key={year} className="flex items-center space-x-2">
-                                        <Checkbox id={`year-${year}`} checked={selectedSalesYears.includes(year)} onCheckedChange={() => handleSalesYearToggle(year)} />
-                                        <Label htmlFor={`year-${year}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{year}</Label>
-                                    </div>
-                                ))}
+                                <Select value={String(selectedSalesYear1)} onValueChange={(v) => setSelectedSalesYear1(Number(v))}>
+                                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 1" /></SelectTrigger>
+                                    <SelectContent>
+                                        {salesAvailableYears.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <span className="font-semibold text-muted-foreground">vs.</span>
+                                <Select value={String(selectedSalesYear2)} onValueChange={(v) => setSelectedSalesYear2(Number(v))}>
+                                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Year 2" /></SelectTrigger>
+                                    <SelectContent>
+                                        {salesAvailableYears.filter(y => y !== selectedSalesYear1).map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <ResponsiveContainer width="100%" height={400}>
                                 <LineChart data={salesChartData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
@@ -342,9 +347,8 @@ export default function FinancialReportsPage() {
                                     <YAxis tickFormatter={(value) => formatCurrency(value as number)} fontSize="12px" />
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend />
-                                    {selectedSalesYears.map((year, index) => (
-                                        <Line key={year} type="monotone" dataKey={year} stroke={lineColors[index % lineColors.length]} strokeWidth={2} activeDot={{ r: 8 }} />
-                                    ))}
+                                    {selectedSalesYear1 && <Line type="monotone" dataKey={selectedSalesYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                    {selectedSalesYear2 && <Line type="monotone" dataKey={selectedSalesYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
                                 </LineChart>
                             </ResponsiveContainer>
                         </>
