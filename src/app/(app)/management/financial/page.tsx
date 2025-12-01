@@ -342,9 +342,6 @@ export default function FinancialPage() {
             <CreditCard className="w-8 h-8 text-primary" />
             <h1 className="text-3xl font-bold tracking-tight font-headline">Financials</h1>
         </div>
-         <Button onClick={() => setIsAddManualDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Manual Payment
-        </Button>
       </div>
 
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -386,10 +383,17 @@ export default function FinancialPage() {
         <TabsContent value="po-payment" className="space-y-4">
             <Card>
                 <CardHeader>
-                <CardTitle className="font-headline">PO Payment</CardTitle>
-                <CardDescription>
-                    A summary of allocated budget vs. actual expenses for each PO.
-                </CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="font-headline">PO Payment</CardTitle>
+                            <CardDescription>
+                                A summary of allocated budget vs. actual expenses for each PO.
+                            </CardDescription>
+                        </div>
+                        <Button onClick={() => setIsAddManualDialogOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" /> Add Manual Payment
+                        </Button>
+                    </div>
                 <div className="flex flex-col md:flex-row items-center gap-4 pt-4">
                         <div className="flex items-center gap-4 w-full">
                             <div className="relative w-full md:w-1/2">
