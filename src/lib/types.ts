@@ -113,7 +113,7 @@ export type Order = {
   statusHistory?: StatusHistory[];
 };
 
-export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled' | 'For Delivery';
+export type PurchaseOrderStatus = 'Completed' | 'Lacking' | 'Delivered' | 'Cancelled' | 'For Delivery' | 'Partially Delivered';
 export type PoPaymentStatus = 'Paid' | 'Unpaid';
 
 export type PurchaseOrderItem = {
@@ -128,6 +128,7 @@ export type PurchaseOrderItem = {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
   itemType?: 'general' | 'misc';
+  isDelivered?: boolean;
 }
 
 export type LiquidatedDamageItem = {

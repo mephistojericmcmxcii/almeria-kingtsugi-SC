@@ -388,6 +388,7 @@ export default function PoPage() {
       case 'Completed': return <Badge className="bg-green-600 text-green-50">Completed</Badge>;
       case 'Lacking': return <Badge variant="secondary" className="bg-orange-500 text-orange-50">Lacking</Badge>;
       case 'Delivered': return <Badge className="bg-blue-500 text-blue-50">Delivered</Badge>;
+      case 'Partially Delivered': return <Badge className="bg-cyan-500 text-cyan-50">Partially Delivered</Badge>;
       case 'For Delivery': return <Badge className="bg-purple-500 text-purple-50">For Delivery</Badge>;
       case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
@@ -408,7 +409,7 @@ export default function PoPage() {
   }
   
   const isAllSelected = selectedPoIds.size > 0 && selectedPoIds.size === sortedAndFilteredPos.length;
-  const PO_STATUS_OPTIONS = ['all', 'Completed', 'Lacking', 'Delivered', 'For Delivery', 'Cancelled'];
+  const PO_STATUS_OPTIONS = ['all', 'Completed', 'Lacking', 'Delivered', 'Partially Delivered', 'For Delivery', 'Cancelled'];
 
   return (
     <>
@@ -431,7 +432,7 @@ export default function PoPage() {
                     />
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full md:w-[150px]">
+                    <SelectTrigger className="w-full md:w-[180px]">
                         <SelectValue placeholder="Filter by status..." />
                     </SelectTrigger>
                     <SelectContent>
