@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'next/navigation';
 
-import { ChevronLeft, Plus, Trash2, Edit, Printer, X } from "lucide-react";
+import { Plus, Trash2, Edit, Printer, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -182,12 +182,6 @@ export default function PoDetailsPage() {
     return (
         <div className="space-y-8">
             <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" asChild>
-                    <Link href="/management/po">
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="sr-only">Back to Purchase Orders</span>
-                    </Link>
-                </Button>
                 <div>
                     {isLoading ? <Skeleton className="h-8 w-48" /> : <h1 className="text-3xl font-bold tracking-tight font-headline">PO # {po?.poNumber}</h1>}
                     {isLoading ? <Skeleton className="h-4 w-64 mt-2" /> : <p className="text-muted-foreground">Manage items for this purchase order.</p>}
