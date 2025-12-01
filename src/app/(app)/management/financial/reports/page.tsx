@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { useFirebase, FirebaseClientProvider } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -29,7 +29,7 @@ const PrintFinancialReportLayout = lazy(() => import('@/components/financial/pri
 const PrintYearlyComparisonLayout = lazy(() => import('@/components/financial/print-yearly-comparison'));
 
 
-type PoFinancialSummary = {
+export type PoFinancialSummary = {
   id: string;
   po: PurchaseOrder;
   totalAllocation: number;
@@ -192,7 +192,7 @@ export default function FinancialReportsPage() {
 
         const totalFixedCosts = filteredFixedCosts.reduce((sum, cost) => sum + cost.cost, 0);
         
-        const totalPurchaseOrderExpenses = poTotals.totalExpenses + totalLdCost;
+        const totalPurchaseOrderExpenses = poTotals.totalExpenses + poTotals.totalLdCost;
         
         return {
             totalProfitLoss: poTotals.totalProfitLoss,
@@ -208,7 +208,7 @@ export default function FinancialReportsPage() {
             ].filter(item => item.value > 0),
         };
 
-    }, [filteredSummaries, filteredFixedCosts, totalLdCost]);
+    }, [filteredSummaries, filteredFixedCosts]);
     
      const profitLossComparisonData = useMemo(() => {
         const dataByMonth: any[] = MONTH_NAMES.map(month => ({ month }));
