@@ -1,9 +1,10 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, doc, getDoc, query, orderBy, collectionGroup, where } from 'firebase/firestore';
-import { useFirebase } from '@/firebase';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { useFirebase, FirebaseClientProvider } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { format, getQuarter, getYear, getMonth } from 'date-fns';
@@ -23,6 +24,9 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+const PrintFinancialReportLayout = lazy(() => import('@/components/financial/print-financial-report'));
+const PrintYearlyComparisonLayout = lazy(() => import('@/components/financial/print-yearly-comparison'));
 
 
 type PoFinancialSummary = {
@@ -65,6 +69,7 @@ export default function FinancialReportsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [selectedQuarter, setSelectedQuarter] = useState('all');
+    const [activeTab, setActiveTab] = useState('financial-reports');
     
     // State for profit/loss chart
     const [plAvailableYears, setPlAvailableYears] = useState<number[]>([]);
@@ -98,8 +103,12 @@ export default function FinancialReportsPage() {
                         const itemsSnapshot = await getDocs(itemsCollectionRef);
                         const totals = itemsSnapshot.docs.reduce((acc, itemDoc) => {
                             const item = itemDoc.data() as PurchaseOrderItem;
-                            acc.allocation += (item.amount || 0) * (item.quantity || 1);
-                            acc.expenses += (item.actualAmount || 0) * (item.quantity || 1);
+                             if (item.itemType === 'misc') {
+                                acc.expenses += item.amount || 0;
+                            } else {
+                                acc.allocation += (item.amount || 0) * (item.quantity || 1);
+                                acc.expenses += (item.actualAmount || 0) * (item.quantity || 1);
+                            }
                             return acc;
                         }, { allocation: 0, expenses: 0 });
                         totalAllocation = po.totalAllocation ?? totals.allocation;
@@ -183,8 +192,8 @@ export default function FinancialReportsPage() {
 
         const totalFixedCosts = filteredFixedCosts.reduce((sum, cost) => sum + cost.cost, 0);
         
-        const totalPurchaseOrderExpenses = poTotals.totalExpenses + poTotals.totalLdCost;
-
+        const totalPurchaseOrderExpenses = poTotals.totalExpenses + totalLdCost;
+        
         return {
             totalProfitLoss: poTotals.totalProfitLoss,
             totalTaxDeduction: poTotals.totalTaxDeduction,
@@ -199,7 +208,7 @@ export default function FinancialReportsPage() {
             ].filter(item => item.value > 0),
         };
 
-    }, [filteredSummaries, filteredFixedCosts]);
+    }, [filteredSummaries, filteredFixedCosts, totalLdCost]);
     
      const profitLossComparisonData = useMemo(() => {
         const dataByMonth: any[] = MONTH_NAMES.map(month => ({ month }));
@@ -279,6 +288,47 @@ export default function FinancialReportsPage() {
     };
 
     const lineColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe'];
+
+    const handlePrint = () => {
+        const features = "width=1200,height=800,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+        const printWindow = window.open('', '_blank', features);
+        if (printWindow) {
+            printWindow.document.write('<div id="print-root"></div>');
+            printWindow.document.close();
+            const printRoot = printWindow.document.getElementById('print-root');
+            if (printRoot) {
+                const root = createRoot(printRoot);
+                let contentToPrint;
+                if (activeTab === 'financial-reports') {
+                    const stats = { totalAllocation, totalExpenses, totalTaxDeduction, totalProfitLoss };
+                    contentToPrint = (
+                        <PrintFinancialReportLayout
+                            summaries={filteredSummaries}
+                            stats={stats}
+                            expensesByCategoryData={expensesByCategoryData}
+                            profitLossChartData={profitLossChartData}
+                        />
+                    );
+                } else { // yearly-comparison
+                    const selectedType = COMPARISON_DATA_TYPES.find(t => t.value === comparisonDataType);
+                    contentToPrint = (
+                        <PrintYearlyComparisonLayout
+                            data={profitLossComparisonData}
+                            year1={selectedPlYear1}
+                            year2={selectedPlYear2}
+                            dataTypeLabel={selectedType?.label || ''}
+                        />
+                    );
+                }
+
+                root.render(
+                    <Suspense fallback={<div>Loading print view...</div>}>
+                        <FirebaseClientProvider>{contentToPrint}</FirebaseClientProvider>
+                    </Suspense>
+                );
+            }
+        }
+    };
     
     if (user?.role !== 'admin' && !isLoading) {
         return (
@@ -294,9 +344,9 @@ export default function FinancialReportsPage() {
         <div className="space-y-6" id="report-content">
              <style>{`
                 @media print {
-                    body { background-color: #fff; }
+                    body { background-color: #fff !important; }
                     #report-header, #report-filters, #main-header, #main-sidebar { display: none !important; }
-                    .printable-card { border: none; box-shadow: none; }
+                    .printable-card { border: none; box-shadow: none; break-inside: avoid; }
                      .recharts-wrapper { width: 100% !important; }
                 }
             `}</style>
@@ -304,12 +354,12 @@ export default function FinancialReportsPage() {
                 <div className="flex items-center gap-4">
                     <h1 className="text-3xl font-bold tracking-tight font-headline">Expenditure & Profit Analysis</h1>
                 </div>
-                <Button onClick={() => window.print()}>
+                <Button onClick={handlePrint}>
                     <Printer className="mr-2 h-4 w-4" /> Print Report
                 </Button>
             </div>
             
-             <Tabs defaultValue="financial-reports" className="space-y-4">
+             <Tabs defaultValue="financial-reports" onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="financial-reports">Financial Reports</TabsTrigger>
                     <TabsTrigger value="yearly-comparison">Yearly Profit Comparison</TabsTrigger>
@@ -354,7 +404,7 @@ export default function FinancialReportsPage() {
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 <StatsCard title="Total PO Allocation" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalAllocation)} description="Total budgeted amount for all POs." icon={DollarSign} isLoading={isLoading} />
-                                <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs + Tax + LD." icon={TrendingDown} isLoading={isLoading} />
+                                <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs + Tax." icon={TrendingDown} isLoading={isLoading} />
                                 <StatsCard title="Total Tax Deduction" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalTaxDeduction)} description="Total tax deductions from all POs." icon={Receipt} isLoading={isLoading} />
                                 <StatsCard title="Net Profit / Loss" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)} description="Sum of all PO profits and losses." icon={TrendingUp} isLoading={isLoading} />
                             </div>
