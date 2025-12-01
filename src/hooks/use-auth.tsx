@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useRef, useCallback } from 'react';
@@ -9,7 +10,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, collection, serverTimestamp, runTransaction, updateDoc, Firestore, writeBatch, increment, Transaction, Timestamp, query, where, collectionGroup, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
-import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback, Notification } from '@/lib/types';
+import type { User, InventoryVariant, CartItem, Order, OrderStatus, PurchaseOrder, PurchaseOrderStatus, StatusHistory, QuotationRequest, CustomerFeedback, Notification, DeliveryRecord } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -61,7 +62,20 @@ interface AuthContextType {
       rating?: number;
     }
 ) => Promise<boolean>;
-  updatePoStatus: (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null, receivedBy?: string, receivedDate?: Date }) => Promise<boolean>;
+  updatePoStatus: (
+    po: PurchaseOrder, 
+    newStatus: PurchaseOrderStatus, 
+    details?: { 
+        salesInvoice?: string, 
+        deliveryReceipt?: string, 
+        salesInvoiceFile?: File | null, 
+        deliveryReceiptFile?: File | null, 
+        receivedBy?: string, 
+        receivedDate?: Date, 
+        items?: PurchaseOrderItem[],
+        deliveredItemsSummaryForHistory?: DeliveryRecord['items'] 
+    }
+  ) => Promise<boolean>;
   uploadFile: (file: File, path: string, fileName?: string) => Promise<string | null>;
   deleteFileByUrl: (url: string) => Promise<void>;
   showAdminOrderBadge: boolean;
@@ -1170,31 +1184,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const updatePoStatus = async (po: PurchaseOrder, newStatus: PurchaseOrderStatus, details?: { salesInvoice?: string, deliveryReceipt?: string, salesInvoiceFile?: File | null, deliveryReceiptFile?: File | null, receivedBy?: string, receivedDate?: Date }): Promise<boolean> => {
+    const updatePoStatus = async (
+        po: PurchaseOrder, 
+        newStatus: PurchaseOrderStatus, 
+        details?: { 
+            salesInvoice?: string, 
+            deliveryReceipt?: string, 
+            salesInvoiceFile?: File | null, 
+            deliveryReceiptFile?: File | null, 
+            receivedBy?: string, 
+            receivedDate?: Date,
+            items?: PurchaseOrderItem[],
+            deliveredItemsSummaryForHistory?: DeliveryRecord['items'] 
+        }
+    ): Promise<boolean> => {
         const poRef = doc(firestore, 'purchase_orders', po.id);
         try {
+            const batch = writeBatch(firestore);
+
             const dataToUpdate: any = {
                 status: newStatus,
                 updatedAt: serverTimestamp(),
             };
 
-            if (newStatus === 'Delivered') {
-                if (details?.salesInvoice) dataToUpdate.salesInvoice = details.salesInvoice;
-                if (details?.deliveryReceipt) dataToUpdate.deliveryReceipt = details.deliveryReceipt;
-                if (details?.receivedBy) dataToUpdate.receivedBy = details.receivedBy;
-                if (details?.receivedDate) dataToUpdate.receivedDate = Timestamp.fromDate(details.receivedDate);
+            const isDeliveryEvent = ['Delivered', 'Partially Delivered'].includes(newStatus);
 
-                if (details?.salesInvoiceFile) {
-                    const url = await uploadFile(details.salesInvoiceFile, `po_documents/${po.poNumber}`, details.salesInvoice);
-                    if (url) dataToUpdate.salesInvoiceUrl = url;
+            if (isDeliveryEvent && details?.receivedDate && details.receivedBy) {
+                const deliveryRecord: DeliveryRecord = {
+                    id: doc(collection(firestore, 'dummy')).id, // Unique ID for the history record
+                    receivedDate: Timestamp.fromDate(details.receivedDate),
+                    receivedBy: details.receivedBy,
+                    salesInvoice: details.salesInvoice || '',
+                    deliveryReceipt: details.deliveryReceipt || '',
+                    items: details.deliveredItemsSummaryForHistory || [],
+                };
+                
+                if (details.salesInvoiceFile) {
+                    const url = await uploadFile(details.salesInvoiceFile, `po_documents/${po.id}`, `SI_${deliveryRecord.id}`);
+                    if(url) deliveryRecord.salesInvoiceUrl = url;
                 }
-                if (details?.deliveryReceiptFile) {
-                    const url = await uploadFile(details.deliveryReceiptFile, `po_documents/${po.poNumber}`, details.deliveryReceipt);
-                    if (url) dataToUpdate.deliveryReceiptUrl = url;
+                if (details.deliveryReceiptFile) {
+                    const url = await uploadFile(details.deliveryReceiptFile, `po_documents/${po.id}`, `DR_${deliveryRecord.id}`);
+                    if(url) deliveryRecord.deliveryReceiptUrl = url;
+                }
+                
+                dataToUpdate.deliveryHistory = [...(po.deliveryHistory || []), deliveryRecord];
+            }
+
+            batch.update(poRef, dataToUpdate);
+
+            // If items are being updated (e.g., their isDelivered status), update them in the subcollection.
+            if (details?.items) {
+                for (const item of details.items) {
+                    if (item.itemType !== 'misc') {
+                        const itemRef = doc(firestore, 'purchase_orders', po.id, 'items', item.id);
+                        batch.update(itemRef, { isDelivered: item.isDelivered });
+                    }
                 }
             }
 
-            await updateDoc(poRef, dataToUpdate);
+            await batch.commit();
             
             toast({
                 title: 'PO Status Updated',
@@ -1208,14 +1257,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 title: 'Update Failed',
                 description: 'Could not update the PO status. Please try again.',
             });
-            if (error.code === 'permission-denied') {
-                const permissionError = new FirestorePermissionError({
-                    path: poRef.path,
-                    operation: 'update',
-                    requestResourceData: { status: newStatus, ...details },
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            }
             return false;
         }
     };

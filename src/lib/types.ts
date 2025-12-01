@@ -137,6 +137,16 @@ export type LiquidatedDamageItem = {
     cost: number;
 };
 
+export type DeliveryRecord = {
+    id: string;
+    salesInvoice: string;
+    deliveryReceipt: string;
+    receivedBy: string;
+    receivedDate: Timestamp;
+    salesInvoiceUrl?: string;
+    deliveryReceiptUrl?: string;
+    items: { id: string; name: string; quantity: number }[];
+}
 
 export type PurchaseOrder = {
   id: string;
@@ -160,13 +170,15 @@ export type PurchaseOrder = {
   // Manual entry fields
   totalAllocation?: number;
   totalExpenses?: number;
-  // Delivery confirmation
+  // Delivery confirmation (DEPRECATED - use deliveryHistory)
   salesInvoice?: string;
   deliveryReceipt?: string;
   salesInvoiceUrl?: string;
   deliveryReceiptUrl?: string;
   receivedBy?: string;
   receivedDate?: Timestamp;
+  // New delivery history
+  deliveryHistory?: DeliveryRecord[];
 };
 
 export type QuotationRequestItem = {

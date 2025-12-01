@@ -1,16 +1,17 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { PurchaseOrder, PurchaseOrderItem, PurchaseOrderStatus } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderItem, PurchaseOrderStatus, DeliveryRecord } from '@/lib/types';
 import type { DisplayPurchaseOrder } from '@/app/(app)/management/po/page';
 import { format, parse } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Download, Calendar as CalendarIcon, PackageCheck, Truck } from 'lucide-react';
+import { Download, Calendar as CalendarIcon, PackageCheck, Truck, History } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Checkbox } from '../ui/checkbox';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
@@ -51,12 +53,11 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
 
   useEffect(() => {
     if (isOpen && po) {
-      setSalesInvoice(po.salesInvoice || '');
-      setDeliveryReceipt(po.deliveryReceipt || '');
-      setReceivedBy(po.receivedBy || '');
-      const rDate = po.receivedDate?.toDate();
-      setReceivedDate(rDate);
-      setReceivedDateString(rDate ? format(rDate, 'dd-MMM-yyyy') : '');
+      setSalesInvoice('');
+      setDeliveryReceipt('');
+      setReceivedBy('');
+      setReceivedDate(new Date());
+      setReceivedDateString(format(new Date(), 'dd-MMM-yyyy'));
       setSiFile(null);
       setDrFile(null);
       setDeliveryType('complete');
@@ -90,21 +91,29 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
 
   const handleDelivery = async () => {
     setIsUpdating(true);
-    let newStatus: PurchaseOrderStatus = 'Delivered';
+    let newStatus: PurchaseOrderStatus;
     let itemsToUpdate: PurchaseOrderItem[] = [];
+    let deliveredItemSummary: DeliveryRecord['items'] = [];
     
     if (deliveryType === 'partial') {
-        const selectedIds = Object.keys(selectedItems).filter(id => selectedItems[id]);
+        const selectedIds = Object.keys(selectedItems).filter(id => undeliveredItems.some(item => item.id === id) && selectedItems[id]);
+        
         if (selectedIds.length === 0) {
             toast({ variant: 'destructive', title: 'No Items Selected', description: 'Please select items for partial delivery.' });
             setIsUpdating(false);
             return;
         }
         
-        itemsToUpdate = poItems.map(item => ({
-            ...item,
-            isDelivered: selectedItems[item.id] || item.isDelivered || false,
-        }));
+        itemsToUpdate = poItems.map(item => {
+            const isNewlySelected = selectedIds.includes(item.id);
+            if (isNewlySelected) {
+                deliveredItemSummary.push({ id: item.id, name: item.name, quantity: item.quantity || 0 });
+            }
+            return {
+                ...item,
+                isDelivered: item.isDelivered || isNewlySelected,
+            };
+        });
         
         const allItemsDelivered = itemsToUpdate.filter(item => item.itemType !== 'misc').every(item => item.isDelivered);
         newStatus = allItemsDelivered ? 'Delivered' : 'Partially Delivered';
@@ -112,19 +121,25 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
     } else { // Complete delivery
          itemsToUpdate = poItems.map(item => ({
             ...item,
-            isDelivered: true
+            isDelivered: item.itemType !== 'misc' ? true : item.isDelivered
         }));
+         deliveredItemSummary = poItems
+            .filter(item => item.itemType !== 'misc')
+            .map(item => ({ id: item.id, name: item.name, quantity: item.quantity || 0 }));
+        newStatus = 'Delivered';
     }
 
-    const success = await updatePoStatus(po, newStatus, { 
-        salesInvoice, 
-        deliveryReceipt, 
-        salesInvoiceFile: siFile, 
+    const success = await updatePoStatus(po, newStatus, {
+        salesInvoice,
+        deliveryReceipt,
+        salesInvoiceFile: siFile,
         deliveryReceiptFile: drFile,
         receivedBy,
         receivedDate,
         items: itemsToUpdate,
+        deliveredItemsSummaryForHistory: deliveredItemSummary,
     });
+
     if (success) {
         onOpenChange(true);
     }
@@ -133,7 +148,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   
   const isDelivered = po.status === 'Delivered';
   const showDeliveryForm = ['Completed', 'For Delivery', 'Partially Delivered', 'Delivered'].includes(po.displayStatus);
-  const isDeliveryActionDisabled = isUpdating || !receivedBy || !receivedDate || (deliveryType === 'partial' && Object.values(selectedItems).every(v => v === false)) || isDelivered;
+  const isDeliveryActionDisabled = isUpdating || !receivedBy || !receivedDate || (deliveryType === 'partial' && undeliveredItems.every(item => !selectedItems[item.id])) || isDelivered;
 
   const handleSelectItem = (itemId: string, checked: boolean) => {
     setSelectedItems(prev => ({ ...prev, [itemId]: checked }));
@@ -218,14 +233,14 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                         </div>
                      )}
 
-                     {deliveryType === 'partial' && !isDelivered && undeliveredItems.length > 0 && (
+                     {deliveryType === 'partial' && !isDelivered && (
                         <div className="border rounded-lg p-4">
                             <div className="flex items-center space-x-2 mb-2">
                                <Checkbox id="select-all" checked={isAllSelected} onCheckedChange={handleSelectAll} />
                                <Label htmlFor="select-all" className="font-semibold">Select All Undelivered Items</Label>
                             </div>
                             <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
-                                {undeliveredItems.map(item => (
+                                {undeliveredItems.length > 0 ? undeliveredItems.map(item => (
                                     <div key={item.id} className="flex items-center space-x-2">
                                         <Checkbox
                                             id={`item-${item.id}`}
@@ -235,7 +250,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                         <Label htmlFor={`item-${item.id}`} className="flex-grow">{item.name}</Label>
                                         <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
                                     </div>
-                                ))}
+                                )) : <p className="text-sm text-muted-foreground text-center py-4">All items have been delivered.</p>}
                             </div>
                         </div>
                      )}
@@ -247,7 +262,6 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                 <Input id="salesInvoice" value={salesInvoice} onChange={(e) => setSalesInvoice(e.target.value)} disabled={isDelivered} className="flex-grow"/>
                                 <Input id="siFile" type="file" onChange={(e) => setSiFile(e.target.files?.[0] ?? null)} disabled={isDelivered} className="flex-grow"/>
                              </div>
-                             {po.salesInvoiceUrl && <a href={po.salesInvoiceUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded SI</Button></a>}
                          </div>
                          <div className="space-y-2">
                              <Label htmlFor="deliveryReceipt">Delivery Receipt #</Label>
@@ -255,7 +269,6 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                 <Input id="deliveryReceipt" value={deliveryReceipt} onChange={(e) => setDeliveryReceipt(e.target.value)} disabled={isDelivered} className="flex-grow"/>
                                 <Input id="drFile" type="file" onChange={(e) => setDrFile(e.target.files?.[0] ?? null)} disabled={isDelivered} className="flex-grow"/>
                              </div>
-                             {po.deliveryReceiptUrl && <a href={po.deliveryReceiptUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Uploaded DR</Button></a>}
                          </div>
                          <div className="grid grid-cols-2 gap-4">
                              <div className="space-y-2">
@@ -308,6 +321,41 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                              </div>
                          </div>
                      </div>
+                </div>
+            )}
+             {po.deliveryHistory && po.deliveryHistory.length > 0 && (
+                <div className="space-y-4 border-t pt-4">
+                    <h3 className="font-semibold text-foreground flex items-center gap-2"><History className="h-4 w-4"/>Delivery History</h3>
+                    <Accordion type="single" collapsible className="w-full">
+                        {po.deliveryHistory.map((record, index) => (
+                            <AccordionItem value={`item-${index}`} key={record.id}>
+                                <AccordionTrigger>
+                                    <div className="flex justify-between items-center w-full pr-4">
+                                        <span className="font-semibold">Delivery on {format(record.receivedDate.toDate(), 'dd-MMM-yyyy')}</span>
+                                        <span className="text-sm text-muted-foreground">DR #: {record.deliveryReceipt}</span>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="p-4 bg-muted/50 rounded-md space-y-4">
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div><p className="font-medium">Received By:</p><p>{record.receivedBy}</p></div>
+                                            <div><p className="font-medium">Sales Invoice:</p><p>{record.salesInvoice}</p></div>
+                                        </div>
+                                         <div className="flex gap-4">
+                                            {record.drUrl && <a href={record.drUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Delivery Receipt</Button></a>}
+                                            {record.siUrl && <a href={record.siUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Sales Invoice</Button></a>}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm mb-2">Items in this Delivery:</p>
+                                            <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                                                {record.items.map(item => <li key={item.id}>{item.quantity}x {item.name}</li>)}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
                 </div>
             )}
         </div>
