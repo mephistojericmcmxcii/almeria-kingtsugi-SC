@@ -2,9 +2,9 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense, createRoot } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, FirebaseClientProvider } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus, LiquidatedDamageItem } from '@/lib/types';
@@ -28,9 +28,10 @@ import { FixedMiscCosts } from '@/components/financial/fixed-misc-costs';
 
 const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
 const AddManualPoDialog = lazy(() => import('@/components/po/add-manual-po-dialog').then(module => ({ default: module.AddManualPoDialog })));
+const PrintFinancialReport = lazy(() => import('@/components/financial/print-financial-report').then(module => ({ default: module.PrintFinancialReport })));
 
 
-type PoFinancialSummary = {
+export type PoFinancialSummary = {
   id: string;
   po: PurchaseOrder;
   totalAllocation: number;
@@ -324,6 +325,30 @@ export default function FinancialPage() {
     setIsModalOpen(open);
   }
 
+  const handlePrintReport = () => {
+    const features = "width=1200,height=800,menubar=no,toolbar=no,location=no,resizable=yes,scrollbars=yes";
+    const printWindow = window.open('', '_blank', features);
+
+    if (printWindow) {
+      printWindow.document.write('<div id="print-root"></div>');
+      printWindow.document.close();
+      const printRoot = printWindow.document.getElementById('print-root');
+      if (printRoot) {
+        const root = createRoot(printRoot);
+        root.render(
+          <Suspense fallback={<div>Loading Report...</div>}>
+            <FirebaseClientProvider>
+                <PrintFinancialReport 
+                    data={sortedAndFilteredSummaries}
+                    totals={{ paidCount, unpaidCount, totalTaxDeduction, totalProfitLoss }}
+                />
+            </FirebaseClientProvider>
+          </Suspense>
+        );
+      }
+    }
+  };
+
   if (user?.role !== 'admin' && !isLoading) {
     return (
         <div className="flex flex-col items-center justify-center h-full text-center">
@@ -393,7 +418,7 @@ export default function FinancialPage() {
                             </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant="outline">
+                            <Button variant="outline" onClick={handlePrintReport}>
                                 <FileText className="mr-2 h-4 w-4" /> Generate Report
                             </Button>
                             <Button onClick={() => setIsAddManualDialogOpen(true)}>

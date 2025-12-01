@@ -14,9 +14,11 @@ interface PrintLayoutWrapperProps {
   children: React.ReactNode;
   title?: string;
   useLandscape?: boolean;
+  disableHeader?: boolean;
+  disableFooter?: boolean;
 }
 
-const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title, useLandscape = false }) => {
+const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title, useLandscape = false, disableHeader = false, disableFooter = false }) => {
   const { firestore } = useFirebase();
   const [settings, setSettings] = useState<PrintSettings>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -169,7 +171,7 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
           }
         `}</style>
         <div className="print-container">
-          {settings.headerImageUrl && (
+          {!disableHeader && settings.headerImageUrl && (
             <header className="print-header">
                <img src={settings.headerImageUrl} alt="Company Header" />
             </header>
@@ -184,14 +186,16 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
                 {children}
             </main>
 
-          {settings.footerImageUrl ? (
-             <footer className="print-footer">
-                <img src={settings.footerImageUrl} alt="Company Footer" />
-             </footer>
-          ) : (
-            <footer className="print-footer" style={{paddingBottom: '1rem'}}>
-                Date Printed: {printDate}
-            </footer>
+          {!disableFooter && (
+             settings.footerImageUrl ? (
+                 <footer className="print-footer">
+                    <img src={settings.footerImageUrl} alt="Company Footer" />
+                 </footer>
+              ) : (
+                <footer className="print-footer" style={{paddingBottom: '1rem'}}>
+                    Date Printed: {printDate}
+                </footer>
+              )
           )}
         </div>
     </>
