@@ -28,9 +28,10 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
             }
             .print-area {
                 display: flex;
-                align-items: center;
                 justify-content: center;
-                height: 100vh;
+                align-items: flex-start; /* Aligns sticker to the top */
+                padding-top: 2rem; /* Adds some margin at the top */
+                min-height: 0; /* Prevents container from stretching and causing a second page */
             }
             .outer-border {
               box-shadow: none !important;
@@ -41,6 +42,12 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           body {
              font-family: 'PT Sans', sans-serif;
              background-color: #f3f4f6;
+          }
+          .print-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
           }
           .outer-border {
               margin: 2rem auto;
