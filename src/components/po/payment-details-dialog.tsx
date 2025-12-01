@@ -1,16 +1,17 @@
 
+
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format, parse } from 'date-fns';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, Timestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { PurchaseOrder, PoPaymentStatus } from '@/lib/types';
+import type { PurchaseOrder, PoPaymentStatus, FixedMiscCost, LiquidatedDamageItem } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,11 +20,21 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { Checkbox } from '../ui/checkbox';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
+import { ScrollArea } from '../ui/scroll-area';
 
 const PAYMENT_STATUSES: PoPaymentStatus[] = ['Paid', 'Unpaid'];
+
+const liquidatedDamageItemSchema = z.object({
+  costId: z.string(),
+  expenditure: z.string(),
+  cost: z.number(),
+});
 
 const formSchema = z.object({
   paymentDate: z.date().optional(),
@@ -34,6 +45,7 @@ const formSchema = z.object({
   bank: z.string().optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
   depositReceipt: z.any().optional(),
+  liquidatedDamages: z.array(liquidatedDamageItemSchema).optional(),
   // Manual fields
   totalAllocation: z.preprocess(
     (val) => val === '' ? undefined : (typeof val === 'string' ? parseFloat(val) : val),
@@ -72,11 +84,23 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
   const { po, totalAllocation, totalExpenses } = summary;
   const isManualEntry = po.entryType === 'manual';
   const [dateString, setDateString] = useState('');
-
+  const [fixedCosts, setFixedCosts] = useState<FixedMiscCost[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
+
+  useEffect(() => {
+    const fetchCosts = async () => {
+        if (!firestore) return;
+        const costsQuery = query(collection(firestore, 'fixed_misc_costs'), orderBy('expenditure', 'asc'));
+        const snapshot = await getDocs(costsQuery);
+        setFixedCosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FixedMiscCost)));
+    };
+    if (isOpen) {
+        fetchCosts();
+    }
+  }, [isOpen, firestore]);
 
   useEffect(() => {
     if (isOpen && po) {
@@ -86,6 +110,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
         amountDeposited: po.amountDeposited,
         bank: po.bank || '',
         paymentStatus: po.paymentStatus || 'Unpaid',
+        liquidatedDamages: po.liquidatedDamages || [],
         totalAllocation: po.totalAllocation ?? totalAllocation,
         totalExpenses: po.totalExpenses ?? totalExpenses,
       });
@@ -95,6 +120,10 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
 
   const watchedValues = form.watch();
   
+  const totalLdCost = useMemo(() => {
+    return watchedValues.liquidatedDamages?.reduce((total, item) => total + item.cost, 0) || 0;
+  }, [watchedValues.liquidatedDamages]);
+
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     const poRef = doc(firestore, 'purchase_orders', po.id);
@@ -144,173 +173,262 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
     }
   };
   
-    const handleNumberInputOnWheel = (e: React.WheelEvent<HTMLInputElement>) => {
-      e.currentTarget.blur();
-    };
+  const handleNumberInputOnWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.currentTarget.blur();
+  };
+  
+  const currentTotalAllocation = isManualEntry ? watchedValues.totalAllocation || 0 : totalAllocation;
+  const currentTotalExpenses = isManualEntry ? watchedValues.totalExpenses || 0 : totalExpenses;
+  const currentAmountDeposited = watchedValues.amountDeposited ?? 0;
+  
+  const taxDeduction = currentAmountDeposited > 0 ? currentTotalAllocation - currentAmountDeposited : 0;
+  
+  const profitLoss = currentAmountDeposited > 0 
+      ? currentAmountDeposited - currentTotalExpenses - totalLdCost
+      : currentTotalAllocation - currentTotalExpenses - taxDeduction - totalLdCost;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Manage Payment for PO #{po.poNumber}</DialogTitle>
           <DialogDescription>Update payment and deposit information for this purchase order.</DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-y">
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Agency / Company</p>
-                    <p className="text-base font-semibold">{po.source}</p>
-                </div>
-                 <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Care Of</p>
-                    <p className="text-base font-semibold">{po.careOf}</p>
-                </div>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="max-h-[70vh] overflow-y-auto pr-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-y">
+              <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Agency / Company</p>
+                  <p className="text-base font-semibold">{po.source}</p>
+              </div>
+              <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Care Of</p>
+                  <p className="text-base font-semibold">{po.careOf}</p>
+              </div>
             </div>
 
-            {isManualEntry ? (
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                    <FormField control={form.control} name="totalAllocation" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Total Allocation</FormLabel>
-                        <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                    <FormField control={form.control} name="totalExpenses" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Total Expenses</FormLabel>
-                        <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 gap-x-8">
-                    <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
-                        <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                        <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
-                    </div>
-                </div>
-            )}
+            <div className="space-y-6 py-4">
 
-            <FormField control={form.control} name="paymentDate" render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Payment Date</FormLabel>
-                 <div className="relative flex items-center w-[240px]">
-                    <FormControl>
-                         <Input
-                            value={dateString}
-                            onChange={(e) => setDateString(e.target.value)}
-                            onBlur={(e) => {
-                                try {
-                                    const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
-                                    if (!isNaN(parsedDate.getTime())) {
-                                        field.onChange(parsedDate);
-                                    } else {
+              {isManualEntry ? (
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      <FormField control={form.control} name="totalAllocation" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Total Allocation</FormLabel>
+                          <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )} />
+                      <FormField control={form.control} name="totalExpenses" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Total Expenses</FormLabel>
+                          <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )} />
+                  </div>
+              ) : (
+                  <div className="grid grid-cols-2 gap-x-8">
+                      <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">Total Allocation</p>
+                          <p className="text-lg font-bold">{formatCurrency(totalAllocation)}</p>
+                      </div>
+                      <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                          <p className="text-lg font-bold">{formatCurrency(totalExpenses)}</p>
+                      </div>
+                  </div>
+              )}
+
+              <Separator />
+
+              <div className="space-y-4">
+                 <FormField control={form.control} name="paymentDate" render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Payment Date</FormLabel>
+                     <div className="relative flex items-center w-[240px]">
+                        <FormControl>
+                             <Input
+                                value={dateString}
+                                onChange={(e) => setDateString(e.target.value)}
+                                onBlur={(e) => {
+                                    try {
+                                        const parsedDate = parse(e.target.value, 'dd-MMM-yyyy', new Date());
+                                        if (!isNaN(parsedDate.getTime())) {
+                                            field.onChange(parsedDate);
+                                        } else {
+                                            setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
+                                        }
+                                    } catch {
                                         setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
                                     }
-                                } catch {
-                                    setDateString(field.value ? format(field.value, 'dd-MMM-yyyy') : '');
-                                }
-                            }}
-                            placeholder="dd-MMM-yyyy"
-                        />
-                    </FormControl>
-                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" size="icon" className="absolute right-1 h-8 w-8">
-                                <CalendarIcon className="h-4 w-4" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={(date) => {
-                                    if (date) {
-                                      field.onChange(date);
-                                      setDateString(format(date, 'dd-MMM-yyyy'));
-                                    }
-                                    setIsCalendarOpen(false);
                                 }}
-                                initialFocus
+                                placeholder="dd-MMM-yyyy"
                             />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )} />
-            
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField control={form.control} name="amountDeposited" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Amount Deposited</FormLabel>
-                    <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
-                 <FormField control={form.control} name="bank" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Bank</FormLabel>
-                    <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )} />
-            </div>
-            
-            <FormField control={form.control} name="paymentStatus" render={({ field }) => (
-            <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                    <SelectTrigger className="w-[240px]">
-                    <SelectValue placeholder="Select a status" />
-                    </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                    {PAYMENT_STATUSES.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                </SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-            )} />
-
-            <div className="space-y-2">
-                <FormField
-                    control={form.control}
-                    name="depositReceipt"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Deposit Receipt/Document</FormLabel>
-                            <FormControl>
-                                <Input
-                                    type="file"
-                                    accept="image/*,.pdf"
-                                    onChange={(e) => field.onChange(e.target.files)}
+                        </FormControl>
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="icon" className="absolute right-1 h-8 w-8">
+                                    <CalendarIcon className="h-4 w-4" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={(date) => {
+                                        if (date) {
+                                          field.onChange(date);
+                                          setDateString(format(date, 'dd-MMM-yyyy'));
+                                        }
+                                        setIsCalendarOpen(false);
+                                    }}
+                                    initialFocus
                                 />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                {po.depositReceiptUrl && (
-                    <a href={po.depositReceiptUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="link" size="sm" className="p-0 h-auto">
-                            <Download className="mr-2 h-3 w-3" /> View Uploaded Receipt
-                        </Button>
-                    </a>
-                )}
-            </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={form.control} name="amountDeposited" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Amount Deposited</FormLabel>
+                        <FormControl><Input type="number" onWheel={handleNumberInputOnWheel} {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                     <FormField control={form.control} name="bank" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Bank</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                </div>
+                
+                <FormField control={form.control} name="paymentStatus" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                        <SelectTrigger className="w-[240px]">
+                        <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {PAYMENT_STATUSES.map(status => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} />
 
+                <div className="space-y-2">
+                    <FormField
+                        control={form.control}
+                        name="depositReceipt"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Deposit Receipt/Document</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        onChange={(e) => field.onChange(e.target.files)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {po.depositReceiptUrl && (
+                        <a href={po.depositReceiptUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="link" size="sm" className="p-0 h-auto">
+                                <Download className="mr-2 h-3 w-3" /> View Uploaded Receipt
+                            </Button>
+                        </a>
+                    )}
+                </div>
+              </div>
+              
+              <Separator />
+
+              <FormField
+                control={form.control}
+                name="liquidatedDamages"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="font-semibold text-base">Liquidated Damages (Optional)</FormLabel>
+                    <FormDescription>Select miscellaneous costs to apply as liquidated damages.</FormDescription>
+                    <ScrollArea className="h-40 w-full rounded-md border p-4">
+                        {fixedCosts.map((cost) => (
+                          <FormField
+                            key={cost.id}
+                            control={form.control}
+                            name="liquidatedDamages"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={cost.id}
+                                  className="flex flex-row items-center space-x-3 space-y-0 py-2"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.some(item => item.costId === cost.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), { costId: cost.id, expenditure: cost.expenditure, cost: cost.cost }])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (item) => item.costId !== cost.id
+                                              )
+                                            )
+                                      }}
+                                    />
+                                  </FormControl>
+                                   <FormLabel className="font-normal flex-1 flex justify-between items-center">
+                                      <span>{cost.expenditure}</span>
+                                      <span className="font-semibold">{formatCurrency(cost.cost)}</span>
+                                  </FormLabel>
+                                </FormItem>
+                              )
+                            }}
+                          />
+                        ))}
+                    </ScrollArea>
+                  </FormItem>
+                )}
+              />
+
+               <Separator />
+
+               <div className="grid grid-cols-3 gap-4 text-center">
+                   <div className="space-y-1 rounded-md bg-muted p-3">
+                        <p className="text-sm font-medium text-muted-foreground">Tax Deduction</p>
+                        <p className={cn("text-lg font-bold", taxDeduction > 0 && "text-orange-600")}>{formatCurrency(taxDeduction)}</p>
+                   </div>
+                   <div className="space-y-1 rounded-md bg-muted p-3">
+                        <p className="text-sm font-medium text-muted-foreground">Liquidated Damages</p>
+                        <p className={cn("text-lg font-bold", totalLdCost > 0 && "text-red-600")}>{formatCurrency(totalLdCost)}</p>
+                   </div>
+                   <div className="space-y-1 rounded-md bg-muted p-3">
+                        <p className="text-sm font-medium text-muted-foreground">Profit / Loss</p>
+                        <p className={cn(
+                            "text-lg font-bold",
+                            profitLoss > 0 && "text-green-600",
+                            profitLoss < 0 && "text-red-600",
+                        )}>{formatCurrency(profitLoss)}</p>
+                   </div>
+               </div>
+
+            </div>
+            
             <DialogFooter className="pt-6">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>

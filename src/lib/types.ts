@@ -130,6 +130,13 @@ export type PurchaseOrderItem = {
   itemType?: 'general' | 'misc';
 }
 
+export type LiquidatedDamageItem = {
+    costId: string;
+    expenditure: string;
+    cost: number;
+};
+
+
 export type PurchaseOrder = {
   id: string;
   poNumber: string;
@@ -148,6 +155,7 @@ export type PurchaseOrder = {
   paymentStatus?: PoPaymentStatus;
   entryType?: 'system' | 'manual';
   depositReceiptUrl?: string;
+  liquidatedDamages?: LiquidatedDamageItem[];
   // Manual entry fields
   totalAllocation?: number;
   totalExpenses?: number;

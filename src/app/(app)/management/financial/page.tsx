@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
@@ -6,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
-import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderItem, PoPaymentStatus, PurchaseOrderStatus, LiquidatedDamageItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { getQuarter, format } from 'date-fns';
 
@@ -199,6 +200,9 @@ export default function FinancialPage() {
                 const aTax = a.po.amountDeposited && a.po.amountDeposited > 0 ? aAllocation - (a.po.amountDeposited || 0) : 0;
                 const bTax = b.po.amountDeposited && b.po.amountDeposited > 0 ? bAllocation - (b.po.amountDeposited || 0) : 0;
                 
+                const aLdCost = a.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
+                const bLdCost = b.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
+                
                 const aLd = aAllocation - a.totalExpenses;
                 const bLd = bAllocation - b.totalExpenses;
 
@@ -215,8 +219,8 @@ export default function FinancialPage() {
                     aValue = aLd;
                     bValue = bLd;
                 } else { // profit
-                    const aProfit = a.po.amountDeposited ? (a.po.amountDeposited - a.totalExpenses) : (aAllocation - a.totalExpenses - aTax);
-                    const bProfit = b.po.amountDeposited ? (b.po.amountDeposited - b.totalExpenses) : (bAllocation - b.totalExpenses - bTax);
+                    const aProfit = a.po.amountDeposited ? (a.po.amountDeposited - a.totalExpenses - aLdCost) : (aAllocation - a.totalExpenses - aTax - aLdCost);
+                    const bProfit = b.po.amountDeposited ? (b.po.amountDeposited - b.totalExpenses - bLdCost) : (bAllocation - b.totalExpenses - bTax - bLdCost);
                     aValue = aProfit;
                     bValue = bProfit;
                 }
@@ -252,7 +256,10 @@ export default function FinancialPage() {
             
             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
             
-            const profit = summary.po.amountDeposited ? (summary.po.amountDeposited - expenses) : (allocation - expenses - taxDeduction);
+            const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
+            const profit = summary.po.amountDeposited 
+                ? (summary.po.amountDeposited - expenses - ldCost) 
+                : (allocation - expenses - taxDeduction - ldCost);
 
             acc.totalTaxDeduction += taxDeduction;
             acc.totalProfitLoss += profit;
@@ -488,7 +495,11 @@ export default function FinancialPage() {
                             const expenses = summary.totalExpenses;
                             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
                             const ld = allocation - expenses;
-                            const profitLoss = summary.po.amountDeposited ? (summary.po.amountDeposited - expenses) : (allocation - expenses - taxDeduction);
+                            const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
+                            const profitLoss = summary.po.amountDeposited 
+                                ? (summary.po.amountDeposited - expenses - ldCost) 
+                                : (allocation - expenses - taxDeduction - ldCost);
+
                             return (
                                 <TableRow key={summary.id}>
                                     <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
