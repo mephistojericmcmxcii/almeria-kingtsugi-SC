@@ -737,7 +737,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const newNotification: Omit<Notification, 'id'> = {
                     title: 'Item Added to Quotation',
                     description: `${variant.parentName} was added to your list.`,
-                    href: '/profile?tab=quotation',
+                    href: '/transactions?tab=quotation',
                     read: false,
                     createdAt: serverTimestamp() as Timestamp,
                 };
@@ -958,7 +958,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const newNotification: Omit<Notification, 'id'> = {
                     title: 'Quotation Ready',
                     description: `Your quotation for request #${rfq.id.substring(0, 6)}... is ready for review.`,
-                    href: '/profile?tab=quotation',
+                    href: '/transactions?tab=quotation',
                     read: false,
                     createdAt: Timestamp.now(),
                 };
@@ -1045,11 +1045,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const isUserFacingUpdate = ['quote-ready', 'completed', 'cancelled', 'declined', 'delivering'].includes(newStatus);
                 if (isUserFacingUpdate) {
                     const userNotificationRef = doc(collection(firestore, 'users', order.userId, 'notifications'));
-                    let href = '/profile?tab=purchases';
+                    let href = '/transactions?tab=purchases';
                     if (newStatus === 'quote-ready') {
-                        href = '/profile?tab=quotation';
+                        href = '/transactions?tab=quotation';
                     } else if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'declined') {
-                        href = '/profile?tab=orders';
+                        href = '/transactions?tab=orders';
                     }
 
                     const newNotification: Omit<Notification, 'id'> = {
@@ -1288,4 +1288,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

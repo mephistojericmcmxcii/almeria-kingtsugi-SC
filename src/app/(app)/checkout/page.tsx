@@ -102,7 +102,7 @@ export default function CheckoutPage() {
                 title: "Quotation Request Sent!",
                 description: "Thank you for your request. We will get back to you shortly with a quotation.",
             });
-            router.push('/profile');
+            router.push('/transactions?tab=quotation');
         }
         // If it fails, the placeOrder function will have already shown an error toast.
         setIsPlacingOrder(false);
@@ -145,9 +145,9 @@ export default function CheckoutPage() {
         <div className="space-y-8">
             <div className="flex items-center gap-4">
                 <Button variant="outline" size="icon" asChild>
-                    <Link href="/profile">
+                    <Link href="/transactions?tab=quotation">
                         <ChevronLeft className="h-4 w-4" />
-                        <span className="sr-only">Back to Profile</span>
+                        <span className="sr-only">Back to Transactions</span>
                     </Link>
                 </Button>
                 <div>

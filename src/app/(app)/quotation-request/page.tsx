@@ -189,7 +189,7 @@ export default function RfqPage() {
         const userNotification = {
             title: 'RFQ Submitted',
             description: 'Your custom quotation request has been sent successfully.',
-            href: '/profile?tab=rfq',
+            href: '/transactions?tab=rfq',
             read: false,
             createdAt: serverTimestamp(),
         };
@@ -197,7 +197,7 @@ export default function RfqPage() {
 
         await batch.commit();
 
-        router.push('/profile?tab=rfq');
+        router.push('/transactions?tab=rfq');
 
     } catch (err: any) {
         console.error("[RFQ Form] An error occurred during submission:", err);
@@ -335,5 +335,3 @@ export default function RfqPage() {
     </>
   );
 }
-
-    
