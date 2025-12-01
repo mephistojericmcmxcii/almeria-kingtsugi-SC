@@ -21,11 +21,12 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
       <style>{`
           @media print {
             @page {
-              size: auto;
+              size: portrait;
               margin: 0.5cm;
             }
             body {
-              background-color: #fff;
+              background-color: #fff !important;
+              -webkit-print-color-adjust: exact;
             }
             .sticker-container {
               border: none !important;
@@ -37,7 +38,6 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           body {
              font-family: 'PT Sans', sans-serif;
              background-color: #f3f4f6;
-             -webkit-print-color-adjust: exact;
           }
           .sticker-container {
               margin: 2rem auto;
