@@ -15,7 +15,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, Package, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Separator } from '../ui/separator';
+import { Separator } from '@/components/ui/separator';
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
@@ -114,7 +114,7 @@ export default function ProductsPage() {
         <CardHeader>
            <div className="flex flex-col md:flex-row items-center gap-4">
               <div className="relative w-full md:w-1/2">
-                 <form onSubmit={(e) => { e.preventDefault(); /* Search is now real-time */ }}>
+                 <form onSubmit={(e) => { e.preventDefault(); router.push(`/products?q=${encodeURIComponent(searchTerm)}`); }}>
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input 
                         placeholder="Search by name, brand, or description..."
@@ -155,7 +155,10 @@ export default function ProductsPage() {
                  <div className="space-y-8">
                     {Object.entries(filteredAndGroupedItems).sort(([catA], [catB]) => catA.localeCompare(catB)).map(([category, variants]) => (
                         <div key={category}>
-                            <h2 className="text-2xl font-semibold font-headline tracking-tight mb-4">{category}</h2>
+                            <div className="mb-4">
+                               <h2 className="text-2xl font-semibold font-headline tracking-tight text-primary">{category}</h2>
+                               <Separator className="mt-2 bg-primary/20" />
+                            </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                                 {variants.map((variant) => {
                                     const placeholder = getPlaceholderImage(variant);
