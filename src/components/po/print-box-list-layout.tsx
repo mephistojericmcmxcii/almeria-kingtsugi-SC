@@ -23,13 +23,15 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
             }
             body {
               background-color: #fff !important;
-              -webkit-print-color-adjust: exact;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             .sticker-container {
-              border: none !important;
               box-shadow: none !important;
               margin: 0 !important;
               border-radius: 0 !important;
+              /* Force border printing */
+              border: 10px solid transparent;
             }
           }
           body {
@@ -39,11 +41,27 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           .sticker-container {
               margin: 2rem auto;
               padding: 1.5rem;
-              border: 10px solid black;
-              border-image: linear-gradient(45deg, gold, black) 1;
+              position: relative;
               background-color: #fff;
               width: 100%;
-              max-width: 500px; /* Reduced width for sticker size */
+              max-width: 500px;
+              z-index: 1;
+          }
+          .sticker-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            padding: 10px; /* This creates the border thickness */
+            background: linear-gradient(45deg, gold, black);
+            -webkit-mask: 
+               linear-gradient(#fff 0 0) content-box, 
+               linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
           }
           .box-identity {
               font-size: 18pt;
