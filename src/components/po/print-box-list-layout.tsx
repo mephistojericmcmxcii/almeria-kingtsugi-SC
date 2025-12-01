@@ -26,13 +26,8 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            .print-area {
-                display: flex;
-                justify-content: flex-start; /* Aligns sticker to the top */
-                align-items: flex-start; 
-                padding-top: 2rem; 
-                height: auto; /* Remove fixed height */
-                min-height: 0;
+             .print-area {
+                padding-top: 1rem;
             }
           }
           body {
@@ -40,9 +35,7 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
              background-color: #f3f4f6;
           }
           .print-area {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 100%;
             height: 100vh;
           }
           .outer-border {
