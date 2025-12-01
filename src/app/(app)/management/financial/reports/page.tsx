@@ -2,13 +2,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, doc, getDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, orderBy, collectionGroup, where } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { format, getQuarter } from 'date-fns';
-import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import type { PurchaseOrder, PurchaseOrderItem, FixedMiscCost } from '@/lib/types';
+import { format, getQuarter, getYear, getMonth } from 'date-fns';
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import type { PurchaseOrder, PurchaseOrderItem, FixedMiscCost, Order } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Printer, Receipt, TrendingUp, ShieldAlert, FileText, TrendingDown, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 type PoFinancialSummary = {
   id: string;
@@ -37,17 +39,26 @@ const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
 };
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+
 export default function FinancialReportsPage() {
     const { firestore } = useFirebase();
     const { user } = useAuth();
     const { toast } = useToast();
     const [summaries, setSummaries] = useState<PoFinancialSummary[]>([]);
     const [fixedCosts, setFixedCosts] = useState<FixedMiscCost[]>([]);
+    const [salesOrders, setSalesOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [selectedQuarter, setSelectedQuarter] = useState('all');
+    
+    // State for sales chart
+    const [salesAvailableYears, setSalesAvailableYears] = useState<number[]>([]);
+    const [selectedSalesYears, setSelectedSalesYears] = useState<number[]>([]);
+
 
     useEffect(() => {
         const fetchAllFinancialData = async () => {
@@ -97,6 +108,19 @@ export default function FinancialReportsPage() {
                 const costsQuery = query(collection(firestore, 'fixed_misc_costs'), orderBy('date', 'desc'));
                 const costsSnapshot = await getDocs(costsQuery);
                 setFixedCosts(costsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FixedMiscCost)));
+                
+                // Fetch Sales Data
+                const salesQuery = query(collectionGroup(firestore, 'orders'), where('status', '==', 'completed'));
+                const salesSnapshot = await getDocs(salesQuery);
+                const fetchedSalesOrders = salesSnapshot.docs.map(doc => doc.data() as Order);
+                setSalesOrders(fetchedSalesOrders);
+                
+                if (fetchedSalesOrders.length > 0) {
+                    const years = Array.from(new Set(fetchedSalesOrders.map(order => getYear(order.orderDate.toDate()))));
+                    const sortedYears = years.sort((a, b) => b - a);
+                    setSalesAvailableYears(sortedYears);
+                    setSelectedSalesYears(sortedYears.slice(0, 2)); // Select the most recent 2 years by default
+                }
 
 
             } catch (error) {
@@ -162,19 +186,42 @@ export default function FinancialReportsPage() {
 
     }, [filteredSummaries, filteredFixedCosts]);
 
+    const salesChartData = useMemo(() => {
+        const dataByMonth: any[] = MONTH_NAMES.map(month => ({ month }));
+        salesOrders.forEach(order => {
+            const orderDate = order.orderDate.toDate();
+            const year = getYear(orderDate);
+            const month = getMonth(orderDate);
+
+            if (!dataByMonth[month][year]) {
+                dataByMonth[month][year] = 0;
+            }
+            dataByMonth[month][year] += order.totalAmount;
+        });
+        return dataByMonth;
+    }, [salesOrders]);
+
     const availableYears = useMemo(() => {
         const years = new Set([...summaries.map(s => s.po.date.toDate().getFullYear()), ...fixedCosts.map(c => c.date.toDate().getFullYear())]);
         return Array.from(years).sort((a, b) => b - a).map(String);
     }, [summaries, fixedCosts]);
+
+    const handleSalesYearToggle = (year: number) => {
+        setSelectedSalesYears(prev => 
+            prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]
+        );
+    };
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-background p-2 border rounded-md shadow-lg">
                     <p className="font-bold">{`${label}`}</p>
-                    <p style={{ color: payload[0].fill }}>
-                        {`${payload[0].name}: ${formatCurrency(payload[0].value)}`}
-                    </p>
+                    {payload.map((p: any, i: number) => (
+                         <p key={i} style={{ color: p.stroke || p.fill }}>
+                            {`${p.name}: ${formatCurrency(p.value)}`}
+                        </p>
+                    ))}
                 </div>
             );
         }
@@ -194,6 +241,8 @@ export default function FinancialReportsPage() {
             </text>
         );
     };
+
+    const lineColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe'];
     
     if (user?.role !== 'admin' && !isLoading) {
         return (
@@ -227,7 +276,7 @@ export default function FinancialReportsPage() {
             <Card id="report-filters" className="printable-card">
                  <CardHeader>
                     <CardTitle>Filters</CardTitle>
-                    <CardDescription>Filter the data for your report.</CardDescription>
+                    <CardDescription>Filter the expenditure data for your report.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col md:flex-row items-center gap-4">
@@ -258,7 +307,7 @@ export default function FinancialReportsPage() {
 
             <Card className="printable-card">
                 <CardHeader>
-                    <CardTitle>Summary Overview</CardTitle>
+                    <CardTitle>Expenditure & Profit Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -269,6 +318,40 @@ export default function FinancialReportsPage() {
                     </div>
                 </CardContent>
             </Card>
+
+             <Card className="printable-card">
+                <CardHeader>
+                    <CardTitle>Multi-Year Sales Comparison</CardTitle>
+                    <CardDescription>Compare monthly sales revenue across different years.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? ( <Skeleton className="h-[400px] w-full" /> ) : (
+                        <>
+                            <div className="flex items-center justify-center gap-6 pb-4">
+                                {salesAvailableYears.map(year => (
+                                    <div key={year} className="flex items-center space-x-2">
+                                        <Checkbox id={`year-${year}`} checked={selectedSalesYears.includes(year)} onCheckedChange={() => handleSalesYearToggle(year)} />
+                                        <Label htmlFor={`year-${year}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{year}</Label>
+                                    </div>
+                                ))}
+                            </div>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <LineChart data={salesChartData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="month" fontSize="12px" />
+                                    <YAxis tickFormatter={(value) => formatCurrency(value as number)} fontSize="12px" />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Legend />
+                                    {selectedSalesYears.map((year, index) => (
+                                        <Line key={year} type="monotone" dataKey={year} stroke={lineColors[index % lineColors.length]} strokeWidth={2} activeDot={{ r: 8 }} />
+                                    ))}
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2 printable-card">
@@ -308,7 +391,7 @@ export default function FinancialReportsPage() {
             </div>
             
             <Card className="printable-card">
-                 <CardHeader><CardTitle>Detailed Data</CardTitle></CardHeader>
+                 <CardHeader><CardTitle>Detailed Expenditure Data</CardTitle></CardHeader>
                 <CardContent>
                      <Table>
                         <TableHeader>
