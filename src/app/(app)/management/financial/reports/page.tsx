@@ -69,6 +69,7 @@ export default function FinancialReportsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [selectedQuarter, setSelectedQuarter] = useState('all');
+    const [selectedMonth, setSelectedMonth] = useState('all');
     const [activeTab, setActiveTab] = useState('financial-reports');
     
     // State for profit/loss chart
@@ -76,6 +77,12 @@ export default function FinancialReportsPage() {
     const [selectedPlYear1, setSelectedPlYear1] = useState<number | undefined>();
     const [selectedPlYear2, setSelectedPlYear2] = useState<number | undefined>();
     const [comparisonDataType, setComparisonDataType] = useState<ComparisonDataType>('profit');
+
+    useEffect(() => {
+        if (selectedQuarter === 'all') {
+            setSelectedMonth('all');
+        }
+    }, [selectedQuarter]);
 
 
     useEffect(() => {
@@ -157,27 +164,44 @@ export default function FinancialReportsPage() {
         }
     }, [firestore, user, toast]);
 
+    const QUARTER_MONTHS: Record<string, { name: string; value: number }[]> = {
+        '1': [{ name: 'January', value: 0 }, { name: 'February', value: 1 }, { name: 'March', value: 2 }],
+        '2': [{ name: 'April', value: 3 }, { name: 'May', value: 4 }, { name: 'June', value: 5 }],
+        '3': [{ name: 'July', value: 6 }, { name: 'August', value: 7 }, { name: 'September', value: 8 }],
+        '4': [{ name: 'October', value: 9 }, { name: 'November', value: 10 }, { name: 'December', value: 11 }],
+    };
+
+    const availableMonths = useMemo(() => {
+        if (selectedQuarter === 'all' || !QUARTER_MONTHS[selectedQuarter]) {
+            return [];
+        }
+        return [{ name: 'All Months', value: 'all' }, ...QUARTER_MONTHS[selectedQuarter]];
+    }, [selectedQuarter]);
+
     const filteredSummaries = useMemo(() => {
         return summaries.filter(summary => {
             const poDate = summary.po.date.toDate();
             const yearMatch = selectedYear === 'all' || poDate.getFullYear() === parseInt(selectedYear);
             const quarterMatch = selectedQuarter === 'all' || getQuarter(poDate) === parseInt(selectedQuarter);
+            const monthMatch = selectedMonth === 'all' || poDate.getMonth() === parseInt(selectedMonth);
+
             const lowerSearchTerm = searchTerm.toLowerCase();
             const searchMatch = !searchTerm ||
                 summary.po.poNumber.toLowerCase().includes(lowerSearchTerm) ||
                 (summary.po.source && summary.po.source.toLowerCase().includes(lowerSearchTerm));
-            return yearMatch && quarterMatch && searchMatch;
+            return yearMatch && quarterMatch && monthMatch && searchMatch;
         });
-    }, [summaries, searchTerm, selectedYear, selectedQuarter]);
+    }, [summaries, searchTerm, selectedYear, selectedQuarter, selectedMonth]);
     
     const filteredFixedCosts = useMemo(() => {
         return fixedCosts.filter(cost => {
             const costDate = cost.date.toDate();
             const yearMatch = selectedYear === 'all' || costDate.getFullYear() === parseInt(selectedYear);
             const quarterMatch = selectedQuarter === 'all' || getQuarter(costDate) === parseInt(selectedQuarter);
-            return yearMatch && quarterMatch;
+            const monthMatch = selectedMonth === 'all' || costDate.getMonth() === parseInt(selectedMonth);
+            return yearMatch && quarterMatch && monthMatch;
         });
-    }, [fixedCosts, selectedYear, selectedQuarter]);
+    }, [fixedCosts, selectedYear, selectedQuarter, selectedMonth]);
 
     const { totalProfitLoss, totalTaxDeduction, totalLdCost, totalAllocation, totalExpenses, profitLossChartData, expensesByCategoryData } = useMemo(() => {
         const poTotals = filteredSummaries.reduce((acc, s) => {
@@ -371,7 +395,7 @@ export default function FinancialReportsPage() {
                             <CardDescription>Filter the expenditure data for your report.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex flex-col md:flex-row items-center gap-4">
+                             <div className="flex flex-col md:flex-row items-center gap-4">
                                 <div className="relative w-full md:w-1/2">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input placeholder="Search by PO #, Source..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10" />
@@ -393,6 +417,18 @@ export default function FinancialReportsPage() {
                                         <SelectItem value="4">Quarter 4</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {selectedQuarter !== 'all' && (
+                                    <Select value={String(selectedMonth)} onValueChange={setSelectedMonth}>
+                                        <SelectTrigger className="w-full md:w-[180px]">
+                                            <SelectValue placeholder="Select Month" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableMonths.map(month => (
+                                                <SelectItem key={month.value} value={String(month.value)}>{month.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
