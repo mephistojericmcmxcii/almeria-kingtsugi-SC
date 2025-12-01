@@ -136,18 +136,15 @@ export default function FinancialReportsPage() {
         });
     }, [fixedCosts, selectedYear, selectedQuarter]);
 
-    const { totalProfitLoss, totalTaxDeduction, totalAllocation, totalExpenses, profitLossChartData, expensesBySourceData, expensesByCategoryData } = useMemo(() => {
+    const { totalProfitLoss, totalTaxDeduction, totalAllocation, totalExpenses, profitLossChartData, expensesByCategoryData } = useMemo(() => {
         const poTotals = filteredSummaries.reduce((acc, s) => {
             acc.totalProfitLoss += s.profit;
             acc.totalTaxDeduction += s.taxDeduction;
             acc.totalAllocation += s.totalAllocation;
             acc.totalExpenses += s.totalExpenses;
-            
-            const source = s.po.source || 'Unknown';
-            acc.expensesBySource[source] = (acc.expensesBySource[source] || 0) + s.totalExpenses;
 
             return acc;
-        }, { totalProfitLoss: 0, totalTaxDeduction: 0, totalAllocation: 0, totalExpenses: 0, expensesBySource: {} as Record<string, number> });
+        }, { totalProfitLoss: 0, totalTaxDeduction: 0, totalAllocation: 0, totalExpenses: 0 });
 
         const totalFixedCosts = filteredFixedCosts.reduce((sum, cost) => sum + cost.cost, 0);
 
@@ -157,7 +154,6 @@ export default function FinancialReportsPage() {
             totalAllocation: poTotals.totalAllocation,
             totalExpenses: poTotals.totalExpenses + totalFixedCosts,
             profitLossChartData: filteredSummaries.map(s => ({ name: s.po.poNumber, profit: s.profit })).sort((a,b) => a.name.localeCompare(b.name)),
-            expensesBySourceData: Object.entries(poTotals.expensesBySource).map(([name, value]) => ({ name, value })),
             expensesByCategoryData: [
                 { name: 'Purchase Orders', value: poTotals.totalExpenses },
                 { name: 'Fixed/Misc Costs', value: totalFixedCosts }
@@ -311,25 +307,6 @@ export default function FinancialReportsPage() {
                 </Card>
             </div>
             
-            <Card className="printable-card">
-                <CardHeader><CardTitle>Expenses by PO Source</CardTitle></CardHeader>
-                <CardContent>
-                    {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
-                        <ResponsiveContainer width="100%" height={350}>
-                            <BarChart data={expensesBySourceData} layout="vertical" margin={{ top: 5, right: 20, left: 100, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} fontSize="10px"/>
-                                <YAxis type="category" dataKey="name" width={100} interval={0} fontSize="10px" />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} />
-                                <Bar dataKey="value" name="Total Expenses" fill="#8884d8" barSize={20}>
-                                     {expensesBySourceData.map((entry, index) => <Cell key={`cell-${index}`} fill={'#8884d8'} />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    )}
-                </CardContent>
-            </Card>
-
             <Card className="printable-card">
                  <CardHeader><CardTitle>Detailed Data</CardTitle></CardHeader>
                 <CardContent>
