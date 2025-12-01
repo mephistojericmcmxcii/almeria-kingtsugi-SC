@@ -583,7 +583,7 @@ export default function TransactionsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const defaultTab = searchParams.get('tab') || 'quotation';
+  const defaultTab = searchParams.get('tab') || 'rfq';
   
   const { quotationOrders, activeOrders, completedOrders } = useMemo(() => {
     if (!orders) return { quotationOrders: [], activeOrders: [], completedOrders: [] };
