@@ -27,7 +27,7 @@ const Header = () => {
   }, []);
   
   return (
-    <header className="sticky top-0 z-10 grid h-16 w-full grid-cols-3 items-center gap-4 border-b-2 border-b-foreground/20 bg-primary px-4 md:px-6">
+    <header className="sticky top-0 z-10 grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-4 border-b-2 border-b-foreground/20 bg-primary px-4 md:px-6">
       <div className="flex items-center gap-4">
           {/* Desktop sidebar trigger (visible when collapsed) */}
           <SidebarTrigger className={cn("hidden h-7 w-7 -ml-2", !open && "md:flex")} />
@@ -38,7 +38,7 @@ const Header = () => {
           </div>
       </div>
       
-      <div className="flex justify-center">
+      <div className="flex justify-start">
         <GlobalSearch />
       </div>
 
