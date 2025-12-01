@@ -207,9 +207,6 @@ export default function FinancialReportsPage() {
             `}</style>
              <div id="report-header" className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
-                        <Link href="/management/financial"><ArrowLeft className="h-4 w-4" /></Link>
-                    </Button>
                     <h1 className="text-3xl font-bold tracking-tight font-headline">Financial Reports</h1>
                 </div>
                 <Button onClick={() => window.print()}>
@@ -348,6 +345,3 @@ export default function FinancialReportsPage() {
         </div>
     );
 }
-
-
-    
