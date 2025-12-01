@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Search } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -94,10 +94,9 @@ export function GlobalSearch() {
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverAnchor asChild>
                 <form onSubmit={handleSearchSubmit} className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search products..."
-                        className="pl-9 pr-10 bg-background/80 hover:bg-background/90 focus:bg-background"
+                        className="pl-3 pr-10 bg-background/80 hover:bg-background/90 focus:bg-background"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onBlur={() => {
