@@ -35,15 +35,9 @@ const Header = () => {
       <div className="md:hidden">
          <SidebarTrigger />
       </div>
-
-      {/* Mobile Search Bar */}
-      <div className="md:hidden flex-1">
-         <GlobalSearch />
-      </div>
       
-      {/* Desktop Search Bar */}
-      <div className="hidden md:flex flex-1 justify-center">
-         <GlobalSearch />
+      <div className="flex-1">
+        <GlobalSearch />
       </div>
 
       <div className="flex items-center gap-2">
