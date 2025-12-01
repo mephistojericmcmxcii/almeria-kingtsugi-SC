@@ -107,7 +107,7 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
           }
           main {
             flex-grow: 1;
-            padding: 2rem;
+            padding: 1cm;
           }
           table {
             width: 100%;
@@ -160,7 +160,7 @@ const PrintLayoutWrapper: React.FC<PrintLayoutWrapperProps> = ({ children, title
               min-height: 100vh;
             }
             main {
-              padding: 1.5cm; /* Re-apply padding to main content only */
+              padding: 1cm; /* Re-apply padding to main content only */
             }
              th, td {
                 padding: 8px;

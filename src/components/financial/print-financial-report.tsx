@@ -57,7 +57,7 @@ const PrintFinancialReportLayout: React.FC<PrintFinancialReportLayoutProps> = ({
   };
 
   return (
-    <PrintLayoutWrapper title="Expenditure & Profit Analysis Report">
+    <PrintLayoutWrapper title="Expenditure & Profit Analysis Report" useLandscape disableHeader disableFooter>
       <style>{`
         .stats-grid {
           display: grid;

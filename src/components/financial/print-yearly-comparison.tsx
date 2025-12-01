@@ -36,7 +36,7 @@ const PrintYearlyComparisonLayout: React.FC<PrintYearlyComparisonProps> = ({ dat
   };
 
   return (
-    <PrintLayoutWrapper title={`Multi-Year Comparison: ${dataTypeLabel}`}>
+    <PrintLayoutWrapper title={`Multi-Year Comparison: ${dataTypeLabel}`} useLandscape disableHeader disableFooter>
       <main>
         <div style={{ width: '100%', height: '600px' }}>
           <ResponsiveContainer>
