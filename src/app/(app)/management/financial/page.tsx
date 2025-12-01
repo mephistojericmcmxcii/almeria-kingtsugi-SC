@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp, Search, ArrowUpDown, Receipt } from "lucide-react";
+import { CreditCard, Eye, ShieldAlert, MoreHorizontal, Plus, Trash2, CircleDollarSign, BadgeDollarSign, TrendingUp, Search, ArrowUpDown, Receipt, FileText } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -390,9 +390,14 @@ export default function FinancialPage() {
                                 A summary of allocated budget vs. actual expenses for each PO.
                             </CardDescription>
                         </div>
-                        <Button onClick={() => setIsAddManualDialogOpen(true)}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Manual Payment
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline">
+                                <FileText className="mr-2 h-4 w-4" /> Generate Report
+                            </Button>
+                            <Button onClick={() => setIsAddManualDialogOpen(true)}>
+                                Add Manual Payment
+                            </Button>
+                        </div>
                     </div>
                 <div className="flex flex-col md:flex-row items-center gap-4 pt-4">
                         <div className="flex items-center gap-4 w-full">
