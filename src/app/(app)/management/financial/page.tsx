@@ -45,7 +45,7 @@ type SortConfig = {
 const PesoIcon = () => <span className="font-bold">₱</span>;
 
 
-export default function PoPaymentPage() {
+export default function FinancialPage() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -331,7 +331,7 @@ export default function PoPaymentPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
             <CreditCard className="w-8 h-8 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight font-headline">PO Payment Summary</h1>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Financials</h1>
         </div>
          <Button onClick={() => setIsAddManualDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Manual Payment
@@ -555,8 +555,3 @@ export default function PoPaymentPage() {
     </>
   );
 }
-
-    
-
-
-
