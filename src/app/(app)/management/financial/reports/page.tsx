@@ -226,13 +226,19 @@ export default function FinancialReportsPage() {
     const PIE_COLORS = ['#10b981', '#f97316', '#3b82f6', '#8b5cf6'];
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        if (percent < 0.001) return null; // Don't render label for very small slices
         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
-        if (percent === 0) return null;
+
+        const displayPercent = (percent * 100).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        });
+        
         return (
             <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                {`${(percent * 100).toFixed(0)}%`}
+                {`${displayPercent}%`}
             </text>
         );
     };
@@ -261,7 +267,7 @@ export default function FinancialReportsPage() {
             `}</style>
              <div id="report-header" className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <h1 className="text-3xl font-bold tracking-tight font-headline">Financial Reports</h1>
+                    <h1 className="text-3xl font-bold tracking-tight font-headline">Expenditure & Profit Analysis</h1>
                 </div>
                 <Button onClick={() => window.print()}>
                     <Printer className="mr-2 h-4 w-4" /> Print Report
