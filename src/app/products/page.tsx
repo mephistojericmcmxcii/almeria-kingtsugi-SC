@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const { user, products: allVariants, isProductsLoading: isDataLoading, addToCart } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -229,5 +229,13 @@ export default function ProductsPage() {
         </Suspense>
     )}
     </>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading products...</div>}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
