@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, lazy, Suspense, createRoot } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useRouter } from 'next/navigation';
 import { useFirebase, FirebaseClientProvider } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
