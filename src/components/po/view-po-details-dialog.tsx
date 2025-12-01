@@ -60,7 +60,9 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
       setReceivedDateString(format(new Date(), 'dd-MMM-yyyy'));
       setSiFile(null);
       setDrFile(null);
-      setDeliveryType('complete');
+      
+      // If status is already 'Partially Delivered', force partial, otherwise default to complete
+      setDeliveryType(po.status === 'Partially Delivered' ? 'partial' : 'complete');
       
       const fetchItems = async () => {
           const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
@@ -223,7 +225,7 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 <div className="space-y-4 border-t pt-4">
                     <h3 className="font-semibold text-foreground">Delivery Confirmation</h3>
                      
-                     {!isDelivered && (
+                     {!isDelivered && po.status !== 'Partially Delivered' && (
                         <div className="space-y-3">
                             <Label>Delivery Type</Label>
                              <RadioGroup value={deliveryType} onValueChange={(v) => setDeliveryType(v as any)} className="flex space-x-4">
@@ -342,8 +344,8 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                                             <div><p className="font-medium">Sales Invoice:</p><p>{record.salesInvoice}</p></div>
                                         </div>
                                          <div className="flex gap-4">
-                                            {record.drUrl && <a href={record.drUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Delivery Receipt</Button></a>}
-                                            {record.siUrl && <a href={record.siUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Sales Invoice</Button></a>}
+                                            {record.deliveryReceiptUrl && <a href={record.deliveryReceiptUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Delivery Receipt</Button></a>}
+                                            {record.salesInvoiceUrl && <a href={record.salesInvoiceUrl} target="_blank" rel="noopener noreferrer"><Button variant="link" size="sm" className="p-0 h-auto"><Download className="mr-2 h-3 w-3"/>View Sales Invoice</Button></a>}
                                         </div>
                                         <div>
                                             <p className="font-medium text-sm mb-2">Items in this Delivery:</p>
