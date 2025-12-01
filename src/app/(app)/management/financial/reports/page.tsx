@@ -2,13 +2,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, orderBy } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { format, getQuarter } from 'date-fns';
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import type { PoFinancialSummary, PurchaseOrder, PurchaseOrderItem } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderItem, FixedMiscCost } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,11 +17,21 @@ import { StatsCard } from '@/components/dashboard/stats-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Printer, Receipt, TrendingUp, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Search, Printer, Receipt, TrendingUp, ShieldAlert, FileText, TrendingDown, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
-const PesoIcon = () => <span className="font-bold">₱</span>;
+type PoFinancialSummary = {
+  id: string;
+  po: PurchaseOrder;
+  totalAllocation: number;
+  totalExpenses: number;
+  taxDeduction: number;
+  ldCost: number;
+  profit: number;
+  paymentStatus?: 'Paid' | 'Unpaid';
+};
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -32,6 +42,7 @@ export default function FinancialReportsPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const [summaries, setSummaries] = useState<PoFinancialSummary[]>([]);
+    const [fixedCosts, setFixedCosts] = useState<FixedMiscCost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +50,7 @@ export default function FinancialReportsPage() {
     const [selectedQuarter, setSelectedQuarter] = useState('all');
 
     useEffect(() => {
-        const fetchSummaries = async () => {
+        const fetchAllFinancialData = async () => {
             if (!firestore || user?.role !== 'admin') {
                 setIsLoading(false);
                 return;
@@ -47,6 +58,7 @@ export default function FinancialReportsPage() {
             setIsLoading(true);
 
             try {
+                // Fetch POs and their items
                 const poCollectionRef = collection(firestore, 'purchase_orders');
                 const poSnapshot = await getDocs(poCollectionRef);
                 const pos = poSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
@@ -69,29 +81,34 @@ export default function FinancialReportsPage() {
                         totalAllocation = po.totalAllocation ?? totals.allocation;
                         totalExpenses = totals.expenses;
                     }
+                    const taxDeduction = (po.amountDeposited && po.amountDeposited > 0) ? totalAllocation - (po.amountDeposited || 0) : 0;
+                    const ldCost = po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
+                    const profit = totalAllocation - totalExpenses - taxDeduction - ldCost;
+                    
                     return {
-                        id: po.id,
-                        po,
-                        totalAllocation,
-                        totalExpenses,
-                        profit: (po.amountDeposited || 0) - totalExpenses,
-                        paymentStatus: po.paymentStatus,
+                        id: po.id, po, totalAllocation, totalExpenses, taxDeduction, ldCost, profit, paymentStatus: po.paymentStatus
                     };
                 });
 
                 const calculatedSummaries = await Promise.all(summaryPromises);
                 setSummaries(calculatedSummaries);
 
+                // Fetch Fixed/Misc Costs
+                const costsQuery = query(collection(firestore, 'fixed_misc_costs'), orderBy('date', 'desc'));
+                const costsSnapshot = await getDocs(costsQuery);
+                setFixedCosts(costsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FixedMiscCost)));
+
+
             } catch (error) {
-                console.error("Error fetching PO summaries:", error);
-                toast({ variant: 'destructive', title: 'Error', description: 'Could not load PO payment summaries.' });
+                console.error("Error fetching financial data:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not load financial data.' });
             } finally {
                 setIsLoading(false);
             }
         };
 
         if (user?.role === 'admin') {
-            fetchSummaries();
+            fetchAllFinancialData();
         } else {
             setIsLoading(false);
         }
@@ -109,52 +126,58 @@ export default function FinancialReportsPage() {
             return yearMatch && quarterMatch && searchMatch;
         });
     }, [summaries, searchTerm, selectedYear, selectedQuarter]);
+    
+    const filteredFixedCosts = useMemo(() => {
+        return fixedCosts.filter(cost => {
+            const costDate = cost.date.toDate();
+            const yearMatch = selectedYear === 'all' || costDate.getFullYear() === parseInt(selectedYear);
+            const quarterMatch = selectedQuarter === 'all' || getQuarter(costDate) === parseInt(selectedQuarter);
+            return yearMatch && quarterMatch;
+        });
+    }, [fixedCosts, selectedYear, selectedQuarter]);
 
-    const { paidCount, unpaidCount, totalTaxDeduction, totalProfitLoss, chartData, pieChartData } = useMemo(() => {
-        const totals = filteredSummaries.reduce((acc, summary) => {
-            if (summary.paymentStatus === 'Paid') acc.paidCount++;
-            else if (summary.paymentStatus === 'Unpaid') acc.unpaidCount++;
-
-            const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
-            const expenses = summary.totalExpenses;
-            const taxDeduction = (summary.po.amountDeposited && summary.po.amountDeposited > 0) ? allocation - (summary.po.amountDeposited || 0) : 0;
-            const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
-            const profit = allocation - expenses - taxDeduction - ldCost;
-
-            acc.totalTaxDeduction += taxDeduction;
-            acc.totalProfitLoss += profit;
+    const { totalProfitLoss, totalTaxDeduction, totalAllocation, totalExpenses, profitLossChartData, expensesBySourceData, expensesByCategoryData } = useMemo(() => {
+        const poTotals = filteredSummaries.reduce((acc, s) => {
+            acc.totalProfitLoss += s.profit;
+            acc.totalTaxDeduction += s.taxDeduction;
+            acc.totalAllocation += s.totalAllocation;
+            acc.totalExpenses += s.totalExpenses;
             
-            acc.chartData.push({ name: summary.po.poNumber, profit });
+            const source = s.po.source || 'Unknown';
+            acc.expensesBySource[source] = (acc.expensesBySource[source] || 0) + s.totalExpenses;
 
             return acc;
-        }, {
-            paidCount: 0,
-            unpaidCount: 0,
-            totalTaxDeduction: 0,
-            totalProfitLoss: 0,
-            chartData: [] as { name: string; profit: number }[],
-        });
-        
-        totals.chartData.sort((a,b) => a.name.localeCompare(b.name));
+        }, { totalProfitLoss: 0, totalTaxDeduction: 0, totalAllocation: 0, totalExpenses: 0, expensesBySource: {} as Record<string, number> });
+
+        const totalFixedCosts = filteredFixedCosts.reduce((sum, cost) => sum + cost.cost, 0);
 
         return {
-            ...totals,
-            pieChartData: [{ name: 'Paid', value: totals.paidCount }, { name: 'Unpaid', value: totals.unpaidCount }],
+            totalProfitLoss: poTotals.totalProfitLoss,
+            totalTaxDeduction: poTotals.totalTaxDeduction,
+            totalAllocation: poTotals.totalAllocation,
+            totalExpenses: poTotals.totalExpenses + totalFixedCosts,
+            profitLossChartData: filteredSummaries.map(s => ({ name: s.po.poNumber, profit: s.profit })).sort((a,b) => a.name.localeCompare(b.name)),
+            expensesBySourceData: Object.entries(poTotals.expensesBySource).map(([name, value]) => ({ name, value })),
+            expensesByCategoryData: [
+                { name: 'Purchase Orders', value: poTotals.totalExpenses },
+                { name: 'Fixed/Misc Costs', value: totalFixedCosts }
+            ].filter(item => item.value > 0),
         };
-    }, [filteredSummaries]);
+
+    }, [filteredSummaries, filteredFixedCosts]);
 
     const availableYears = useMemo(() => {
-        const years = new Set(summaries.map(s => s.po.date.toDate().getFullYear()));
+        const years = new Set([...summaries.map(s => s.po.date.toDate().getFullYear()), ...fixedCosts.map(c => c.date.toDate().getFullYear())]);
         return Array.from(years).sort((a, b) => b - a).map(String);
-    }, [summaries]);
+    }, [summaries, fixedCosts]);
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-background p-2 border rounded-md shadow-lg">
-                    <p className="font-bold">{`PO #: ${label}`}</p>
-                    <p style={{ color: payload[0].value >= 0 ? '#10b981' : '#ef4444' }}>
-                        {`Profit/Loss: ${formatCurrency(payload[0].value)}`}
+                    <p className="font-bold">{`${label}`}</p>
+                    <p style={{ color: payload[0].fill }}>
+                        {`${payload[0].name}: ${formatCurrency(payload[0].value)}`}
                     </p>
                 </div>
             );
@@ -162,7 +185,7 @@ export default function FinancialReportsPage() {
         return null;
     };
     
-    const PIE_COLORS = ['#10b981', '#f97316'];
+    const PIE_COLORS = ['#10b981', '#f97316', '#3b82f6', '#8b5cf6'];
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -190,19 +213,10 @@ export default function FinancialReportsPage() {
         <div className="space-y-6" id="report-content">
              <style>{`
                 @media print {
-                    body {
-                        background-color: #fff;
-                    }
-                    #report-header, #report-filters, #main-header, #main-sidebar {
-                        display: none !important;
-                    }
-                    .printable-card {
-                        border: none;
-                        box-shadow: none;
-                    }
-                     .recharts-wrapper {
-                        width: 100% !important;
-                    }
+                    body { background-color: #fff; }
+                    #report-header, #report-filters, #main-header, #main-sidebar { display: none !important; }
+                    .printable-card { border: none; box-shadow: none; }
+                     .recharts-wrapper { width: 100% !important; }
                 }
             `}</style>
              <div id="report-header" className="flex items-center justify-between">
@@ -248,14 +262,14 @@ export default function FinancialReportsPage() {
 
             <Card className="printable-card">
                 <CardHeader>
-                    <CardTitle>Summary</CardTitle>
+                    <CardTitle>Summary Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <StatsCard title="Total Profit / Loss" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)} description="Sum of all PO profits and losses." icon={TrendingUp} isLoading={isLoading} />
+                        <StatsCard title="Total PO Allocation" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalAllocation)} description="Total budgeted amount for all POs." icon={DollarSign} isLoading={isLoading} />
+                        <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs." icon={TrendingDown} isLoading={isLoading} />
                         <StatsCard title="Total Tax Deduction" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalTaxDeduction)} description="Total tax deductions from all POs." icon={Receipt} isLoading={isLoading} />
-                        <StatsCard title="Paid POs" value={isLoading ? <Skeleton className="h-8 w-1/4" /> : paidCount} description="Total purchase orders marked as paid." icon={PesoIcon} isLoading={isLoading} />
-                        <StatsCard title="Unpaid POs" value={isLoading ? <Skeleton className="h-8 w-1/4" /> : unpaidCount} description="Total purchase orders awaiting payment." icon={PesoIcon} isLoading={isLoading} />
+                        <StatsCard title="Net Profit / Loss" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)} description="Sum of all PO profits and losses." icon={TrendingUp} isLoading={isLoading} />
                     </div>
                 </CardContent>
             </Card>
@@ -266,13 +280,13 @@ export default function FinancialReportsPage() {
                     <CardContent>
                          {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
                             <ResponsiveContainer width="100%" height={350}>
-                                <BarChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                                <BarChart data={profitLossChartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} interval={0} fontSize="10px" />
                                     <YAxis tickFormatter={(value) => formatCurrency(value)} fontSize="12px" />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} />
-                                    <Bar dataKey="profit">
-                                        {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#22c55e' : '#ef4444'} />)}
+                                    <Bar dataKey="profit" name="Profit/Loss">
+                                        {profitLossChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#22c55e' : '#ef4444'} />)}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
@@ -280,22 +294,41 @@ export default function FinancialReportsPage() {
                     </CardContent>
                 </Card>
                  <Card className="printable-card">
-                    <CardHeader><CardTitle>PO Payment Status</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Expenses by Category</CardTitle></CardHeader>
                     <CardContent>
                         {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
                             <ResponsiveContainer width="100%" height={350}>
                                 <PieChart>
-                                    <Pie data={pieChartData} cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={120} fill="#8884d8" dataKey="value">
-                                        {pieChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                                    <Pie data={expensesByCategoryData} cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={120} fill="#8884d8" dataKey="value">
+                                        {expensesByCategoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                                     </Pie>
                                     <Legend />
-                                    <Tooltip formatter={(value) => value} />
+                                    <Tooltip formatter={(value) => formatCurrency(value as number)} />
                                 </PieChart>
                             </ResponsiveContainer>
                         )}
                     </CardContent>
                 </Card>
             </div>
+            
+            <Card className="printable-card">
+                <CardHeader><CardTitle>Expenses by PO Source</CardTitle></CardHeader>
+                <CardContent>
+                    {isLoading ? <Skeleton className="h-[350px] w-full" /> : (
+                        <ResponsiveContainer width="100%" height={350}>
+                            <BarChart data={expensesBySourceData} layout="vertical" margin={{ top: 5, right: 20, left: 100, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} fontSize="10px"/>
+                                <YAxis type="category" dataKey="name" width={100} interval={0} fontSize="10px" />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} />
+                                <Bar dataKey="value" name="Total Expenses" fill="#8884d8" barSize={20}>
+                                     {expensesBySourceData.map((entry, index) => <Cell key={`cell-${index}`} fill={'#8884d8'} />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </CardContent>
+            </Card>
 
             <Card className="printable-card">
                  <CardHeader><CardTitle>Detailed Data</CardTitle></CardHeader>
@@ -304,8 +337,8 @@ export default function FinancialReportsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>PO #</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Care Of</TableHead>
+                                <TableHead>Source</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Allocation</TableHead>
                                 <TableHead className="text-right">Expenses</TableHead>
                                 <TableHead className="text-right">Tax</TableHead>
@@ -316,24 +349,17 @@ export default function FinancialReportsPage() {
                             {isLoading ? Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                             )) : filteredSummaries.length > 0 ? (
-                                filteredSummaries.map((summary) => {
-                                    const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
-                                    const expenses = summary.totalExpenses;
-                                    const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
-                                    const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
-                                    const profitLoss = allocation - expenses - taxDeduction - ldCost;
-                                    return (
-                                        <TableRow key={summary.id}>
-                                            <TableCell>{summary.po.poNumber}</TableCell>
-                                            <TableCell>{format(summary.po.date.toDate(), 'dd-MMM-yyyy')}</TableCell>
-                                            <TableCell>{summary.po.careOf}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(allocation)}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(expenses)}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(taxDeduction)}</TableCell>
-                                            <TableCell className={cn("text-right font-bold", profitLoss >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(profitLoss)}</TableCell>
-                                        </TableRow>
-                                    );
-                                })
+                                filteredSummaries.map((summary) => (
+                                    <TableRow key={summary.id}>
+                                        <TableCell>{summary.po.poNumber}</TableCell>
+                                        <TableCell>{summary.po.source}</TableCell>
+                                        <TableCell><Badge variant="outline">{summary.po.paymentStatus}</Badge></TableCell>
+                                        <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(summary.taxDeduction)}</TableCell>
+                                        <TableCell className={cn("text-right font-bold", summary.profit >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(summary.profit)}</TableCell>
+                                    </TableRow>
+                                ))
                             ) : (
                                 <TableRow><TableCell colSpan={7} className="h-24 text-center">No data found for the selected filters.</TableCell></TableRow>
                             )}
@@ -345,3 +371,5 @@ export default function FinancialReportsPage() {
         </div>
     );
 }
+
+    

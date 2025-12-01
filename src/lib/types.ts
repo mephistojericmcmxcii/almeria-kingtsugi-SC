@@ -202,6 +202,7 @@ export type QuotationRequest = {
 };
 
 export type CustomerFeedback = {
+  id: string;
   userName: string;
   rating: number;
   review: string;
@@ -221,3 +222,5 @@ export type FixedMiscCost = {
 export type BrandSettings = {
   logoUrl?: string;
 };
+
+    

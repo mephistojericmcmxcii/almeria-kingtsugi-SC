@@ -1,5 +1,7 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LucideIcon } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
 
 interface StatsCardProps {
     title: string;
@@ -19,9 +21,11 @@ export function StatsCard({ title, value, description, icon: Icon, isLoading }: 
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
+                {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{value}</div>}
                 {!isLoading && <p className="text-xs text-muted-foreground">{description}</p>}
             </CardContent>
         </Card>
     );
 }
+
+    
