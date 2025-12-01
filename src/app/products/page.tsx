@@ -15,6 +15,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, Package, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Separator } from '../ui/separator';
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
@@ -41,16 +42,32 @@ export default function ProductsPage() {
     return ['All Categories', ...Array.from(uniqueCategories).sort()];
   }, [allVariants]);
 
-  const filteredItems = useMemo(() => {
-    if (!allVariants) return [];
-    return allVariants.filter(variant => {
-      const lowercasedTerm = searchTerm.toLowerCase();
-      const inCategory = selectedCategory === 'all' || variant.parentCategory === selectedCategory;
-      const matchesSearch = variant.parentName.toLowerCase().includes(lowercasedTerm) ||
-                              variant.brand.toLowerCase().includes(lowercasedTerm) ||
-                              (variant.description && variant.description.toLowerCase().includes(lowercasedTerm));
-      return inCategory && matchesSearch;
+  const filteredAndGroupedItems = useMemo(() => {
+    if (!allVariants) return {};
+    
+    const searchFiltered = allVariants.filter(variant => {
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return variant.parentName.toLowerCase().includes(lowercasedTerm) ||
+               variant.brand.toLowerCase().includes(lowercasedTerm) ||
+               (variant.description && variant.description.toLowerCase().includes(lowercasedTerm));
     });
+
+    if (selectedCategory === 'all') {
+        // Group by category
+        return searchFiltered.reduce((acc, variant) => {
+            const category = variant.parentCategory || 'Uncategorized';
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category].push(variant);
+            return acc;
+        }, {} as Record<string, InventoryVariant[]>);
+    } else {
+        // Filter by selected category and return as a single group
+        const categoryFiltered = searchFiltered.filter(variant => variant.parentCategory === selectedCategory);
+        if (categoryFiltered.length === 0) return {};
+        return { [selectedCategory]: categoryFiltered };
+    }
   }, [allVariants, searchTerm, selectedCategory]);
 
   const handleViewItemClick = (variant: InventoryVariant) => {
@@ -84,6 +101,8 @@ export default function ProductsPage() {
       return PlaceHolderImages.find(p => p.id === 'product-fallback')!;
   };
 
+  const hasResults = Object.keys(filteredAndGroupedItems).length > 0;
+
   return (
     <>
     <div className="space-y-8">
@@ -95,13 +114,15 @@ export default function ProductsPage() {
         <CardHeader>
            <div className="flex flex-col md:flex-row items-center gap-4">
               <div className="relative w-full md:w-1/2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input 
-                    placeholder="Search by name, brand, or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10"
-                />
+                 <form onSubmit={(e) => { e.preventDefault(); /* Search is now real-time */ }}>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by name, brand, or description..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10"
+                    />
+                </form>
               </div>
               <div className="w-full md:w-1/2">
                   <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={isDataLoading}>
@@ -130,50 +151,57 @@ export default function ProductsPage() {
                         </div>
                     ))}
                 </div>
-            ) : filteredItems.length > 0 ? (
-                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {filteredItems.map((variant) => {
-                        const placeholder = getPlaceholderImage(variant);
-                        return (
-                            <Card 
-                                key={variant.ref?.path || variant.id} 
-                                className="overflow-hidden group cursor-pointer flex flex-col"
-                                onClick={() => handleViewItemClick(variant)}
-                            >
-                                <div className="aspect-square relative w-full">
-                                    <img
-                                        src={placeholder.imageUrl}
-                                        alt={placeholder.description}
-                                        className="object-cover w-full h-full transition-transform group-hover:scale-105"
-                                        data-ai-hint={placeholder.imageHint}
-                                    />
-                                    {variant.quantity <= 0 && (
-                                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                        <p className="text-white font-bold bg-destructive px-3 py-1 rounded">OUT OF STOCK</p>
-                                      </div>
-                                    )}
-                                </div>
-                                <CardHeader className="p-4 pb-2 flex-grow">
-                                    <CardTitle className="font-headline text-lg leading-tight truncate" title={variant.parentName}>
-                                        {variant.parentName}
-                                    </CardTitle>
-                                    <CardDescription className="truncate" title={variant.brand}>
-                                        {variant.brand}
-                                    </CardDescription>
-                                    {variant.description && (
-                                        <p className="text-xs text-muted-foreground pt-1 truncate" title={variant.description}>
-                                            {variant.description}
-                                        </p>
-                                    )}
-                                </CardHeader>
-                                <CardContent className="p-4 pt-0 mt-auto">
-                                    <Button variant="outline" size="sm" className="w-full">
-                                        View
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+            ) : hasResults ? (
+                 <div className="space-y-8">
+                    {Object.entries(filteredAndGroupedItems).sort(([catA], [catB]) => catA.localeCompare(catB)).map(([category, variants]) => (
+                        <div key={category}>
+                            <h2 className="text-2xl font-semibold font-headline tracking-tight mb-4">{category}</h2>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                                {variants.map((variant) => {
+                                    const placeholder = getPlaceholderImage(variant);
+                                    return (
+                                        <Card 
+                                            key={variant.ref?.path || variant.id} 
+                                            className="overflow-hidden group cursor-pointer flex flex-col"
+                                            onClick={() => handleViewItemClick(variant)}
+                                        >
+                                            <div className="aspect-square relative w-full">
+                                                <img
+                                                    src={placeholder.imageUrl}
+                                                    alt={placeholder.description}
+                                                    className="object-cover w-full h-full transition-transform group-hover:scale-105"
+                                                    data-ai-hint={placeholder.imageHint}
+                                                />
+                                                {variant.quantity <= 0 && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                    <p className="text-white font-bold bg-destructive px-3 py-1 rounded">OUT OF STOCK</p>
+                                                </div>
+                                                )}
+                                            </div>
+                                            <CardHeader className="p-4 pb-2 flex-grow">
+                                                <CardTitle className="font-headline text-lg leading-tight truncate" title={variant.parentName}>
+                                                    {variant.parentName}
+                                                </CardTitle>
+                                                <CardDescription className="truncate" title={variant.brand}>
+                                                    {variant.brand}
+                                                </CardDescription>
+                                                {variant.description && (
+                                                    <p className="text-xs text-muted-foreground pt-1 truncate" title={variant.description}>
+                                                        {variant.description}
+                                                    </p>
+                                                )}
+                                            </CardHeader>
+                                            <CardContent className="p-4 pt-0 mt-auto">
+                                                <Button variant="outline" size="sm" className="w-full">
+                                                    View
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <div className="text-center py-24">
