@@ -29,7 +29,7 @@ import { FixedMiscCosts } from '@/components/financial/fixed-misc-costs';
 
 const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
 const AddManualPoDialog = lazy(() => import('@/components/po/add-manual-po-dialog').then(module => ({ default: module.AddManualPoDialog })));
-const PrintFinancialReport = lazy(() => import('@/components/financial/print-financial-report').then(module => ({ default: module.PrintFinancialReport })));
+const PrintFinancialReport = lazy(() => import('@/components/financial/print-financial-report').then(module => ({ default: module.default })));
 
 
 export type PoFinancialSummary = {
