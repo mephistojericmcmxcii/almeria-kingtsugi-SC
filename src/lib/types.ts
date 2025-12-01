@@ -187,8 +187,16 @@ export type CustomerFeedback = {
   createdAt: any;
 };
 
+export type FixedMiscCost = {
+  id: string;
+  expenditure: string;
+  cost: number;
+  date: Timestamp;
+  description?: string;
+  createdAt: any;
+};
+
+
 export type BrandSettings = {
   logoUrl?: string;
 };
-
-    

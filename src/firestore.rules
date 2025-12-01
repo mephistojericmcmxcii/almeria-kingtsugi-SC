@@ -1,0 +1,119 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ✅ Collection group access for variants (fixes public listing + snapshot issues)
+    match /{path=**}/variants/{variantId} {
+      allow read: if true;
+    }
+
+    // ---------- INVENTORY ----------
+    match /inventory/{itemId} {
+
+      // Public product display
+      allow read: if true;
+
+      // Admin control only
+      allow create, delete: if request.auth != null &&
+                            request.auth.token.admin == true;
+
+      allow update: if request.auth != null &&
+                    request.auth.token.admin == true;
+
+      match /variants/{variantId} {
+        allow read: if true;
+
+        allow create, delete: if request.auth != null &&
+                              request.auth.token.admin == true;
+
+        // Users can update ONLY quantity
+        allow update: if request.auth != null &&
+          request.resource.data.diff(resource.data)
+          .changedKeys()
+          .hasOnly(["quantity"]);
+      }
+    }
+
+    // ---------- USERS ----------
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+                   request.auth.uid == userId;
+
+      match /cart/{cartId} {
+        allow read, write: if request.auth != null &&
+                           request.auth.uid == userId;
+      }
+      
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth != null &&
+                           request.auth.uid == userId;
+      }
+
+      match /orders/{orderId} {
+        // User can R/W own orders, admin can read any
+        allow read, write: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.admin == true);
+      }
+
+      match /rfq/{rfqId} {
+        // User can R/W own RFQs, admin can read any
+        allow write: if request.auth != null && request.auth.uid == userId;
+        allow read: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.admin == true);
+      }
+    }
+    
+    // --- Admin-only collections ---
+    match /roles_admin/{userId} {
+        allow read: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /admin_notifications/{notificationId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // ---------- PURCHASE ORDERS ----------
+    match /purchase_orders/{poId} {
+      allow read, write: if request.auth != null &&
+                         request.auth.token.admin == true;
+       match /items/{itemId} {
+         allow read, write: if request.auth != null &&
+                         request.auth.token.admin == true;
+       }
+    }
+    
+    // ---------- CUSTOMER FEEDBACK ----------
+    match /customer_feedback/{feedbackId} {
+        // Anyone can read feedback
+        allow read: if true;
+        // Only authenticated users can create feedback.
+        allow create: if request.auth != null;
+        // Only admins can delete feedback
+        allow delete: if request.auth != null && request.auth.token.admin == true;
+        // Nobody can update feedback
+        allow update: if false;
+    }
+
+    // ---------- FIXED MISC COSTS ----------
+    match /fixed_misc_costs/{costId} {
+        allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+
+    // ---------- SYSTEM SETTINGS (PUBLIC SAFE) ----------
+    // Allows snapshot listeners + normal reads without fallback interference
+    match /system_settings/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                   request.auth.token.admin == true;
+    }
+
+    // ---------- FALLBACK ----------
+    // Secure default instead of total lock
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+                   request.auth.token.admin == true;
+    }
+  }
+}
