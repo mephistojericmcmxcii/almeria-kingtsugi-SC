@@ -57,6 +57,7 @@ const PrintFinancialReport: React.FC<PrintFinancialReportProps> = ({ data, total
   
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent === 0) return null;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -222,3 +223,5 @@ const PrintFinancialReport: React.FC<PrintFinancialReportProps> = ({ data, total
 };
 
 export default PrintFinancialReport;
+
+  
