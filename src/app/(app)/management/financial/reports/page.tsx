@@ -159,27 +159,31 @@ export default function FinancialReportsPage() {
         });
     }, [fixedCosts, selectedYear, selectedQuarter]);
 
-    const { totalProfitLoss, totalTaxDeduction, totalAllocation, totalExpenses, profitLossChartData, expensesByCategoryData } = useMemo(() => {
+    const { totalProfitLoss, totalTaxDeduction, totalLdCost, totalAllocation, totalExpenses, profitLossChartData, expensesByCategoryData } = useMemo(() => {
         const poTotals = filteredSummaries.reduce((acc, s) => {
             acc.totalProfitLoss += s.profit;
             acc.totalTaxDeduction += s.taxDeduction;
+            acc.totalLdCost += s.ldCost;
             acc.totalAllocation += s.totalAllocation;
             acc.totalExpenses += s.totalExpenses;
 
             return acc;
-        }, { totalProfitLoss: 0, totalTaxDeduction: 0, totalAllocation: 0, totalExpenses: 0 });
+        }, { totalProfitLoss: 0, totalTaxDeduction: 0, totalLdCost: 0, totalAllocation: 0, totalExpenses: 0 });
 
         const totalFixedCosts = filteredFixedCosts.reduce((sum, cost) => sum + cost.cost, 0);
-
+        
         return {
             totalProfitLoss: poTotals.totalProfitLoss,
             totalTaxDeduction: poTotals.totalTaxDeduction,
+            totalLdCost: poTotals.totalLdCost,
             totalAllocation: poTotals.totalAllocation,
-            totalExpenses: poTotals.totalExpenses + totalFixedCosts,
+            totalExpenses: poTotals.totalExpenses + totalFixedCosts + poTotals.totalTaxDeduction + poTotals.totalLdCost,
             profitLossChartData: filteredSummaries.map(s => ({ name: s.po.poNumber, profit: s.profit })).sort((a,b) => a.name.localeCompare(b.name)),
             expensesByCategoryData: [
                 { name: 'Purchase Orders', value: poTotals.totalExpenses },
-                { name: 'Fixed/Misc Costs', value: totalFixedCosts }
+                { name: 'Fixed/Misc Costs', value: totalFixedCosts },
+                { name: 'Tax Deductions', value: poTotals.totalTaxDeduction },
+                { name: 'Liquidated Damages', value: poTotals.totalLdCost },
             ].filter(item => item.value > 0),
         };
 
@@ -223,7 +227,7 @@ export default function FinancialReportsPage() {
         return null;
     };
     
-    const PIE_COLORS = ['#10b981', '#f97316', '#3b82f6', '#8b5cf6'];
+    const PIE_COLORS = ['#10b981', '#f97316', '#3b82f6', '#8b5cf6', '#ef4444'];
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
         if (percent < 0.001) return null; // Don't render label for very small slices
@@ -319,7 +323,7 @@ export default function FinancialReportsPage() {
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 <StatsCard title="Total PO Allocation" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalAllocation)} description="Total budgeted amount for all POs." icon={DollarSign} isLoading={isLoading} />
-                                <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs." icon={TrendingDown} isLoading={isLoading} />
+                                <StatsCard title="Total Expenses" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalExpenses)} description="PO actual costs + Fixed costs + Tax + LD." icon={TrendingDown} isLoading={isLoading} />
                                 <StatsCard title="Total Tax Deduction" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalTaxDeduction)} description="Total tax deductions from all POs." icon={Receipt} isLoading={isLoading} />
                                 <StatsCard title="Net Profit / Loss" value={isLoading ? <Skeleton className="h-8 w-1/2" /> : formatCurrency(totalProfitLoss)} description="Sum of all PO profits and losses." icon={TrendingUp} isLoading={isLoading} />
                             </div>
@@ -372,10 +376,10 @@ export default function FinancialReportsPage() {
                                     <TableRow>
                                         <TableHead>PO #</TableHead>
                                         <TableHead>Source</TableHead>
-                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Allocation</TableHead>
                                         <TableHead className="text-right">Expenses</TableHead>
                                         <TableHead className="text-right">Tax</TableHead>
+                                        <TableHead className="text-right">LD</TableHead>
                                         <TableHead className="text-right">Profit/Loss</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -387,10 +391,10 @@ export default function FinancialReportsPage() {
                                             <TableRow key={summary.id}>
                                                 <TableCell>{summary.po.poNumber}</TableCell>
                                                 <TableCell>{summary.po.source}</TableCell>
-                                                <TableCell><Badge variant="outline">{summary.po.paymentStatus}</Badge></TableCell>
                                                 <TableCell className="text-right">{formatCurrency(summary.totalAllocation)}</TableCell>
                                                 <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
                                                 <TableCell className="text-right">{formatCurrency(summary.taxDeduction)}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(summary.ldCost)}</TableCell>
                                                 <TableCell className={cn("text-right font-bold", summary.profit >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(summary.profit)}</TableCell>
                                             </TableRow>
                                         ))
