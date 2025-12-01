@@ -36,6 +36,16 @@ type PoFinancialSummary = {
   paymentStatus?: 'Paid' | 'Unpaid';
 };
 
+type ComparisonDataType = 'profit' | 'allocation' | 'expenses' | 'tax' | 'ld';
+
+const COMPARISON_DATA_TYPES: { value: ComparisonDataType; label: string }[] = [
+    { value: 'profit', label: 'Profit / Loss' },
+    { value: 'allocation', label: 'Total Allocation' },
+    { value: 'expenses', label: 'Total Expenses' },
+    { value: 'tax', label: 'Tax Deduction' },
+    { value: 'ld', label: 'Liquidated Damages' },
+];
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -60,6 +70,7 @@ export default function FinancialReportsPage() {
     const [plAvailableYears, setPlAvailableYears] = useState<number[]>([]);
     const [selectedPlYear1, setSelectedPlYear1] = useState<number | undefined>();
     const [selectedPlYear2, setSelectedPlYear2] = useState<number | undefined>();
+    const [comparisonDataType, setComparisonDataType] = useState<ComparisonDataType>('profit');
 
 
     useEffect(() => {
@@ -189,8 +200,8 @@ export default function FinancialReportsPage() {
         };
 
     }, [filteredSummaries, filteredFixedCosts]);
-
-    const profitLossComparisonData = useMemo(() => {
+    
+     const profitLossComparisonData = useMemo(() => {
         const dataByMonth: any[] = MONTH_NAMES.map(month => ({ month }));
         summaries.forEach(summary => {
             const poDate = summary.po.date.toDate();
@@ -201,11 +212,30 @@ export default function FinancialReportsPage() {
                 if (!dataByMonth[month][year]) {
                     dataByMonth[month][year] = 0;
                 }
-                dataByMonth[month][year] += summary.profit;
+                
+                let valueToSum = 0;
+                switch (comparisonDataType) {
+                    case 'profit':
+                        valueToSum = summary.profit;
+                        break;
+                    case 'allocation':
+                        valueToSum = summary.totalAllocation;
+                        break;
+                    case 'expenses':
+                        valueToSum = summary.totalExpenses;
+                        break;
+                    case 'tax':
+                        valueToSum = summary.taxDeduction;
+                        break;
+                    case 'ld':
+                        valueToSum = summary.ldCost;
+                        break;
+                }
+                dataByMonth[month][year] += valueToSum;
             }
         });
         return dataByMonth;
-    }, [summaries, selectedPlYear1, selectedPlYear2]);
+    }, [summaries, selectedPlYear1, selectedPlYear2, comparisonDataType]);
 
     const availableYears = useMemo(() => {
         const years = new Set([...summaries.map(s => s.po.date.toDate().getFullYear()), ...fixedCosts.map(c => c.date.toDate().getFullYear())]);
@@ -410,8 +440,8 @@ export default function FinancialReportsPage() {
                 <TabsContent value="yearly-comparison">
                      <Card className="printable-card">
                         <CardHeader>
-                            <CardTitle>Multi-Year Profit/Loss Comparison</CardTitle>
-                            <CardDescription>Compare monthly profit/loss from Purchase Orders across different years.</CardDescription>
+                            <CardTitle>Multi-Year PO Financial Comparison</CardTitle>
+                            <CardDescription>Compare financial metrics from Purchase Orders across different years.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoading ? ( <Skeleton className="h-[400px] w-full" /> ) : (
@@ -430,6 +460,16 @@ export default function FinancialReportsPage() {
                                                 {plAvailableYears.filter(y => y !== selectedPlYear1).map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
+                                        <Select value={comparisonDataType} onValueChange={(v) => setComparisonDataType(v as ComparisonDataType)}>
+                                            <SelectTrigger className="w-[220px]">
+                                                <SelectValue placeholder="Select Data Type" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {COMPARISON_DATA_TYPES.map(type => (
+                                                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <ResponsiveContainer width="100%" height={400}>
                                         <LineChart data={profitLossComparisonData} margin={{ top: 5, right: 20, left: 30, bottom: 5 }}>
@@ -437,9 +477,12 @@ export default function FinancialReportsPage() {
                                             <XAxis dataKey="month" fontSize="12px" />
                                             <YAxis tickFormatter={(value) => formatCurrency(value as number)} fontSize="12px" />
                                             <Tooltip content={<CustomTooltip />} />
-                                            <Legend />
-                                            {selectedPlYear1 && <Line type="monotone" name={`P/L ${selectedPlYear1}`} dataKey={selectedPlYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
-                                            {selectedPlYear2 && <Line type="monotone" name={`P/L ${selectedPlYear2}`} dataKey={selectedPlYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                            <Legend formatter={(value, entry) => {
+                                                const selectedType = COMPARISON_DATA_TYPES.find(t => t.value === comparisonDataType);
+                                                return `${selectedType?.label || ''} ${value}`;
+                                            }}/>
+                                            {selectedPlYear1 && <Line type="monotone" name={String(selectedPlYear1)} dataKey={selectedPlYear1} stroke={lineColors[0]} strokeWidth={2} activeDot={{ r: 8 }} />}
+                                            {selectedPlYear2 && <Line type="monotone" name={String(selectedPlYear2)} dataKey={selectedPlYear2} stroke={lineColors[1]} strokeWidth={2} activeDot={{ r: 8 }} />}
                                         </LineChart>
                                     </ResponsiveContainer>
                                 </>
@@ -451,5 +494,3 @@ export default function FinancialReportsPage() {
         </div>
     );
 }
-
-    
