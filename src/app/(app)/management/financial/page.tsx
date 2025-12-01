@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
@@ -23,6 +22,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FixedMiscCosts } from '@/components/financial/fixed-misc-costs';
 
 const PaymentDetailsDialog = lazy(() => import('@/components/po/payment-details-dialog').then(module => ({ default: module.PaymentDetailsDialog })));
 const AddManualPoDialog = lazy(() => import('@/components/po/add-manual-po-dialog').then(module => ({ default: module.AddManualPoDialog })));
@@ -369,152 +370,162 @@ export default function FinancialPage() {
         />
        </div>
 
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Purchase Order Financials</CardTitle>
-          <CardDescription>
-            A summary of allocated budget vs. actual expenses for each PO.
-          </CardDescription>
-           <div className="flex flex-col md:flex-row items-center gap-4 pt-4">
-                <div className="flex items-center gap-4 w-full">
-                    <div className="relative w-full md:w-1/2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search by PO #, Source, Care Of..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10"
-                        />
+      <Tabs defaultValue="po-payment" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="po-payment">PO Payment</TabsTrigger>
+          <TabsTrigger value="fixed-misc-costs">Fixed Miscellaneous Costs</TabsTrigger>
+        </TabsList>
+        <TabsContent value="po-payment" className="space-y-4">
+            <Card>
+                <CardHeader>
+                <CardTitle className="font-headline">Purchase Order Financials</CardTitle>
+                <CardDescription>
+                    A summary of allocated budget vs. actual expenses for each PO.
+                </CardDescription>
+                <div className="flex flex-col md:flex-row items-center gap-4 pt-4">
+                        <div className="flex items-center gap-4 w-full">
+                            <div className="relative w-full md:w-1/2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by PO #, Source, Care Of..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10"
+                                />
+                            </div>
+                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                <SelectTrigger className="w-full md:w-[180px]">
+                                    <SelectValue placeholder="Select Year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Years</SelectItem>
+                                    {availableYears.map(year => (
+                                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                                <SelectTrigger className="w-full md:w-[180px]">
+                                    <SelectValue placeholder="Select Quarter" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Quarters</SelectItem>
+                                    <SelectItem value="1">Quarter 1</SelectItem>
+                                    <SelectItem value="2">Quarter 2</SelectItem>
+                                    <SelectItem value="3">Quarter 3</SelectItem>
+                                    <SelectItem value="4">Quarter 4</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {selectedQuarter !== 'all' && (
+                                <Select value={String(selectedMonth)} onValueChange={setSelectedMonth}>
+                                    <SelectTrigger className="w-full md:w-[180px]">
+                                        <SelectValue placeholder="Select Month" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableMonths.map(month => (
+                                            <SelectItem key={month.value} value={String(month.value)}>{month.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
                     </div>
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-full md:w-[180px]">
-                            <SelectValue placeholder="Select Year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Years</SelectItem>
-                            {availableYears.map(year => (
-                                <SelectItem key={year} value={year}>{year}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                     <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-                        <SelectTrigger className="w-full md:w-[180px]">
-                            <SelectValue placeholder="Select Quarter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Quarters</SelectItem>
-                            <SelectItem value="1">Quarter 1</SelectItem>
-                            <SelectItem value="2">Quarter 2</SelectItem>
-                            <SelectItem value="3">Quarter 3</SelectItem>
-                            <SelectItem value="4">Quarter 4</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {selectedQuarter !== 'all' && (
-                        <Select value={String(selectedMonth)} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="w-full md:w-[180px]">
-                                <SelectValue placeholder="Select Month" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableMonths.map(month => (
-                                    <SelectItem key={month.value} value={String(month.value)}>{month.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                 <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('poNumber')}>{getSortIcon('poNumber')}PO #</Button></TableHead>
-                <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('date')}>{getSortIcon('date')}Date</Button></TableHead>
-                <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('careOf')}>{getSortIcon('careOf')}Care Of</Button></TableHead>
-                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalAllocation')}>{getSortIcon('totalAllocation')}Total Allocation</Button></TableHead>
-                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalExpenses')}>{getSortIcon('totalExpenses')}Total Expenses</Button></TableHead>
-                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('taxDeduction')}>{getSortIcon('taxDeduction')}Tax Deduction</Button></TableHead>
-                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('amountDeposited')}>{getSortIcon('amountDeposited')}Amount Deposited</Button></TableHead>
-                <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('profit')}>{getSortIcon('profit')}Profit / Loss</Button></TableHead>
-                <TableHead className="text-center px-2"><Button variant="ghost" className="p-0 justify-center w-full" onClick={() => requestSort('paymentStatus')}>{getSortIcon('paymentStatus')}Payment Status</Button></TableHead>
-                <TableHead className="text-right px-4">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-6 w-24 mx-auto" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : sortedAndFilteredSummaries.length > 0 ? (
-                sortedAndFilteredSummaries.map((summary) => {
-                    const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
-                    const expenses = summary.totalExpenses;
-                    const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
-                    const profitLoss = allocation - expenses - taxDeduction;
-                    return (
-                        <TableRow key={summary.id}>
-                            <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
-                            <TableCell>{format(summary.po.date.toDate(), 'dd-MMM-yyyy')}</TableCell>
-                            <TableCell>{summary.po.careOf}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(allocation)}</TableCell>
-                            <TableCell className="text-right font-semibold">{formatCurrency(expenses)}</TableCell>
-                            <TableCell className="text-right text-orange-600">{formatCurrency(taxDeduction)}</TableCell>
-                            <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
-                            <TableCell className={cn(
-                                "text-right font-bold",
-                                profitLoss >= 0 ? "text-green-600" : "text-red-600"
-                            )}>
-                                {formatCurrency(profitLoss)}
-                            </TableCell>
-                            <TableCell className="text-center">{getStatusBadge(summary.paymentStatus)}</TableCell>
-                            <TableCell className="text-right">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onSelect={() => handleViewDetails(summary)}>
-                                    <Eye className="mr-2 h-4 w-4" /> Manage Payment
-                                    </DropdownMenuItem>
-                                    {summary.po.entryType === 'manual' && (
-                                        <>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onSelect={() => setPoToDelete(summary)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
-                                        </DropdownMenuItem>
-                                        </>
-                                    )}
-                                </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
+                </CardHeader>
+                <CardContent>
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('poNumber')}>{getSortIcon('poNumber')}PO #</Button></TableHead>
+                        <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('date')}>{getSortIcon('date')}Date</Button></TableHead>
+                        <TableHead className="px-2"><Button variant="ghost" className="p-0" onClick={() => requestSort('careOf')}>{getSortIcon('careOf')}Care Of</Button></TableHead>
+                        <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalAllocation')}>{getSortIcon('totalAllocation')}Total Allocation</Button></TableHead>
+                        <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('totalExpenses')}>{getSortIcon('totalExpenses')}Total Expenses</Button></TableHead>
+                        <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('taxDeduction')}>{getSortIcon('taxDeduction')}Tax Deduction</Button></TableHead>
+                        <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('amountDeposited')}>{getSortIcon('amountDeposited')}Amount Deposited</Button></TableHead>
+                        <TableHead className="text-right px-2"><Button variant="ghost" className="p-0 justify-end w-full" onClick={() => requestSort('profit')}>{getSortIcon('profit')}Profit / Loss</Button></TableHead>
+                        <TableHead className="text-center px-2"><Button variant="ghost" className="p-0 justify-center w-full" onClick={() => requestSort('paymentStatus')}>{getSortIcon('paymentStatus')}Payment Status</Button></TableHead>
+                        <TableHead className="text-right px-4">Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-32 ml-auto" /></TableCell>
+                            <TableCell className="text-center"><Skeleton className="h-6 w-24 mx-auto" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
-                    );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-24 text-center">
-                    No purchase orders found for the selected filters.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                        ))
+                    ) : sortedAndFilteredSummaries.length > 0 ? (
+                        sortedAndFilteredSummaries.map((summary) => {
+                            const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
+                            const expenses = summary.totalExpenses;
+                            const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
+                            const profitLoss = allocation - expenses - taxDeduction;
+                            return (
+                                <TableRow key={summary.id}>
+                                    <TableCell className="font-medium">{summary.po.poNumber}</TableCell>
+                                    <TableCell>{format(summary.po.date.toDate(), 'dd-MMM-yyyy')}</TableCell>
+                                    <TableCell>{summary.po.careOf}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(allocation)}</TableCell>
+                                    <TableCell className="text-right font-semibold">{formatCurrency(expenses)}</TableCell>
+                                    <TableCell className="text-right text-orange-600">{formatCurrency(taxDeduction)}</TableCell>
+                                    <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
+                                    <TableCell className={cn(
+                                        "text-right font-bold",
+                                        profitLoss >= 0 ? "text-green-600" : "text-red-600"
+                                    )}>
+                                        {formatCurrency(profitLoss)}
+                                    </TableCell>
+                                    <TableCell className="text-center">{getStatusBadge(summary.paymentStatus)}</TableCell>
+                                    <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onSelect={() => handleViewDetails(summary)}>
+                                            <Eye className="mr-2 h-4 w-4" /> Manage Payment
+                                            </DropdownMenuItem>
+                                            {summary.po.entryType === 'manual' && (
+                                                <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onSelect={() => setPoToDelete(summary)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
+                                                </DropdownMenuItem>
+                                                </>
+                                            )}
+                                        </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })
+                    ) : (
+                        <TableRow>
+                        <TableCell colSpan={10} className="h-24 text-center">
+                            No purchase orders found for the selected filters.
+                        </TableCell>
+                        </TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="fixed-misc-costs" className="space-y-4">
+            <FixedMiscCosts />
+        </TabsContent>
+      </Tabs>
     </div>
     
     {selectedSummary && (
@@ -555,3 +566,5 @@ export default function FinancialPage() {
     </>
   );
 }
+
+    
