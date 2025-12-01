@@ -21,8 +21,8 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
       <style>{`
           @media print {
             @page {
-              size: portrait;
-              margin: 0.5cm;
+              size: landscape;
+              margin: 1cm;
             }
             body {
               background-color: #fff !important;
@@ -41,26 +41,27 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           }
           .sticker-container {
               margin: 2rem auto;
-              padding: 1.5rem;
-              border: 2px solid #333;
+              padding: 2rem;
+              border: 10px solid black;
+              border-image: linear-gradient(45deg, gold, black) 1;
               background-color: #fff;
               width: 100%;
-              max-width: 700px;
+              max-width: 1000px; /* Adjusted for landscape */
           }
           .box-identity {
-              font-size: 16pt;
+              font-size: 20pt;
               font-weight: bold;
               text-align: center;
               margin-bottom: 1.5rem;
               padding: 0.5rem;
-              background-color: #f3f4f6;
+              background-color: #f9fafb;
               border: 1px dashed #ccc;
           }
           .po-info {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 0.5rem 1rem;
-              font-size: 11pt;
+              gap: 0.5rem 2rem;
+              font-size: 12pt;
               margin-bottom: 1.5rem;
               padding-bottom: 1rem;
               border-bottom: 1px solid #e5e7eb;
@@ -77,8 +78,8 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
               border-collapse: collapse;
           }
           .item-table th, .item-table td {
-              font-size: 10pt;
-              padding: 6px 8px;
+              font-size: 11pt;
+              padding: 8px 10px;
               text-align: left;
               border-bottom: 1px solid #e5e7eb;
           }
