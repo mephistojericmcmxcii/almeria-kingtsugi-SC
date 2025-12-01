@@ -172,18 +172,19 @@ export default function FinancialReportsPage() {
 
         const totalFixedCosts = filteredFixedCosts.reduce((sum, cost) => sum + cost.cost, 0);
         
+        const totalPurchaseOrderExpenses = poTotals.totalExpenses + poTotals.totalLdCost;
+
         return {
             totalProfitLoss: poTotals.totalProfitLoss,
             totalTaxDeduction: poTotals.totalTaxDeduction,
             totalLdCost: poTotals.totalLdCost,
             totalAllocation: poTotals.totalAllocation,
-            totalExpenses: poTotals.totalExpenses + totalFixedCosts + poTotals.totalTaxDeduction + poTotals.totalLdCost,
+            totalExpenses: totalPurchaseOrderExpenses + totalFixedCosts + poTotals.totalTaxDeduction,
             profitLossChartData: filteredSummaries.map(s => ({ name: s.po.poNumber, profit: s.profit })).sort((a,b) => a.name.localeCompare(b.name)),
             expensesByCategoryData: [
-                { name: 'Purchase Orders', value: poTotals.totalExpenses },
+                { name: 'Purchase Orders', value: totalPurchaseOrderExpenses },
                 { name: 'Fixed/Misc Costs', value: totalFixedCosts },
                 { name: 'Tax Deductions', value: poTotals.totalTaxDeduction },
-                { name: 'Liquidated Damages', value: poTotals.totalLdCost },
             ].filter(item => item.value > 0),
         };
 
@@ -450,3 +451,5 @@ export default function FinancialReportsPage() {
         </div>
     );
 }
+
+    
