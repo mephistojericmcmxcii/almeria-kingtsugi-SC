@@ -44,22 +44,24 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
               width: 100%;
               max-width: 500px;
               z-index: 1;
+              box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
           }
-          .sticker-container::before {
-            content: '';
+          .border-div {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: -1;
-            padding: 10px; /* This creates the border thickness */
             background: linear-gradient(45deg, gold, black);
-            -webkit-mask: 
-               linear-gradient(#fff 0 0) content-box, 
-               linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            z-index: -1;
+          }
+          .top-border {
+            top: 0; left: 0; width: 100%; height: 10px;
+          }
+          .bottom-border {
+            bottom: 0; left: 0; width: 100%; height: 10px;
+          }
+          .left-border {
+            top: 0; left: 0; width: 10px; height: 100%;
+          }
+          .right-border {
+            top: 0; right: 0; width: 10px; height: 100%;
           }
           .box-identity {
               font-size: 18pt;
@@ -115,6 +117,11 @@ const PrintBoxListLayout: React.FC<PrintBoxListLayoutProps> = ({ po, items, boxI
           }
         `}</style>
         <div className="sticker-container">
+            <div className="border-div top-border"></div>
+            <div className="border-div bottom-border"></div>
+            <div className="border-div left-border"></div>
+            <div className="border-div right-border"></div>
+
             {boxIdentity && (
                 <div className="box-identity">
                 {boxIdentity}
