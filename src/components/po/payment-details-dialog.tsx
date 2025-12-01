@@ -15,17 +15,16 @@ import type { PurchaseOrder, PoPaymentStatus, FixedMiscCost, LiquidatedDamageIte
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, Download, ChevronsUpDown, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../ui/command';
 import { ScrollArea } from '../ui/scroll-area';
 
 const PAYMENT_STATUSES: PoPaymentStatus[] = ['Paid', 'Unpaid'];
@@ -183,9 +182,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
   
   const taxDeduction = currentAmountDeposited > 0 ? currentTotalAllocation - currentAmountDeposited : 0;
   
-  const profitLoss = currentAmountDeposited > 0 
-      ? currentAmountDeposited - currentTotalExpenses - totalLdCost
-      : currentTotalAllocation - currentTotalExpenses - taxDeduction - totalLdCost;
+  const profitLoss = currentTotalAllocation - currentTotalExpenses - taxDeduction - totalLdCost;
 
 
   return (
@@ -310,26 +307,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                     )} />
                 </div>
                 
-                <FormField control={form.control} name="paymentStatus" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                        <SelectTrigger className="w-[240px]">
-                        <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {PAYMENT_STATUSES.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )} />
-
-                <div className="space-y-2">
+                <div className="space-y-2 w-[240px]">
                     <FormField
                         control={form.control}
                         name="depositReceipt"
@@ -365,7 +343,7 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
                 render={({ field }) => (
                   <FormItem className="space-y-3">
                     <FormLabel className="font-semibold text-base">Liquidated Damages (Optional)</FormLabel>
-                    <FormDescription>Select miscellaneous costs to apply as liquidated damages.</FormDescription>
+                    <p className="text-[0.8rem] text-muted-foreground">Select miscellaneous costs to apply as liquidated damages.</p>
                     <ScrollArea className="h-40 w-full rounded-md border p-4">
                         {fixedCosts.map((cost) => (
                           <FormField
@@ -429,11 +407,33 @@ export function PaymentDetailsDialog({ isOpen, onOpenChange, summary, onSuccess 
 
             </div>
             
-            <DialogFooter className="pt-6">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Details'}
-              </Button>
+             <DialogFooter className="pt-6 sm:justify-between">
+                <div className="flex items-center gap-2">
+                     <FormField control={form.control} name="paymentStatus" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="sr-only">Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger className="w-[240px]">
+                                <SelectValue placeholder="Select a status" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {PAYMENT_STATUSES.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving...' : 'Save Details'}
+                    </Button>
+                </div>
             </DialogFooter>
           </form>
         </Form>

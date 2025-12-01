@@ -219,8 +219,8 @@ export default function FinancialPage() {
                     aValue = aLd;
                     bValue = bLd;
                 } else { // profit
-                    const aProfit = a.po.amountDeposited ? (a.po.amountDeposited - a.totalExpenses - aLdCost) : (aAllocation - a.totalExpenses - aTax - aLdCost);
-                    const bProfit = b.po.amountDeposited ? (b.po.amountDeposited - b.totalExpenses - bLdCost) : (bAllocation - b.totalExpenses - bTax - bLdCost);
+                    const aProfit = aAllocation - a.totalExpenses - aTax - aLdCost;
+                    const bProfit = bAllocation - b.totalExpenses - bTax - bLdCost;
                     aValue = aProfit;
                     bValue = bProfit;
                 }
@@ -257,9 +257,7 @@ export default function FinancialPage() {
             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
             
             const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
-            const profit = summary.po.amountDeposited 
-                ? (summary.po.amountDeposited - expenses - ldCost) 
-                : (allocation - expenses - taxDeduction - ldCost);
+            const profit = allocation - expenses - taxDeduction - ldCost;
 
             acc.totalTaxDeduction += taxDeduction;
             acc.totalProfitLoss += profit;
@@ -496,9 +494,7 @@ export default function FinancialPage() {
                             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
                             const ld = allocation - expenses;
                             const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
-                            const profitLoss = summary.po.amountDeposited 
-                                ? (summary.po.amountDeposited - expenses - ldCost) 
-                                : (allocation - expenses - taxDeduction - ldCost);
+                            const profitLoss = allocation - expenses - taxDeduction - ldCost;
 
                             return (
                                 <TableRow key={summary.id}>
