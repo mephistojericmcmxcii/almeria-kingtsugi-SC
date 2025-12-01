@@ -200,11 +200,8 @@ export default function FinancialPage() {
                 const aTax = a.po.amountDeposited && a.po.amountDeposited > 0 ? aAllocation - (a.po.amountDeposited || 0) : 0;
                 const bTax = b.po.amountDeposited && b.po.amountDeposited > 0 ? bAllocation - (b.po.amountDeposited || 0) : 0;
                 
-                const aLdCost = a.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
-                const bLdCost = b.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
-                
-                const aLd = aAllocation - a.totalExpenses;
-                const bLd = bAllocation - b.totalExpenses;
+                const aLd = a.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
+                const bLd = b.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
 
                 if(sortConfig.key === 'totalAllocation') {
                     aValue = aAllocation;
@@ -219,8 +216,8 @@ export default function FinancialPage() {
                     aValue = aLd;
                     bValue = bLd;
                 } else { // profit
-                    const aProfit = aAllocation - a.totalExpenses - aTax - aLdCost;
-                    const bProfit = bAllocation - b.totalExpenses - bTax - bLdCost;
+                    const aProfit = aAllocation - a.totalExpenses - aTax - aLd;
+                    const bProfit = bAllocation - b.totalExpenses - bTax - bLd;
                     aValue = aProfit;
                     bValue = bProfit;
                 }
@@ -492,7 +489,6 @@ export default function FinancialPage() {
                             const allocation = summary.po.totalAllocation ?? summary.totalAllocation;
                             const expenses = summary.totalExpenses;
                             const taxDeduction = summary.po.amountDeposited && summary.po.amountDeposited > 0 ? allocation - (summary.po.amountDeposited || 0) : 0;
-                            const ld = allocation - expenses;
                             const ldCost = summary.po.liquidatedDamages?.reduce((sum, item) => sum + item.cost, 0) || 0;
                             const profitLoss = allocation - expenses - taxDeduction - ldCost;
 
@@ -507,9 +503,9 @@ export default function FinancialPage() {
                                     <TableCell className="text-right text-blue-600">{formatCurrency(summary.po.amountDeposited || 0)}</TableCell>
                                      <TableCell className={cn(
                                         "text-right font-bold",
-                                        ld >= 0 ? "text-green-600" : "text-red-600"
+                                        ldCost > 0 ? "text-red-600" : "text-muted-foreground"
                                     )}>
-                                        {formatCurrency(ld)}
+                                        {formatCurrency(ldCost)}
                                     </TableCell>
                                     <TableCell className={cn(
                                         "text-right font-bold",
