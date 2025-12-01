@@ -3,19 +3,21 @@
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { PurchaseOrder, PurchaseOrderStatus } from '@/lib/types';
+import type { PurchaseOrder, PurchaseOrderItem, PurchaseOrderStatus } from '@/lib/types';
 import type { DisplayPurchaseOrder } from '@/app/(app)/management/po/page';
 import { format, parse } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Download, Calendar as CalendarIcon } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Download, Calendar as CalendarIcon, PackageCheck, Truck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
-import { FormControl, FormField } from '../ui/form';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Checkbox } from '../ui/checkbox';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
 
 interface ViewPoDetailsDialogProps {
   isOpen: boolean;
@@ -30,7 +32,8 @@ const formatCurrency = (amount: number) => {
 
 
 export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }: ViewPoDetailsDialogProps) {
-  const { updatePoStatus } = useAuth();
+  const { firestore } = useFirebase();
+  const { updatePoStatus, toast } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
@@ -42,6 +45,10 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   const [receivedDateString, setReceivedDateString] = useState('');
   const [receivedDate, setReceivedDate] = useState<Date | undefined>();
 
+  const [deliveryType, setDeliveryType] = useState<'complete' | 'partial'>('complete');
+  const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (isOpen && po) {
       setSalesInvoice(po.salesInvoice || '');
@@ -52,21 +59,71 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
       setReceivedDateString(rDate ? format(rDate, 'dd-MMM-yyyy') : '');
       setSiFile(null);
       setDrFile(null);
+      setDeliveryType('complete');
+      
+      const fetchItems = async () => {
+          const itemsCollectionRef = collection(firestore, 'purchase_orders', po.id, 'items');
+          const q = query(itemsCollectionRef, orderBy('createdAt', 'asc'));
+          const itemsSnap = await getDocs(q);
+          const itemsData = itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseOrderItem))
+          setPoItems(itemsData);
+          
+          const initialSelection: Record<string, boolean> = {};
+          itemsData.forEach(item => {
+              if (item.itemType !== 'misc') {
+                 initialSelection[item.id] = item.isDelivered || false;
+              }
+          });
+          setSelectedItems(initialSelection);
+      }
+      
+      fetchItems();
     }
-  }, [isOpen, po]);
+  }, [isOpen, po, firestore]);
+
+  const undeliveredItems = useMemo(() => {
+      return poItems.filter(item => item.itemType !== 'misc' && !item.isDelivered);
+  }, [poItems]);
 
 
   if (!po) return null;
 
-  const handleMarkAsDelivered = async () => {
+  const handleDelivery = async () => {
     setIsUpdating(true);
-    const success = await updatePoStatus(po, 'Delivered', { 
+    let newStatus: PurchaseOrderStatus = 'Delivered';
+    let itemsToUpdate: PurchaseOrderItem[] = [];
+    
+    if (deliveryType === 'partial') {
+        const selectedIds = Object.keys(selectedItems).filter(id => selectedItems[id]);
+        if (selectedIds.length === 0) {
+            toast({ variant: 'destructive', title: 'No Items Selected', description: 'Please select items for partial delivery.' });
+            setIsUpdating(false);
+            return;
+        }
+        
+        itemsToUpdate = poItems.map(item => ({
+            ...item,
+            isDelivered: selectedItems[item.id] || item.isDelivered || false,
+        }));
+        
+        const allItemsDelivered = itemsToUpdate.filter(item => item.itemType !== 'misc').every(item => item.isDelivered);
+        newStatus = allItemsDelivered ? 'Delivered' : 'Partially Delivered';
+
+    } else { // Complete delivery
+         itemsToUpdate = poItems.map(item => ({
+            ...item,
+            isDelivered: true
+        }));
+    }
+
+    const success = await updatePoStatus(po, newStatus, { 
         salesInvoice, 
         deliveryReceipt, 
         salesInvoiceFile: siFile, 
         deliveryReceiptFile: drFile,
         receivedBy,
-        receivedDate
+        receivedDate,
+        items: itemsToUpdate,
     });
     if (success) {
         onOpenChange(true);
@@ -75,7 +132,23 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
   }
   
   const isDelivered = po.status === 'Delivered';
-  const isMarkAsDeliveredDisabled = isUpdating || !salesInvoice || !deliveryReceipt || !receivedBy || !receivedDate || isDelivered;
+  const showDeliveryForm = ['Completed', 'For Delivery', 'Partially Delivered', 'Delivered'].includes(po.displayStatus);
+  const isDeliveryActionDisabled = isUpdating || !receivedBy || !receivedDate || (deliveryType === 'partial' && Object.values(selectedItems).every(v => v === false)) || isDelivered;
+
+  const handleSelectItem = (itemId: string, checked: boolean) => {
+    setSelectedItems(prev => ({ ...prev, [itemId]: checked }));
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+      const newSelection: Record<string, boolean> = {};
+      undeliveredItems.forEach(item => {
+          newSelection[item.id] = checked;
+      });
+      setSelectedItems(prev => ({...prev, ...newSelection}));
+  };
+
+  const isAllSelected = undeliveredItems.length > 0 && undeliveredItems.every(item => selectedItems[item.id]);
+
   
   const balance = (totals?.allocated || po.totalAllocation || 0) - (totals?.utilized || 0);
 
@@ -131,9 +204,42 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
                 </div>
             </div>
 
-            {(po.displayStatus === 'Completed' || po.displayStatus === 'Delivered' || po.displayStatus === 'For Delivery') && (
+            {showDeliveryForm && (
                 <div className="space-y-4 border-t pt-4">
                     <h3 className="font-semibold text-foreground">Delivery Confirmation</h3>
+                     
+                     {!isDelivered && (
+                        <div className="space-y-3">
+                            <Label>Delivery Type</Label>
+                             <RadioGroup value={deliveryType} onValueChange={(v) => setDeliveryType(v as any)} className="flex space-x-4">
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="complete" id="complete" /><Label htmlFor="complete">Complete Delivery</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="partial" id="partial" /><Label htmlFor="partial">Partial Delivery</Label></div>
+                             </RadioGroup>
+                        </div>
+                     )}
+
+                     {deliveryType === 'partial' && !isDelivered && undeliveredItems.length > 0 && (
+                        <div className="border rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                               <Checkbox id="select-all" checked={isAllSelected} onCheckedChange={handleSelectAll} />
+                               <Label htmlFor="select-all" className="font-semibold">Select All Undelivered Items</Label>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+                                {undeliveredItems.map(item => (
+                                    <div key={item.id} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`item-${item.id}`}
+                                            checked={selectedItems[item.id] || false}
+                                            onCheckedChange={(checked) => handleSelectItem(item.id, !!checked)}
+                                        />
+                                        <Label htmlFor={`item-${item.id}`} className="flex-grow">{item.name}</Label>
+                                        <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                     )}
+
                      <div className="space-y-4">
                          <div className="space-y-2">
                              <Label htmlFor="salesInvoice">Sales Invoice #</Label>
@@ -207,9 +313,9 @@ export default function ViewPoDetailsDialog({ isOpen, onOpenChange, po, totals }
         </div>
         <DialogFooter className="sm:justify-between items-center">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
-          {(po.displayStatus === 'Completed' || po.displayStatus === 'For Delivery') && (
-            <Button onClick={handleMarkAsDelivered} disabled={isMarkAsDeliveredDisabled}>
-                {isUpdating ? 'Saving...' : (isDelivered ? 'Already Delivered' : 'Mark as Delivered')}
+          {showDeliveryForm && (
+            <Button onClick={handleDelivery} disabled={isDeliveryActionDisabled}>
+                {isUpdating ? 'Saving...' : (isDelivered ? 'Already Delivered' : (deliveryType === 'partial' ? 'Save Partial Delivery' : 'Mark as Delivered'))}
             </Button>
           )}
         </DialogFooter>
