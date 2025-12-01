@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,10 +21,19 @@ const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-
 export default function ProductsPage() {
   const { user, products: allVariants, isProductsLoading: isDataLoading, addToCart } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedVariant, setSelectedVariant] = useState<InventoryVariant | null>(null);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const query = searchParams.get('q');
+    if (query) {
+      setSearchTerm(query);
+    }
+  }, [searchParams]);
 
   const categories = useMemo(() => {
     if (!allVariants) return [];

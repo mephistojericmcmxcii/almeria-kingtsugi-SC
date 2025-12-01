@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, lazy, Suspense, useRef } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import type { InventoryVariant } from '@/lib/types';
@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/compon
 import { Search } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '../ui/button';
 
 const ViewProductModal = lazy(() => import('@/components/dashboard/view-product-modal').then(module => ({ default: module.ViewProductModal })));
 
@@ -55,6 +56,15 @@ export function GlobalSearch() {
     }
   };
 
+  const handleSearchSubmit = (e?: FormEvent) => {
+    e?.preventDefault();
+    if (!searchTerm.trim()) return;
+
+    router.push(`/products?q=${encodeURIComponent(searchTerm)}`);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
   const handleAddToCart = (variant: InventoryVariant) => {
     addToCart(variant);
     setSelectedVariant(null);
@@ -83,11 +93,11 @@ export function GlobalSearch() {
     <div className="w-full max-w-sm">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverAnchor asChild>
-                <div className="relative">
+                <form onSubmit={handleSearchSubmit} className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search products..."
-                        className="pl-9 bg-background/80 hover:bg-background/90 focus:bg-background"
+                        className="pl-9 pr-10 bg-background/80 hover:bg-background/90 focus:bg-background"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onBlur={() => {
@@ -105,7 +115,11 @@ export function GlobalSearch() {
                         }}
                         disabled={isProductsLoading}
                     />
-                </div>
+                    <Button type="submit" size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+                       <Search className="h-4 w-4" />
+                       <span className="sr-only">Search</span>
+                    </Button>
+                </form>
             </PopoverAnchor>
             
             <PopoverContent
