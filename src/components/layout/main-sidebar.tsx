@@ -141,13 +141,6 @@ const MainSidebar = () => {
       isProtected: true, // This route requires login
     },
     {
-        href: "/transactions",
-        label: "My Transactions",
-        icon: Receipt,
-        adminOnly: false,
-        isProtected: true,
-    },
-    {
       href: "/reviews",
       label: "Customer Reviews",
       icon: Star,

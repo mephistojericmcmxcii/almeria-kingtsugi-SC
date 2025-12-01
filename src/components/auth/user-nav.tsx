@@ -59,12 +59,6 @@ export function UserNav() {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-           <DropdownMenuItem asChild>
-            <Link href="/transactions">
-              <Receipt className="mr-2 h-4 w-4" />
-              <span>My Transactions</span>
-            </Link>
-          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>
